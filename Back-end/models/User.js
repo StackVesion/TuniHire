@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const bcrypt = require("bcrypt");
 
 const UserSchema = new mongoose.Schema({
   firstName: { type: String},
@@ -27,7 +26,8 @@ const UserSchema = new mongoose.Schema({
   cv: { type: String },
   languagePreferences: { type: [String] },
   createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  updatedAt: { type: Date, default: Date.now },
+  faceDescriptor: { type: Array, required: false }, // Stocke les données faciales
 });
 
 module.exports = mongoose.model("User", UserSchema);
