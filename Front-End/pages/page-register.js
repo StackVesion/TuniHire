@@ -49,6 +49,10 @@ export default function Register() {
         window.location.href = "http://localhost:5000/auth/google";
     };
 
+    const handleGitHubSignIn = () => {
+        window.location.href = "http://localhost:5000/auth/github";
+    };
+
     return (
         <>
             <Layout>
@@ -63,6 +67,10 @@ export default function Register() {
                                     <button className="btn social-login hover-up mb-20" onClick={handleGoogleSignIn}>
                                         <img src="assets/imgs/template/icons/icon-google.svg" alt="jobbox" />
                                         <strong>Sign up with Google</strong>
+                                    </button>
+                                    <button className="btn social-login hover-up mb-20" onClick={handleGitHubSignIn}>
+                                        <img src="assets/imgs/template/icons/icon-github.svg" alt="jobbox" />
+                                        <strong>Sign up with GitHub</strong>
                                     </button>
                                     <div className="divider-text-center">
                                         <span>Or continue with</span>
