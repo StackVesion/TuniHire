@@ -10,6 +10,7 @@ require("dotenv").config(); // Load environment variables
 const connectDB = require("./config/db");
 const User = require('./models/User');
 const jwt = require('jsonwebtoken');
+require('./config/githubAuth'); // Add this line to require GitHub auth config
 
 // CORS configuration
 const corsOptions = {
@@ -144,7 +145,88 @@ app.get('/auth/google/callback',
     }
   });
 
+// GitHub auth routes
+app.get('/auth/github',
+  passport.authenticate('github', { scope: ['user:email'] }));
+
+app.get('/auth/github/callback', 
+  function(req, res, next) {
+    console.log("GitHub callback received, authenticating with passport");
+    passport.authenticate('github', { 
+      failureRedirect: 'http://localhost:3000/page-signin?error=github_auth_failed',
+      failWithError: true 
+    })(req, res, next);
+  },
+  async function(req, res) {
+    try {
+      console.log("GitHub authentication successful, generating token for user:", req.user.email);
+      
+      // Generate JWT token for the authenticated user
+      const token = jwt.sign(
+        { userId: req.user._id, email: req.user.email },
+        process.env.JWT_SECRET || "your-jwt-secret",
+        { expiresIn: '1h' }
+      );
+      
+      // Prepare user data for frontend
+      const userData = {
+        userId: req.user._id,
+        email: req.user.email,
+        firstName: req.user.firstName,
+        lastName: req.user.lastName,
+        role: req.user.role,
+        githubId: req.user.githubId // Include githubId to identify GitHub-authenticated users
+      };
+      
+      console.log("Redirecting to frontend with user data");
+      
+      // Redirect to frontend with token and user data as query params
+      const userDataParam = encodeURIComponent(JSON.stringify(userData));
+      res.redirect(`http://localhost:3000/?token=${token}&userData=${userDataParam}`);
+    } catch (error) {
+      console.error("Error in GitHub callback:", error);
+      res.redirect('http://localhost:3000/page-signin?error=Authentication failed');
+    }
+  },
+  function(err, req, res, next) {
+    console.error("GitHub auth error:", err);
+    res.redirect('http://localhost:3000/page-signin?error=' + encodeURIComponent(err.message || 'Authentication failed'));
+  }
+);
+
 // Dedicated Google logout route
+app.get('/api/users/google/logout', (req, res) => {
+  req.logout(function(err) {
+    if (err) { 
+      console.error("Error during passport logout:", err); 
+    }
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Session destruction error:", err);
+      }
+      res.clearCookie('connect.sid', { path: '/' });
+      res.status(200).json({ message: "Successfully logged out from Google" });
+    });
+  });
+});
+
+// Dedicated GitHub logout route
+app.get('/api/users/github/logout', (req, res) => {
+  req.logout(function(err) {
+    if (err) { 
+      console.error("Error during passport logout:", err); 
+    }
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Session destruction error:", err);
+      }
+      res.clearCookie('connect.sid', { path: '/' });
+      res.status(200).json({ message: "Successfully logged out from GitHub" });
+    });
+  });
+});
+
+// General logout route - kept for backward compatibility
 app.get('/auth/logout', (req, res) => {
   req.logout(function(err) {
     if (err) { 

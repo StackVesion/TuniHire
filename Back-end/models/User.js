@@ -3,12 +3,13 @@ const bcrypt = require("bcrypt");
 
 const UserSchema = new mongoose.Schema({
   googleId: String,
+  githubId: String,
   firstName: { type: String},
   lastName: { type: String},
   email: { type: String, required: true, unique: true },
   password: { type: String, required: function() { 
-    // Password is required only if there's no googleId
-    return !this.googleId; 
+    // Password is required only if there's no googleId or githubId
+    return !this.googleId && !this.githubId; 
   }},
   role: { 
     type: String, 

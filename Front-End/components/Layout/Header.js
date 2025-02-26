@@ -28,29 +28,28 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
     }, [scroll]);
 
     const handleLogout = async () => {
-        try {
-            // Dynamically import SweetAlert2
-            const Swal = (await import('sweetalert2')).default;
-            
-            // Show confirmation dialog
-            const result = await Swal.fire({
-                title: 'Are you sure?',
-                text: 'You will be logged out of your account',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Yes, log out!',
-                cancelButtonText: 'Cancel'
-            });
+        const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-            if (result.isConfirmed) {
-                // Check if user is Google-authenticated
-                const isGoogleUser = user && user.googleId;
-                
-                if (isGoogleUser) {
+        // Confirm logout
+        const Swal = (await import('sweetalert2')).default;
+        const result = await Swal.fire({
+            title: 'Logout',
+            text: 'Are you sure you want to logout?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Logout',
+            cancelButtonText: 'Cancel'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                // Check authentication type
+                if (user && user.googleId) {
                     // Google logout
                     await axios.get("http://localhost:5000/api/users/google/logout", { withCredentials: true });
+                } else if (user && user.githubId) {
+                    // GitHub logout
+                    await axios.get("http://localhost:5000/api/users/github/logout", { withCredentials: true });
                 } else {
                     // Regular logout
                     await axios.post("http://localhost:5000/api/users/signout", {}, { withCredentials: true });
@@ -70,12 +69,24 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                 });
 
                 // Redirect to sign-in page
-                router.push("/page-signin");
+                router.push('/page-signin');
+            } catch (error) {
+                console.error("Logout error:", error);
+                
+                // If the logout API call fails, still clear localStorage and redirect
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                
+                Swal.fire({
+                    title: 'Logged Out',
+                    text: 'You have been logged out, but there was an issue contacting the server.',
+                    icon: 'info',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                
+                router.push('/page-signin');
             }
-        } catch (error) {
-            console.error("Logout error:", error);
-            // If SweetAlert2 failed to load, show a basic alert
-            alert('Failed to log out. Please try again.');
         }
     };
 
