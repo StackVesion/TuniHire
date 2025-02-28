@@ -4,8 +4,8 @@ const bcrypt = require("bcrypt");
 const UserSchema = new mongoose.Schema({
   googleId: String,
   githubId: String,
-  firstName: { type: String},
-  lastName: { type: String},
+  firstName: { type: String },
+  lastName: { type: String },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: function() { 
     // Password is required only if there's no googleId or githubId
@@ -34,7 +34,9 @@ const UserSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
   picture: String,
-  phoneNumber: String
-});
+  phoneNumber: String,
+  faceDescriptor: { type: Array, default: null },
+  faceId: { type: String, unique: true, sparse: true }, // ✅ Correction ici
+    });
 
 module.exports = mongoose.model("User", UserSchema);

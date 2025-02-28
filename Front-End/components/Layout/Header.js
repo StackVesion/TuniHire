@@ -90,6 +90,46 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
         }
     };
 
+    const handleFaceLogout = async () => {
+        const Swal = (await import('sweetalert2')).default;
+        const result = await Swal.fire({
+            title: 'Logout',
+            text: 'Are you sure you want to logout?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Logout',
+            cancelButtonText: 'Cancel'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                await axios.post("http://localhost:5000/api/users/signout", {}, { withCredentials: true });
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                Swal.fire({
+                    title: 'Logged Out!',
+                    text: 'You have been successfully logged out',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+                router.push('/page-signin');
+            } catch (error) {
+                console.error("Logout error:", error);
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                Swal.fire({
+                    title: 'Logged Out',
+                    text: 'You have been logged out, but there was an issue contacting the server.',
+                    icon: 'info',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                router.push('/page-signin');
+            }
+        }
+    };
+
     return (
         <>
             <header className={scroll ? "header sticky-bar stick" : "header sticky-bar"}>
@@ -233,7 +273,7 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                             </a>
                                         </Link>
                                         <button 
-                                            onClick={handleLogout} 
+                                            onClick={user.faceId ? handleFaceLogout : handleLogout} 
                                             className="btn-icon-logout" 
                                             title="Logout"
                                         >
