@@ -1,8 +1,12 @@
 import Layout from "../components/Layout/Layout";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/router";
+import Webcam from "react-webcam";
+import * as faceapi from "face-api.js";
+import * as tf from '@tensorflow/tfjs';
+import '@tensorflow/tfjs-backend-webgl';
 
 export default function Register() {
     const [formData, setFormData] = useState({
@@ -12,51 +16,112 @@ export default function Register() {
         password: "",
         rePassword: "",
     });
+
+    const [faceDescriptor, setFaceDescriptor] = useState(null);
+    const webcamRef = useRef(null);
+    const [error, setError] = useState("");
     const router = useRouter();
+    const [isModelLoaded, setIsModelLoaded] = useState(false);
+
+    useEffect(() => {
+        const loadModels = async () => {
+            try {
+                await tf.setBackend('webgl');
+                await tf.ready();
+                await Promise.all([
+                    faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
+                    faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+                    faceapi.nets.faceRecognitionNet.loadFromUri('/models')
+                ]);
+                setIsModelLoaded(true);
+            } catch (err) {
+                console.error("Erreur de chargement des modèles :", err);
+                setError("Impossible de charger les modèles de reconnaissance faciale.");
+            }
+        };
+
+        loadModels();
+    }, []);
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+    };
+
+    const captureFace = async () => {
+        if (!webcamRef.current || !isModelLoaded) {
+            alert("Les modèles ne sont pas encore chargés.");
+            return;
+        }
+
+        const video = webcamRef.current.video;
+        if (!video || video.readyState !== 4) {
+            alert("Impossible d'accéder à la webcam.");
+            return;
+        }
+
+        try {
+            const detections = await faceapi.detectSingleFace(video)
+                .withFaceLandmarks()
+                .withFaceDescriptor();
+            
+            if (!detections) {
+                alert("Aucun visage détecté, veuillez essayer à nouveau.");
+                return;
+            }
+
+            setFaceDescriptor(detections.descriptor);
+            console.log("Face Descriptor capturé :", detections.descriptor);
+            alert("Visage capturé avec succès !");
+        } catch (err) {
+            console.error("Erreur de détection du visage :", err);
+            setError("Impossible de détecter le visage. Essayez à nouveau.");
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-    
-        console.log("Form Data:", formData); // Debugging: Check the form data
-    
+        setError(""); // Réinitialiser l'erreur
+
         if (formData.password !== formData.rePassword) {
-            alert("Passwords do not match");
+            setError("Les mots de passe ne correspondent pas.");
             return;
         }
-    
+
+        if (!faceDescriptor) {
+            setError("Veuillez capturer votre visage avant de soumettre.");
+            return;
+        }
+
+        const requestBody = {
+            ...formData,
+            faceDescriptor: faceDescriptor ? Array.from(faceDescriptor) : undefined // ✅ Supprime faceDescriptor si null
+        };
+
+        console.log("📤 Données envoyées :", requestBody);
+
         try {
-            const response = await axios.post("http://localhost:5000/api/users/signup", {
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                email: formData.email,
-                password: formData.password,
-                rePassword: formData.rePassword,
-            });
+            const response = await axios.post("http://localhost:5000/api/users/signup", requestBody);
             if (response.data.token) {
                 localStorage.setItem("token", response.data.token);
                 router.push("/page-signin");
             }
         } catch (error) {
-            console.error("Registration failed:", error.response?.data?.message || error.message);
+            console.error("Erreur d'inscription :", error.response?.data?.message || error.message);
+            setError(error.response?.data?.message || "Une erreur s'est produite.");
         }
     };
-
     const handleGoogleSignIn = () => {
         window.location.href = "http://localhost:5000/auth/google";
     };
 
     const handleGitHubSignIn = () => {
         window.location.href = "http://localhost:5000/auth/github";
-    };
+    };  
 
     return (
-        <>
-            <Layout>
-                <section className="pt-100 login-register">
+        <Layout>
+             <section className="pt-100 login-register">
                     <div className="container">
                         <div className="row login-register-cover">
                             <div className="col-lg-4 col-md-6 col-sm-12 mx-auto">
@@ -76,70 +141,44 @@ export default function Register() {
                                         <span>Or continue with</span>
                                     </div>
                                 </div>
-                                <form className="login-register text-start mt-20" onSubmit={handleSubmit}>
-                                    <div className="form-group">
-                                        <label className="form-label" htmlFor="input-1">
-                                            First Name *
-                                        </label>
-                                        <input className="form-control" id="input-1" type="text" required name="firstName" placeholder="John" onChange={handleChange} />
+
+                            {error && (
+                                <div className="alert alert-danger" role="alert">
+                                    {error}
+                                </div>
+                            )}
+                            <form className="login-register text-start mt-20" onSubmit={handleSubmit}>
+                                {["firstName", "lastName", "email", "password", "rePassword"].map((field, index) => (
+                                    <div className="form-group" key={index}>
+                                        <label className="form-label">{field.replace(/([A-Z])/g, ' $1').trim()} *</label>
+                                        <input 
+                                            className="form-control" 
+                                            type={field.includes("password") ? "password" : "text"} 
+                                            required 
+                                            name={field} 
+                                            placeholder={field.charAt(0).toUpperCase() + field.slice(1)} 
+                                            value={formData[field]} 
+                                            onChange={handleChange} 
+                                        />
                                     </div>
-                                    <div className="form-group">
-                                        <label className="form-label" htmlFor="input-2">
-                                            Last Name *
-                                        </label>
-                                        <input className="form-control" id="input-2" type="text" required name="lastName" placeholder="Doe" onChange={handleChange} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label" htmlFor="input-3">
-                                            Email *
-                                        </label>
-                                        <input className="form-control" id="input-3" type="email" required name="email" placeholder="johndoe@gmail.com" onChange={handleChange} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label" htmlFor="input-4">
-                                            Password *
-                                        </label>
-                                        <input className="form-control" id="input-4" type="password" required name="password" placeholder="************" onChange={handleChange} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label" htmlFor="input-5">
-                                            Re-Password *
-                                        </label>
-                                        <input className="form-control" id="input-5" type="password" required name="rePassword" placeholder="************" onChange={handleChange} />
-                                    </div>
-                                    <div className="login_footer form-group d-flex justify-content-between">
-                                        <label className="cb-container">
-                                            <input type="checkbox" />
-                                            <span className="text-small">Agree our terms and policy</span>
-                                            <span className="checkmark" />
-                                        </label>
-                                        <Link legacyBehavior href="/page-contact">
-                                            <a className="text-muted">Lean more</a>
-                                        </Link>
-                                    </div>
-                                    <div className="form-group">
-                                        <button className="btn btn-brand-1 hover-up w-100" type="submit" name="login">
-                                            Submit &amp; Register
-                                        </button>
-                                    </div>
-                                    <div className="text-muted text-center">
-                                        Already have an account?
-                                        <Link legacyBehavior href="/page-signin">
-                                            <a>Sign in</a>
-                                        </Link>
-                                    </div>
-                                </form>
-                            </div>
-                            <div className="img-1 d-none d-lg-block">
-                                <img className="shape-1" src="assets/imgs/page/login-register/img-1.svg" alt="JobBox" />
-                            </div>
-                            <div className="img-2">
-                                <img src="assets/imgs/page/login-register/img-2.svg" alt="JobBox" />
-                            </div>
+                                ))}
+                                <div className="form-group">
+                                    <label className="form-label">Face ID</label>
+                                    <Webcam ref={webcamRef} screenshotFormat="image/png" width="100%" />
+                                    <button type="button" className="btn btn-secondary mt-2" onClick={captureFace}>
+                                        Capture Face
+                                    </button>
+                                </div>
+                                <div className="form-group">
+                                    <button className="btn btn-brand-1 hover-up w-100" type="submit">
+                                        Submit & Register
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
-                </section>
-            </Layout>
-        </>
+                </div>
+            </section>
+        </Layout>
     );
 }

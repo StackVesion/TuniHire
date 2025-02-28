@@ -1,6 +1,5 @@
 const express = require("express");
-const { getUsers, createUser, signIn, signOut } = require("../controllers/userController");
-const User = require("../models/User");
+const { getUsers, createUser, signIn, signOut, signInWithFaceID } = require("../controllers/userController");
 
 const router = express.Router();
 
@@ -8,10 +7,13 @@ const router = express.Router();
 router.get("/", getUsers);
 
 // Route to sign up/create a new user
-router.post("/signup", createUser); // Use createUser function from the controller
+router.post("/signup", createUser);
 
 // Route to sign in
 router.post("/signin", signIn);
+
+// Route to sign in with Face ID
+router.post("/signin/faceid", signInWithFaceID);
 
 // Route to sign out
 router.post("/signout", signOut);
