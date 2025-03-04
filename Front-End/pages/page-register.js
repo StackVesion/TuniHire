@@ -7,6 +7,7 @@ import Webcam from "react-webcam";
 import * as faceapi from "face-api.js";
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-webgl';
+import VerificationMessage from '../components/VerificationMessage';
 
 export default function Register() {
     const [formData, setFormData] = useState({
@@ -22,6 +23,8 @@ export default function Register() {
     const [error, setError] = useState("");
     const router = useRouter();
     const [isModelLoaded, setIsModelLoaded] = useState(false);
+    const [showVerification, setShowVerification] = useState(false);
+    const [registeredEmail, setRegisteredEmail] = useState('');
 
     useEffect(() => {
         const loadModels = async () => {
@@ -102,9 +105,10 @@ export default function Register() {
 
         try {
             const response = await axios.post("http://localhost:5000/api/users/signup", requestBody);
+            setRegisteredEmail(formData.email);
+            setShowVerification(true);
             if (response.data.token) {
                 localStorage.setItem("token", response.data.token);
-                router.push("/page-signin");
             }
         } catch (error) {
             console.error("Erreur d'inscription :", error.response?.data?.message || error.message);
@@ -123,6 +127,7 @@ export default function Register() {
         <Layout>
              <section className="pt-100 login-register">
                     <div className="container">
+                    {!showVerification ? (
                         <div className="row login-register-cover">
                             <div className="col-lg-4 col-md-6 col-sm-12 mx-auto">
                                 <div className="text-center">
@@ -175,10 +180,18 @@ export default function Register() {
                                     </button>
                                 </div>
                             </form>
+                          </div>
                         </div>
-                    </div>
-                </div>
+                        ) : (
+                            <div className="row justify-content-center">
+                                <div className="col-lg-6 col-md-8">
+                                    <VerificationMessage email={registeredEmail} />
+                                </div>
+                            </div>
+                        )}
+
+                 </div>
             </section>
-        </Layout>
+         </Layout>
     );
 }

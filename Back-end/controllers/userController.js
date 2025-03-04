@@ -2,6 +2,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const User = require("../models/User");
+const sendVerificationEmail = require('../config/emailService').sendVerificationEmail;
 
 // Get all users
 const getUsers = async (req, res) => {
@@ -54,6 +55,9 @@ const createUser = async (req, res) => {
             return res.status(400).json({ message: "Invalid face descriptor format" });
         }
         
+        const emailVerificationToken = crypto.randomBytes(32).toString('hex');
+        const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
         // Génération du faceId si un faceDescriptor est fourni
         let faceId = null;
         if (faceDescriptor) {
@@ -68,6 +72,9 @@ const createUser = async (req, res) => {
             password: hashedPassword,
             faceDescriptor: faceDescriptor || null,
             role: "candidate",
+            emailVerificationToken,
+            emailVerificationExpires,
+            isEmailVerified: false,
         });
 
         // Set faceId only if it is not null
@@ -76,6 +83,7 @@ const createUser = async (req, res) => {
         }
 
         await newUser.save();
+        await sendVerificationEmail(email, emailVerificationToken, firstName);
 
         // Génération du token JWT
         const token = jwt.sign(
@@ -116,6 +124,13 @@ const signIn = async (req, res) => {
         if (!user) {
             return res.status(400).json({ message: "User not found" });
         }
+                // Check email verification status first
+                if (!user.isEmailVerified) {
+                    return res.status(403).json({ 
+                        message: "Please verify your email before signing in",
+                        isEmailVerified: false
+                    });
+                }
 
         // If the user signed up through Google, ask them to use Google sign-in
         if (user.googleId && !user.password) {
@@ -144,7 +159,8 @@ const signIn = async (req, res) => {
             email: user.email,
             firstName: user.firstName,
             lastName: user.lastName,
-            role: user.role
+            role: user.role,
+            isEmailVerified: true
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -156,6 +172,7 @@ const signInWithFaceID = async (req, res) => {
     const { faceDescriptor } = req.body;
 
     try {
+
         // Check if the face descriptor is provided
         if (!faceDescriptor) {
             return res.status(400).json({ message: "Face descriptor is required" });
@@ -176,6 +193,13 @@ const signInWithFaceID = async (req, res) => {
                     { expiresIn: "1h" }
                 );
 
+                // Check email verification status first
+                if (!user.isEmailVerified) {
+                    return res.status(403).json({ 
+                        message: "Please verify your email before signing in",
+                        isEmailVerified: false
+                    });
+                }
                 // Include firstName and lastName in the response
                 return res.status(200).json({ 
                     token, 
@@ -276,6 +300,33 @@ const signOut = (req, res) => {
     }
 };
 
+const verifyEmail = async (req, res) => {
+    const { token } = req.params;
+
+    try {
+        const user = await User.findOne({
+            emailVerificationToken: token,
+            emailVerificationExpires: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({
+                message: "Invalid or expired verification token"
+            });
+        }
+
+        user.isEmailVerified = true;
+        user.emailVerificationToken = undefined;
+        user.emailVerificationExpires = undefined;
+        await user.save();
+
+        res.status(200).json({
+            message: "Email verified successfully"
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
 
 module.exports = {
     getUsers,
@@ -283,5 +334,6 @@ module.exports = {
     signIn,
     signInWithFaceID,
     signOut,
-    handleGoogleUser
+    handleGoogleUser,
+    verifyEmail
 };
