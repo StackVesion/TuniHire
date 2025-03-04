@@ -37,6 +37,9 @@ const UserSchema = new mongoose.Schema({
   phoneNumber: String,
   faceDescriptor: { type: Array, default: null },
   faceId: { type: String, unique: true, sparse: true }, // ✅ Correction ici
-    });
+  isEmailVerified: { type: Boolean, default: false },
+  emailVerificationToken: String,
+  emailVerificationExpires: Date
+  });
 
 module.exports = mongoose.model("User", UserSchema);
