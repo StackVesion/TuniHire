@@ -311,7 +311,7 @@ const PurchaseTransaction = () => {
                 <div className="col-md-6">
                   <div className="mb-4">
                     <ImageWithBasePath
-                      src="assets/img/logo.svg"
+                      src="assets/Image1.png"
                       className="img-fluid"
                       alt="logo"
                     />

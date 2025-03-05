@@ -1,19 +1,183 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { all_routes } from "../../router/all_routes";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 import ImageWithBasePath from "../../../core/common/imageWithBasePath";
 import { Link } from "react-router-dom";
 import { InputOtp } from 'primereact/inputotp';
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "../../../core/data/redux/store";
+import { loginStart, loginSuccess, loginFailure, clearError } from "../../../core/data/redux/authSlice";
+import axios from "axios";
+import Swal from "sweetalert2";
 
 const TwoStepVerification = () => {
   const routes = all_routes;
-  const navigation = useNavigate();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { verificationEmail, loading, error } = useSelector((state: RootState) => state.auth);
+  const [otp, setOtp] = useState<string>("");
+  const [countdown, setCountdown] = useState<number>(600); // 10 minutes in seconds
+  const [maskedEmail, setMaskedEmail] = useState<string>("");
 
-  const navigationPath = () => {
-    navigation(routes.login);
+  // Redirect to login if no verification email is set
+  useEffect(() => {
+    console.log("TwoStepVerification - verificationEmail:", verificationEmail);
+    
+    if (!verificationEmail) {
+      console.log("No verification email found, redirecting to login");
+      navigate(routes.login);
+    } else {
+      console.log("Verification email found, creating masked email");
+      // Create masked email (e.g., j***@example.com)
+      const parts = verificationEmail.split('@');
+      if (parts.length === 2) {
+        const name = parts[0];
+        const domain = parts[1];
+        const maskedName = name.substring(0, 1) + '*'.repeat(Math.min(name.length - 1, 3));
+        setMaskedEmail(`${maskedName}@${domain}`);
+      }
+    }
+  }, [verificationEmail, navigate, routes.login]);
+
+  // Handle countdown timer
+  useEffect(() => {
+    if (countdown <= 0) return;
+    
+    const timer = setInterval(() => {
+      setCountdown(prev => prev - 1);
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [countdown]);
+
+  // Format time as MM:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const [token, setTokens] = useState<any>();
+  // Clear errors when component unmounts
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
+
+  // Show error if verification fails
+  useEffect(() => {
+    if (error) {
+      Swal.fire({
+        title: "Verification Failed",
+        text: error,
+        icon: "error",
+        confirmButtonText: "Try Again"
+      }).then(() => {
+        dispatch(clearError());
+      });
+    }
+  }, [error, dispatch]);
+
+  // Verify OTP
+  const verifyOtp = useCallback(async () => {
+    if (!otp || otp.length < 4) {
+      Swal.fire({
+        title: "Invalid Code",
+        text: "Please enter a valid 4-digit verification code",
+        icon: "warning",
+        confirmButtonText: "OK"
+      });
+      return;
+    }
+
+    try {
+      dispatch(loginStart());
+
+      // Call the backend API to verify OTP
+      const response = await axios.post("http://localhost:5000/api/users/verify-otp", {
+        email: verificationEmail,
+        otp
+      });
+
+      // Check if user is admin
+      if (response.data.role !== "admin") {
+        dispatch(loginFailure("Access denied. Admin privileges required."));
+        return;
+      }
+
+      // Successful verification
+      dispatch(loginSuccess({
+        token: response.data.token,
+        user: {
+          id: response.data.userId,
+          email: response.data.email,
+          firstName: response.data.firstName,
+          lastName: response.data.lastName,
+          role: response.data.role
+        }
+      }));
+
+      Swal.fire({
+        title: "Verification Successful",
+        text: "Welcome to the Admin Panel",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false
+      });
+      navigate(routes.adminDashboard, { replace: true });
+    } catch (error: any) {
+      let errorMessage = "Verification failed";
+      
+      if (error.response) {
+        errorMessage = error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      dispatch(loginFailure(errorMessage));
+    }
+  }, [otp, verificationEmail, dispatch, navigate, routes.adminDashboard]);
+
+  // Resend OTP
+  const resendOtp = useCallback(async () => {
+    if (!verificationEmail) return;
+
+    try {
+      const response = await axios.post("http://localhost:5000/api/users/resend-otp", {
+        email: verificationEmail
+      });
+
+      // Reset the countdown
+      setCountdown(600);
+
+      Swal.fire({
+        title: "Code Resent",
+        text: "A new verification code has been sent to your email",
+        icon: "success",
+        confirmButtonText: "OK"
+      });
+    } catch (error: any) {
+      let errorMessage = "Failed to resend verification code";
+      
+      if (error.response) {
+        errorMessage = error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Swal.fire({
+        title: "Error",
+        text: errorMessage,
+        icon: "error",
+        confirmButtonText: "OK"
+      });
+    }
+  }, [verificationEmail]);
+
+  // Go back to login
+  const goBackToLogin = () => {
+    navigate(routes.login);
+  };
 
   return (
     <div className="container-fuild">
@@ -51,7 +215,7 @@ const TwoStepVerification = () => {
                   <div className="vh-100 d-flex flex-column justify-content-between p-4 pb-0">
                     <div className=" mx-auto mb-5 text-center">
                       <ImageWithBasePath
-                        src="assets/img/logo.svg"
+                        src="assets/logoBanner.png"
                         className="img-fluid"
                         alt="Logo"
                       />
@@ -61,76 +225,62 @@ const TwoStepVerification = () => {
                         <h2 className="mb-2">2 Step Verification</h2>
                         <p className="mb-0">
                           Please enter the OTP received to confirm your account
-                          ownership. A code has been send to ******doe@example.com
+                          ownership. A code has been sent to {maskedEmail}
                         </p>
                       </div>
                       <div className="text-center otp-input">
                         <div className="d-flex justify-content-center align-items-center mb-3">
-                          {/* <input
-                            type="text"
-                            className=" rounded w-100 py-sm-3 py-2 text-center fs-26 fw-bold me-3"
-                            id="digit-1"
-                            name="digit-1"
-                            data-next="digit-2"
-                            maxLength={1}
+                          <InputOtp 
+                            value={otp} 
+                            onChange={(e) => setOtp(e.value?.toString() || "")} 
+                            integerOnly 
+                            length={4}
                           />
-                          <input
-                            type="text"
-                            className=" rounded w-100 py-sm-3 py-2 text-center fs-26 fw-bold me-3"
-                            id="digit-2"
-                            name="digit-2"
-                            data-next="digit-3"
-                            data-previous="digit-1"
-                            maxLength={1}
-                          />
-                          <input
-                            type="text"
-                            className=" rounded w-100 py-sm-3 py-2 text-center fs-26 fw-bold me-3"
-                            id="digit-3"
-                            name="digit-3"
-                            data-next="digit-4"
-                            data-previous="digit-2"
-                            maxLength={1}
-                          />
-                          <input
-                            type="text"
-                            className=" rounded w-100 py-sm-3 py-2 text-center fs-26 fw-bold"
-                            id="digit-4"
-                            name="digit-4"
-                            data-next="digit-5"
-                            data-previous="digit-3"
-                            maxLength={1}
-                          /> */}
-                          <InputOtp value={token} onChange={(e) => setTokens(e.value)} integerOnly />
                         </div>
                         <div>
                           <div className="badge bg-danger-transparent mb-3">
                             <p className="d-flex align-items-center ">
                               <i className="ti ti-clock me-1" />
-                              09:59
+                              {formatTime(countdown)}
                             </p>
                           </div>
                           <div className="mb-3 d-flex justify-content-center">
                             <p className="text-gray-9">
                               Didn't get the OTP?{" "}
-                              <Link
-                                to="#"
-                                className="text-primary"
+                              <button
+                                type="button"
+                                onClick={resendOtp}
+                                className="btn btn-link text-primary p-0"
+                                disabled={countdown > 540} // Disable for first minute
                               >
                                 Resend OTP
-                              </Link>
+                              </button>
                             </p>
                           </div>
                         </div>
                       </div>
                       <div className="mb-3">
-                        <button type="submit" onClick={navigationPath} className="btn btn-primary w-100">
-                          Verify &amp; Proceed
+                        <button 
+                          type="button" 
+                          onClick={verifyOtp} 
+                          className="btn btn-primary w-100"
+                          disabled={loading || !otp || otp.length < 4}
+                        >
+                          {loading ? 'Verifying...' : 'Verify & Proceed'}
+                        </button>
+                      </div>
+                      <div className="text-center">
+                        <button 
+                          type="button" 
+                          onClick={goBackToLogin} 
+                          className="btn btn-link"
+                        >
+                          Back to Login
                         </button>
                       </div>
                     </div>
                     <div className="mt-5 pb-4 text-center">
-                      <p className="mb-0 text-gray-9">Copyright © 2024 - Smarthr</p>
+                      <p className="mb-0 text-gray-9">Copyright 2024 - TuniHire</p>
                     </div>
                   </div>
                 </form>

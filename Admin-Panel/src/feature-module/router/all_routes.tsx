@@ -56,22 +56,17 @@ export const all_routes = {
   login: "/login",
   register: "/register",
   forgotPassword: "/forgot-password",
-  forgotPassword2: "/forgot-password-2",
-  forgotPassword3: "/forgot-password-3",
+ 
   twoStepVerification: "/two-step-verification",
-  twoStepVerification2: "/two-step-verification-2",
-  twoStepVerification3: "/two-step-verification-3",
+
   success: "/success",
   emailVerification: "/email-verification",
-  emailVerification2: "/email-verification-2",
-  emailVerification3: "/email-verification-3",
+
   lockScreen: "/lock-screen",
   resetPassword: "/reset-password",
-  resetPassword2: "/reset-password-2",
-  resetPassword3: "/reset-password-3",
+  
   resetPasswordSuccess: "/success",
-  resetPasswordSuccess2: "/success-2",
-  resetPasswordSuccess3: "/success-3",
+ 
 
   //ui routes
   alert: "/ui-alert",

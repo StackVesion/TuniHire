@@ -93,7 +93,7 @@ const EmailVerification = () => {
                   <div>
                     <div className=" mx-auto mb-5 text-center">
                       <ImageWithBasePath
-                        src="assets/img/authentication/authentication-logo.svg"
+                        src="assets/Image1.png"
                         className="img-fluid"
                         alt="Logo"
                       />

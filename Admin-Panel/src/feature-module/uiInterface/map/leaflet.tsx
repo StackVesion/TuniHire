@@ -137,7 +137,7 @@ const Leaflet = () => {
   
     // Custom Icon
     const greenIcon = L.icon({
-      iconUrl: "assets/img/logo.svg", // Path to your SVG file
+      iconUrl: "assets/Image1.png", // Path to your SVG file
       iconSize: [80, 25], // Size of the icon
       iconAnchor: [22, 94], // Anchor point of the icon
       popupAnchor: [-3, -76], // Point where the popup opens relative to the anchor
