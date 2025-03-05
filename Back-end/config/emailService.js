@@ -4,7 +4,7 @@ const getEmailTemplate = require('../templates/emailVerification');
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER,
+        user: process.env.EMAIL_APP_USER,
         pass: process.env.EMAIL_APP_PASSWORD,
         port: process.env.SMTP_PORT,
 
@@ -16,7 +16,7 @@ const sendVerificationEmail = async (email, verificationToken, firstName) => {
     const htmlContent = getEmailTemplate(verificationUrl, firstName || 'there');
 
     const mailOptions = {
-        from: `"TuniHire" <${process.env.EMAIL_USER}>`,
+        from: `"TuniHire" <${process.env.EMAIL_APP_USER}>`,
         to: email,
         subject: 'Verify Your Email Address',
         html: htmlContent
