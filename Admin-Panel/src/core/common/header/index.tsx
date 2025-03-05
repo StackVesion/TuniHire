@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   setDataLayout,
@@ -10,11 +10,17 @@ import {
   toggleMiniSidebar,
 } from "../../data/redux/sidebarSlice";
 import { all_routes } from "../../../feature-module/router/all_routes";
+import { logout } from '../../data/redux/authSlice';
+import { RootState } from '../../data/redux/store';
+import Swal from 'sweetalert2';
+
 const Header = () => {
   const routes = all_routes;
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const dataLayout = useSelector((state: any) => state.themeSetting.dataLayout);
   const Location = useLocation();
+  const { user } = useSelector((state: RootState) => state.auth);
 
   const [subOpen, setSubopen] = useState<any>("");
   const [subsidebar, setSubsidebar] = useState("");
@@ -53,8 +59,29 @@ const Header = () => {
     }
   };
 
-
-
+  // Handle logout
+  const handleLogout = () => {
+    Swal.fire({
+      title: 'Logout',
+      text: 'Are you sure you want to logout?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, logout',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        dispatch(logout());
+        Swal.fire({
+          title: 'Logged Out',
+          text: 'You have been successfully logged out',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false
+        });
+        navigate(routes.login, { replace: true });
+      }
+    });
+  };
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const toggleFullscreen = () => {
@@ -74,6 +101,10 @@ const Header = () => {
       }
     }
   };
+
+  // Get user's first name and last name or use default
+  const fullName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'Admin User';
+  const userEmail = user ? user.email : 'admin@example.com';
 
   return (
     <>
@@ -118,7 +149,7 @@ const Header = () => {
 								<Link to="#" className="btn btn-menubar me-1" data-bs-toggle="dropdown">
 									<i className="ti ti-layout-grid"></i>
 								</Link>
-								<div className="dropdown-menu dropdown-lg dropdown-menu-start">
+								<div className="dropdown-menu dropdown-menu-start">
 									<div className="card mb-0 border-0 shadow-none">
 										<div className="card-header">
 											<h4>CRM</h4>
@@ -350,8 +381,8 @@ const Header = () => {
 													<ImageWithBasePath src="assets/img/profiles/avatar-12.jpg" alt="img"/>
 												</span>
 												<div>
-													<h5 className="mb-0">Kevin Larry</h5>
-													<p className="fs-12 fw-medium mb-0">warren@example.com</p>
+													<h5 className="mb-0">{fullName}</h5>
+													<p className="fs-12 fw-medium mb-0">{userEmail}</p>
 												</div>
 											</div>
 										</div>
@@ -373,23 +404,28 @@ const Header = () => {
 											</Link>
 										</div>
 										<div className="card-footer">
-											<Link className="dropdown-item d-inline-flex align-items-center p-0 py-2" to={routes.login}><i className="ti ti-login me-2"></i>Logout</Link>
+											<button 
+												className="dropdown-item d-inline-flex align-items-center p-0 py-2 border-0 bg-transparent" 
+												onClick={handleLogout}
+											>
+												<i className="ti ti-logout me-2"></i>Logout
+											</button>
 										</div>
 									</div>
 								</div>
 							</div>
-						</div>
-					</div>
-				</div>
+							<div className="dropdown mobile-user-menu">
+								<Link to="#" className="nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+									<i className="fa fa-ellipsis-v"></i>
+								</Link>
+								<div className="dropdown-menu dropdown-menu-end">
+									<Link className="dropdown-item" to={routes.profile}>My Profile</Link>
+									<Link className="dropdown-item" to={routes.profilesettings}>Settings</Link>
+									<button className="dropdown-item" onClick={handleLogout}>Logout</button>
+								</div>
+							</div>
 
-				<div className="dropdown mobile-user-menu">
-					<Link to="#" className="nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-						<i className="fa fa-ellipsis-v"></i>
-					</Link>
-					<div className="dropdown-menu dropdown-menu-end">
-						<Link className="dropdown-item" to={routes.profile}>My Profile</Link>
-						<Link className="dropdown-item" to={routes.profilesettings}>Settings</Link>
-						<Link className="dropdown-item" to={routes.login}>Logout</Link>
+						</div>
 					</div>
 				</div>
 
@@ -399,6 +435,6 @@ const Header = () => {
       {/* /Header */}
     </>
   );
-};
+}
 
 export default Header;

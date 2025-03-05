@@ -2,6 +2,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const User = require("../models/User");
+const { generateOTP, sendOTPEmail } = require("../utils/emailUtils");
 
 // Get all users
 const getUsers = async (req, res) => {
@@ -18,7 +19,7 @@ const createUser = async (req, res) => {
     try {
         let { firstName, lastName, email, password, rePassword, faceDescriptor } = req.body;
 
-        console.log("📤 Request Body:", req.body);
+        console.log(" Request Body:", req.body);
 
         // Nettoyage des entrées
         firstName = firstName.trim();
@@ -87,7 +88,7 @@ const createUser = async (req, res) => {
         res.status(201).json({ token, userId: newUser._id, email: newUser.email });
 
     } catch (error) {
-        console.error("❌ Error creating user:", error);
+        console.error(" Error creating user:", error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -130,6 +131,92 @@ const signIn = async (req, res) => {
             return res.status(400).json({ message: "Invalid credentials" });
         }
 
+        // Generate OTP for two-step verification
+        const otp = generateOTP(4);
+        const otpExpiry = new Date();
+        otpExpiry.setMinutes(otpExpiry.getMinutes() + 10); // OTP valid for 10 minutes
+
+        // Save OTP and expiry to the user record
+        user.otp = otp;
+        user.otpExpiry = otpExpiry;
+        user.isOtpVerified = false;
+        await user.save();
+
+        // IMPORTANT WORKAROUND FOR TESTING: Log the full OTP to console
+        console.log(`--------------------------------------------------------------`);
+        console.log(`🔑 DEVELOPMENT MODE: OTP CODE FOR TESTING IS: ${otp}`);
+        console.log(`--------------------------------------------------------------`);
+
+        // Try to send email, but don't fail if it doesn't work in development
+        try {
+            // Send OTP to user's email
+            const emailResult = await sendOTPEmail(user.email, otp, user.firstName);
+            
+            if (!emailResult.success) {
+                console.error(`Failed to send OTP email to ${email}. Error: ${emailResult.error}`);
+                console.log(`For development/testing purposes, use the OTP displayed in the console above.`);
+                
+                // In production, this would return an error
+                if (process.env.NODE_ENV === 'production') {
+                    return res.status(500).json({ 
+                        message: "Failed to send verification code. Please try again later." 
+                    });
+                }
+            } else {
+                console.log(`✅ OTP email sent successfully to ${email}`);
+            }
+        } catch (error) {
+            console.error("Error sending email:", error.message);
+            if (process.env.NODE_ENV === 'production') {
+                return res.status(500).json({ message: "Failed to send verification code" });
+            }
+            console.log(`For development/testing purposes, use the OTP displayed in the console above.`);
+        }
+
+        // Send a response indicating 2FA is required
+        console.log("Sending OTP requirement response:", {
+            email: user.email,
+            requiresOtp: true
+        });
+
+        // Send a response indicating 2FA is required
+        res.status(200).json({ 
+            message: "Verification code sent to your email",
+            email: user.email,
+            requiresOtp: true,
+            userId: user._id,
+            role: user.role
+        });
+    } catch (error) {
+        console.error("Error in signIn:", error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Verify OTP for two-step verification
+const verifyOtp = async (req, res) => {
+    const { email, otp } = req.body;
+
+    try {
+        // Find the user by email
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ message: "User not found" });
+        }
+
+        // Check if OTP is valid and not expired
+        if (!user.otp || user.otp !== otp) {
+            return res.status(400).json({ message: "Invalid verification code" });
+        }
+
+        if (!user.otpExpiry || new Date() > user.otpExpiry) {
+            return res.status(400).json({ message: "Verification code has expired" });
+        }
+
+        // Mark OTP as verified
+        user.isOtpVerified = true;
+        await user.save();
+
         // Generate a JWT token
         const token = jwt.sign(
             { userId: user._id, email: user.email },
@@ -137,7 +224,7 @@ const signIn = async (req, res) => {
             { expiresIn: "1h" }
         );
 
-        // Include firstName and lastName in the response
+        // Include user information in the response
         res.status(200).json({ 
             token, 
             userId: user._id, 
@@ -145,6 +232,43 @@ const signIn = async (req, res) => {
             firstName: user.firstName,
             lastName: user.lastName,
             role: user.role
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Resend OTP to user's email
+const resendOtp = async (req, res) => {
+    const { email } = req.body;
+
+    try {
+        // Find the user by email
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ message: "User not found" });
+        }
+
+        // Generate new OTP
+        const otp = generateOTP(4);
+        const otpExpiry = new Date();
+        otpExpiry.setMinutes(otpExpiry.getMinutes() + 10); // OTP valid for 10 minutes
+
+        // Save new OTP and expiry to the user record
+        user.otp = otp;
+        user.otpExpiry = otpExpiry;
+        user.isOtpVerified = false;
+        await user.save();
+
+        // Send OTP to user's email
+        const emailResult = await sendOTPEmail(user.email, otp, user.firstName);
+        if (!emailResult.success) {
+            return res.status(500).json({ message: "Failed to send verification code" });
+        }
+
+        res.status(200).json({ 
+            message: "New verification code sent to your email",
+            email: user.email
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -283,5 +407,7 @@ module.exports = {
     signIn,
     signInWithFaceID,
     signOut,
-    handleGoogleUser
+    handleGoogleUser,
+    verifyOtp,
+    resendOtp
 };

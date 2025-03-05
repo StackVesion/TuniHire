@@ -36,7 +36,10 @@ const UserSchema = new mongoose.Schema({
   picture: String,
   phoneNumber: String,
   faceDescriptor: { type: Array, default: null },
-  faceId: { type: String, unique: true, sparse: true }, // ✅ Correction ici
-    });
+  faceId: { type: String, unique: true, sparse: true },
+  otp: { type: String },
+  otpExpiry: { type: Date },
+  isOtpVerified: { type: Boolean, default: false }
+});
 
 module.exports = mongoose.model("User", UserSchema);
