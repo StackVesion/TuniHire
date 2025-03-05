@@ -1,0 +1,25 @@
+{
+    "name": "jobbox-dashboard",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "next lint",
+        "sass": "sass --watch public/assets/scss/style.scss:public/assets/css/style.css"
+    },
+    "dependencies": {
+        "@headlessui/react": "^1.7.13",
+        "chart.js": "^4.2.1",
+        "next": "^15.1.7",
+        "react": "18.2.0",
+        "react-chartjs-2": "^5.2.0",
+        "react-circular-progressbar": "^2.1.0",
+        "react-dom": "18.2.0",
+        "sass": "^1.59.3",
+        "swiper": "^9.1.1",
+        "wow.js": "^1.2.2",
+        "wowjs": "^1.1.3"
+    }
+}

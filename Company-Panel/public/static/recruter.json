@@ -1,0 +1,142 @@
+[
+    {
+        "img": "brand-1.png",
+        "title": "Car Toys",
+        "rating": "66",
+        "location": "New York, US",
+        "open": 12
+    },
+    {
+        "img": "brand-2.png",
+        "title": "Carols Daughter",
+        "rating": "18",
+        "location": "London, UK",
+        "open": 25
+    },
+    {
+        "img": "brand-3.png",
+        "title": "Amazon",
+        "rating": "52",
+        "location": "Tokyo,Japan",
+        "open": 54
+    },
+    {
+        "img": "brand-4.png",
+        "title": "Baseball Savings",
+        "rating": "85",
+        "location": "Chicago, US",
+        "open": 6
+    },
+    {
+        "img": "brand-5.png",
+        "title": "Ashford",
+        "rating": "25",
+        "location": "Toronto, Italia",
+        "open": 67
+    },
+    {
+        "img": "brand-6.png",
+        "title": "Callaway Golf",
+        "rating": "34",
+        "location": "San Francisco, US",
+        "open": 45
+    },
+    {
+        "img": "brand-7.png",
+        "title": "Percepta",
+        "rating": "97",
+        "location": "Chinatown, Singpore",
+        "open": 64
+    },
+    {
+        "img": "brand-8.png",
+        "title": "Exela Movers",
+        "rating": "67",
+        "location": "New York, US",
+        "open": 87
+    },
+    {
+        "img": "brand-9.png",
+        "title": "Ibotta, Inc",
+        "rating": "45",
+        "location": "New York, US",
+        "open": 23
+    },
+    {
+        "img": "brand-1.png",
+        "title": "Wanderu ",
+        "rating": "08",
+        "location": "New York, US",
+        "open": 45
+    },
+    {
+        "img": "brand-2.png",
+        "title": "Aceable Inc.",
+        "rating": "54",
+        "location": "New York, US",
+        "open": 67
+    },
+    {
+        "img": "brand-3.png",
+        "title": "Intrepid Travel",
+        "rating": "123",
+        "location": "New York, US",
+        "open": 53
+    },
+    {
+        "img": "brand-4.png",
+        "title": "Defendify ",
+        "rating": "64",
+        "location": "New York, US",
+        "open": 56
+    },
+    {
+        "img": "brand-5.png",
+        "title": "Twisters ",
+        "rating": "34",
+        "location": "New York, US",
+        "open": 66
+    },
+    {
+        "img": "brand-6.png",
+        "title": "Fireworks",
+        "rating": "12",
+        "location": "New York, US",
+        "open": 12
+    },
+    {
+        "img": "brand-1.png",
+        "title": "Car Toys",
+        "rating": "66",
+        "location": "New York, US",
+        "open": 12
+    },
+    {
+        "img": "brand-2.png",
+        "title": "Carols Daughter",
+        "rating": "18",
+        "location": "London, UK",
+        "open": 25
+    },
+    {
+        "img": "brand-3.png",
+        "title": "Amazon",
+        "rating": "52",
+        "location": "Tokyo,Japan",
+        "open": 54
+    },
+    {
+        "img": "brand-4.png",
+        "title": "Baseball Savings",
+        "rating": "85",
+        "location": "Chicago, US",
+        "open": 6
+    },
+    {
+        "img": "brand-5.png",
+        "title": "Ashford",
+        "rating": "25",
+        "location": "Toronto, Italia",
+        "open": 67
+    }
+]

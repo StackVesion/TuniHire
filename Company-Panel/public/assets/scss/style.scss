@@ -1,0 +1,62 @@
+/***
+ Template Name: JobBox
+ Description: Job Board Finder HTML template
+ Version: 4.1
+ License: GNU General Public License v2 or later
+ License URI: http://www.gnu.org/licenses/gpl-2.0.html
+==============================
+TABLE CONTENT
+ Import Google Fonts
+ Include Third Party CSS Library
+ GENERAL
+ HEADER
+ Offcanvas Sidebar
+ Search form
+ Main header
+ Mega menu
+ Header layouts
+ Page layouts
+ Pagination
+ Breadcrumb
+ CATEGORY PAGES
+ SINGLE POST
+ Author box
+ comment
+ Post share social
+ WP STYPE
+ Custom amine
+***/
+
+// Configuration and helpers
+@import 'abstracts/variables',
+'abstracts/functions',
+'abstracts/mixins';
+// Vendors
+@import 'vendors/vendors-import';
+// Base stuff
+@import 'base/common',
+'base/animation',
+'base/typography';
+// Components
+@import 'components/buttons',
+'components/card',
+'components/tabs',
+'components/circle-chart',
+'components/slider',
+'components/form',
+'components/misc';
+
+// Layout-related sections
+@import 'layout/header',
+'layout/navigation',
+'layout/sidebar',
+'layout/footer',
+'layout/spacing';
+// Page-specific styles
+@import 'pages/pages',
+'pages/profile',
+'pages/post-job',
+'pages/my-resume',
+'pages/dashboard-home';
+// Responsive
+@import 'layout/responsive';
