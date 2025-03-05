@@ -1,0 +1,211 @@
+.form-group {
+	margin-bottom: 1rem;
+}
+.cb-container {
+    display: block;
+    position: relative;
+    padding-left: 35px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    line-height: 21px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.cb-container input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.checkmark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 24px;
+    width: 24px;
+    background-color: $background-white;
+    border: 1px solid $color-border-2;
+    border-radius: 7px;
+}
+
+.cb-container input:checked~.checkmark {
+    border: 2px solid $color-brand-2;
+}
+
+.checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+}
+
+.cb-container input:checked~.checkmark:after {
+    display: block;
+}
+
+.cb-container .checkmark:after {
+    left: 0px;
+    top: -1px;
+    width: 21px;
+    height: 22px;
+    border-radius: 5px;
+    // background: $color-brand-2 url(../imgs/template/icons/tick.svg) no-repeat center;
+}
+
+
+/*COMPONENTS -> FORM*/
+
+input:-moz-placeholder,
+textarea:-moz-placeholder {
+    opacity: 1;
+}
+
+input::-webkit-input-placeholder,
+textarea::-webkit-input-placeholder {
+    opacity: 1;
+}
+
+input::-moz-placeholder,
+textarea::-moz-placeholder {
+    opacity: 1;
+}
+
+input:-ms-input-placeholder,
+textarea:-ms-input-placeholder {
+    opacity: 1;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="date"],
+input[type="time"],
+input[type="tel"] {
+    border: 1px solid $color-border-2;
+    border-radius: 4px;
+    height: 50px;
+    box-shadow: none;
+    padding-left: 20px;
+    font-size: $font-sm;
+    width: 100%;
+    &:focus {
+        border: 1px solid $color-border-3;
+    }
+}
+
+select {
+    width: 100%;
+    background: transparent;
+    border: 0px solid $color-border-1;
+    -webkit-box-shadow: none;
+    box-shadow: none;
+    font-size: $font-md;
+    color: $color-text-paragraph;
+}
+
+option {
+    background: #fff;
+    border: 0px solid #626262;
+    padding-left: 10px;
+    font-size: $font-md;
+}
+
+/*contact form*/
+
+.mt-6 {
+    margin-top: 6px !important;
+}
+.modal-lg, .modal-xl {
+	max-width: 600px;
+}
+.modal-content {
+    .btn-close {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        z-index: 2;
+    }
+}
+.apply-job-form {
+    background-image: url(../imgs/template/bg-1.svg);
+    background-repeat: no-repeat;
+    .text-brand-2 {
+        background: #d5deff;
+        display: inline-block;
+        border-radius: 8px;
+        padding: 5px 15px;
+    }
+}
+.form-login-cover {
+    margin: 50px 0 0 0;
+    border-radius: 16px;
+    border: 1px solid $border-color;
+    padding: 50px 30px;
+    box-shadow: $box-shadow-2;
+}
+.divider-text-center {
+    position: relative;
+    text-align: center;
+    &::after {
+        content: "";
+        height: 1px;
+        width: 100%;
+        position: absolute;
+        background-color: $border-color;
+        top: 50%;
+        left: 0;
+        z-index: 1;
+    }
+    span {
+        display: inline-block;
+        background-color: #fff;
+        padding: 0 15px;
+        z-index: 2;
+        position: relative;
+    }
+}
+.box-list-character
+{
+    background: $background-white;
+    border: 1px solid $color-border-2;
+    border-radius: 8px;
+    padding: 10px;
+    display: table;
+    table-layout: fixed;
+    margin: 30px auto auto auto;
+    width: 100%;
+    ul
+    {
+        display: flex;
+        padding: 0px;
+        list-style: none;
+        margin: 0px;
+        li
+        {
+            display: inline-block;
+            width: 100%;
+            text-align: center;
+            a
+            {
+                font-size: $font-md;
+                line-height: 28px;
+                color: $color-text-paragraph;
+                text-transform: uppercase;
+                display: inline-block;
+                width: 28px;
+                max-width: 28px;
+                height: 28px;
+                &:hover, &.active
+                {
+                    background-color: $color-border-2;
+                    border-radius: 50%;
+                    text-align: center;
+                    color: $color-brand-2;
+                }
+            }
+        }
+    }
+}
