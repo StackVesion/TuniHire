@@ -1,0 +1,45 @@
+
+.sidebar-border-bg {
+    border: 1px solid $color-border-2;
+    background: $background-7 url(../imgs/page/dashboard/bg-hiring.svg) no-repeat bottom left;
+    padding: 30px 40px 260px 40px;
+    border-radius: 4px;
+    margin-bottom: 40px;
+    .text-grey {
+        color: $color-border-1;
+        font-size: 24px;
+        line-height: 37px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        display: block;
+    }
+    .text-hiring {
+        color: $color-text-paragraph-2;
+        font-size: 36px;
+        font-weight: 800;
+        line-height: 57px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        display: inline-block;
+        margin-top: -15px;
+    }
+}
+
+.nav {
+    display: inline-block !important;
+}
+.btn-expanded {
+    background: $background-white url(../imgs/page/dashboard/icon-arrow-left.svg) no-repeat center;
+    height: 30px;
+    width: 30px;
+    border: 1px solid $color-border-2;
+    border-radius: 50%;
+    position: absolute;
+    top: -15px;
+    right: -16px;
+    padding: 0px;
+    z-index: 999;
+}
+.btn-collapsed {
+    background: $background-white url(../imgs/page/dashboard/icon-arrow-right.svg) no-repeat center;
+}

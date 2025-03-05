@@ -37,9 +37,14 @@ const UserSchema = new mongoose.Schema({
   phoneNumber: String,
   faceDescriptor: { type: Array, default: null },
   faceId: { type: String, unique: true, sparse: true },
+  // OTP for two-step verification
   otp: { type: String },
   otpExpiry: { type: Date },
-  isOtpVerified: { type: Boolean, default: false }
+  isOtpVerified: { type: Boolean, default: false },
+  // Email verification
+  isEmailVerified: { type: Boolean, default: false },
+  emailVerificationToken: String,
+  emailVerificationExpires: Date
 });
 
 module.exports = mongoose.model("User", UserSchema);

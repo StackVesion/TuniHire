@@ -1,5 +1,5 @@
 const express = require("express");
-const { getUsers, createUser, signIn, signOut, signInWithFaceID, verifyOtp, resendOtp } = require("../controllers/userController");
+const { getUsers, createUser, signIn, signOut, signInWithFaceID, verifyOtp, resendOtp, verifyEmail } = require("../controllers/userController");
 
 const router = express.Router();
 
@@ -23,5 +23,8 @@ router.post("/signin/faceid", signInWithFaceID);
 
 // Route to sign out
 router.post("/signout", signOut);
+
+// Route to verify email after registration
+router.get('/verify-email/:token', verifyEmail);
 
 module.exports = router;
