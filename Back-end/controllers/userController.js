@@ -5,13 +5,60 @@ const User = require("../models/User");
 const { generateOTP, sendOTPEmail } = require("../utils/emailUtils");
 const { sendVerificationEmail } = require('../config/emailService');
 const fs = require("fs");
+
 // Get all users
 const getUsers = async (req, res) => {
     try {
-        const users = await User.find();
-        res.status(200).json(users);
+        const { page = 1, limit = 10, role, search, status } = req.query;
+        
+        // Build the filter object
+        const filter = {};
+        
+        // Add role filter if provided
+        if (role) {
+            filter.role = role;
+        }
+        
+        // Add status filter if provided
+        if (status) {
+            filter.isActive = status === 'active';
+        }
+        
+        // Add search functionality
+        if (search) {
+            filter.$or = [
+                { firstName: { $regex: search, $options: 'i' } },
+                { lastName: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ];
+        }
+        
+        // Calculate pagination
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        // Execute query with pagination
+        const users = await User.find(filter)
+            .select('firstName lastName email role profilePicture isEmailVerified isActive createdAt')
+            .skip(skip)
+            .limit(parseInt(limit))
+            .sort({ createdAt: -1 });
+        
+        // Get total count for pagination
+        const totalUsers = await User.countDocuments(filter);
+        
+        res.status(200).json({
+            users,
+            totalPages: Math.ceil(totalUsers / parseInt(limit)),
+            currentPage: parseInt(page),
+            totalUsers
+        });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error fetching users:', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Error fetching users',
+            error: error.message
+        });
     }
 };
 
@@ -114,6 +161,7 @@ const euclideanDistance = (desc1, desc2) => {
     }
     return Math.sqrt(sum);
 };
+
 // Sign in a user
 const signIn = async (req, res) => {
     const { email, password } = req.body;
@@ -169,13 +217,14 @@ const signInn = async (req, res) => {
         if (!user) {
             return res.status(400).json({ message: "User not found" });
         }
-                // Check email verification status first
-                if (!user.isEmailVerified) {
-                    return res.status(403).json({ 
-                        message: "Please verify your email before signing in",
-                        isEmailVerified: false
-                    });
-                }
+        
+        // Check email verification status first
+        if (!user.isEmailVerified) {
+            return res.status(403).json({ 
+                message: "Please verify your email before signing in",
+                isEmailVerified: false
+            });
+        }
 
         // If the user signed up through Google, ask them to use Google sign-in
         if (user.googleId && !user.password) {
@@ -599,6 +648,72 @@ const updateUserProfile = async (req, res) => {
     }
 };
 
+/**
+ * Update a user by ID
+ * @author haythem
+ * @description API endpoint to update user information
+ * @date March 2025
+ */
+const updateUser = async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const { firstName, lastName, email, role, isActive } = req.body;
+        
+        // Find user and check if exists
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'User not found' 
+            });
+        }
+
+        // Check if email is being changed and if it already exists
+        if (email && email !== user.email) {
+            const existingUser = await User.findOne({ email });
+            if (existingUser) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Email already in use by another account'
+                });
+            }
+        }
+        
+        // Update user fields if provided
+        if (firstName) user.firstName = firstName;
+        if (lastName) user.lastName = lastName;
+        if (email) user.email = email;
+        if (role) user.role = role;
+        if (isActive !== undefined) user.isActive = isActive;
+        
+        // Save updated user
+        await user.save();
+        
+        res.status(200).json({ 
+            success: true, 
+            message: 'User updated successfully',
+            user: {
+                _id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                role: user.role,
+                isActive: user.isActive,
+                profilePicture: user.profilePicture,
+                isEmailVerified: user.isEmailVerified,
+                createdAt: user.createdAt
+            }
+        });
+    } catch (error) {
+        console.error('Error updating user:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error updating user', 
+            error: error.message 
+        });
+    }
+};
+
 // Change user password
 const changeUserPassword = async (req, res) => {
     try {
@@ -644,12 +759,50 @@ const changeUserPassword = async (req, res) => {
     } catch (error) {
         console.error("Password change error:", error);
         res.status(500).json({ message: "Server error during password change" });
+        }
+        };
+
+/**
+ * Delete a user by ID
+ * @author haythem
+ * @description API endpoint to delete a user from the database
+ * @date March 2025
+ */
+const deleteUser = async (req, res) => {
+    try {
+        const userId = req.params.id;
+        
+        // Find user and check if exists
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'User not found' 
+            });
+        }
+        
+        // Delete the user
+        await User.findByIdAndDelete(userId);
+        
+        res.status(200).json({ 
+            success: true, 
+            message: 'User deleted successfully' 
+        });
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error deleting user', 
+            error: error.message 
+        });
     }
 };
 
 module.exports = {
     getUsers,
     createUser,
+    updateUser,
+    deleteUser,
     signIn,
     signInWithFaceID,
     signOut,

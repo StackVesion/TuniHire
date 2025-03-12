@@ -1,9 +1,9 @@
 const express = require("express");
 const authMiddleware = require("../middleware/authMiddleware");
-const { getUsers, createUser, signIn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword } = require("../controllers/userController");
 const User = require("../models/User"); // Add this line to import the User model
 const multer = require("multer");
 const path = require("path");
+const { getUsers, createUser, signIn, signOut, signInWithFaceID,updateUserProfile,changeUserPassword, verifyOtp, resendOtp, verifyEmail,signInn, updateUser, deleteUser } = require("../controllers/userController");
 
 const router = express.Router();
 
@@ -14,6 +14,12 @@ router.get("/test-auth", authMiddleware, (req, res) => {
 
 // Route to get all users
 router.get("/", getUsers);
+
+// Route to delete a user
+router.delete("/:id", deleteUser);
+
+// Route to update a user
+router.put("/:id", updateUser);
 
 // Route to sign up/create a new user
 router.post("/signup", createUser);

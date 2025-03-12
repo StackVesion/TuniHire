@@ -209,8 +209,8 @@ export const SidebarDataTest = [
         submenuItems: [
           {
             label: 'Users',
-            link: routes.users,
-            base: 'users',
+            link: routes.manageusers,
+            base: 'manage-users',
           },
           {
             label: 'Roles & Permissions',

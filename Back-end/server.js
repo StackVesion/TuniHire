@@ -191,7 +191,7 @@ app.get('/auth/google/callback',
       
       // Redirect to frontend with token and user data as query params
       const userDataParam = encodeURIComponent(JSON.stringify(userData));
-      res.redirect(`http://localhost:3000/?token=${token}&userData=${userDataParam}`);
+      res.redirect('http://localhost:3000/?token=${token}&userData=${userDataParam}');
     } catch (error) {
       console.error("Error in Google callback:", error);
       res.redirect('http://localhost:3000/page-signin?error=Authentication failed');
@@ -243,7 +243,7 @@ app.get('/auth/github/callback',
   },
   function(err, req, res, next) {
     console.error("GitHub auth error:", err);
-    res.redirect('http://localhost:3000/page-signin?error=' + encodeURIComponent(err.message || 'Authentication failed'));
+    res.redirect(`http://localhost:3000/page-signin?error=${encodeURIComponent(err.message || 'Authentication failed')}`);
   }
 );
 
