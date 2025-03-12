@@ -1,0 +1,1508 @@
+From 18b41efef1d396bb8a9ec619b067b86ee2da989e Mon Sep 17 00:00:00 2001
+From: fadi-zaghdoud <fadi.zaghdoud@esprit.tn>
+Date: Wed, 12 Mar 2025 05:28:51 +0100
+Subject: [PATCH] chngesss
+
+---
+ Admin-Panel/package.json                      |   4 +-
+ Admin-Panel/src/core/common/commonSelect.tsx  |  18 +-
+ .../src/core/data/json/sidebarMenu.tsx        |   4 +-
+ .../userManagement/manageusers.tsx            | 801 +++++++++++++++---
+ Back-end/config/emailService.js               |  24 +-
+ Back-end/controllers/userController.js        | 174 +++-
+ Back-end/routes/userRoutes.js                 |   8 +-
+ Back-end/server.js                            |  58 +-
+ Back-end/utils/emailUtils.js                  |  71 +-
+ 9 files changed, 959 insertions(+), 203 deletions(-)
+
+diff --git a/Admin-Panel/package.json b/Admin-Panel/package.json
+index e9e4bdc..0bdbdee 100644
+--- a/Admin-Panel/package.json
++++ b/Admin-Panel/package.json
+@@ -86,6 +86,7 @@
+   },
+   "scripts": {
+     "start": "react-scripts start",
++    "dev": "react-scripts start",
+     "build": "react-scripts build",
+     "test": "react-scripts test",
+     "eject": "react-scripts eject"
+@@ -125,6 +126,7 @@
+     "@types/react-router-dom": "^5.3.3",
+     "@types/react-select": "^5.0.1",
+     "@types/react-slick": "^0.23.13",
+-    "eslint": "^9.21.0"
++    "eslint": "^8.56.0",
++    "eslint-config-react-app": "^7.0.1"
+   }
+ }
+diff --git a/Admin-Panel/src/core/common/commonSelect.tsx b/Admin-Panel/src/core/common/commonSelect.tsx
+index 600c687..0f4cbc6 100644
+--- a/Admin-Panel/src/core/common/commonSelect.tsx
++++ b/Admin-Panel/src/core/common/commonSelect.tsx
+@@ -1,6 +1,13 @@
+ import React, { useEffect, useState } from "react";
+ import Select from "react-select";
+ 
++/**
++ * Enhanced Select Component
++ * @author haythem
++ * @description A reusable select component that supports onChange events for filtering
++ * @date March 2025
++ */
++
+ export type Option = {
+   value: string;
+   label: string;
+@@ -10,17 +17,20 @@ export interface SelectProps {
+   options: Option[];
+   defaultValue?: Option;
+   className?: string;
+-  styles?: any; 
++  styles?: any;
++  onChange?: (option: Option | null) => void;
+ }
+ 
+-const CommonSelect: React.FC<SelectProps> = ({ options, defaultValue, className }) => {
++const CommonSelect: React.FC<SelectProps> = ({ options, defaultValue, className, onChange }) => {
+   const [selectedOption, setSelectedOption] = useState<Option | undefined>(defaultValue);
+ 
+- 
+-
+   const handleChange = (option: Option | null) => {
+     setSelectedOption(option || undefined);
++    if (onChange) {
++      onChange(option);
++    }
+   };
++  
+   useEffect(() => {
+     setSelectedOption(defaultValue || undefined);
+   }, [defaultValue])
+diff --git a/Admin-Panel/src/core/data/json/sidebarMenu.tsx b/Admin-Panel/src/core/data/json/sidebarMenu.tsx
+index d1d7830..4cf6715 100644
+--- a/Admin-Panel/src/core/data/json/sidebarMenu.tsx
++++ b/Admin-Panel/src/core/data/json/sidebarMenu.tsx
+@@ -209,8 +209,8 @@ export const SidebarDataTest = [
+         submenuItems: [
+           {
+             label: 'Users',
+-            link: routes.users,
+-            base: 'users',
++            link: routes.manageusers,
++            base: 'manage-users',
+           },
+           {
+             label: 'Roles & Permissions',
+diff --git a/Admin-Panel/src/feature-module/userManagement/manageusers.tsx b/Admin-Panel/src/feature-module/userManagement/manageusers.tsx
+index a49b185..6e39456 100644
+--- a/Admin-Panel/src/feature-module/userManagement/manageusers.tsx
++++ b/Admin-Panel/src/feature-module/userManagement/manageusers.tsx
+@@ -1,117 +1,510 @@
+-import React, { useRef } from "react";
++import React, { useRef, useState, useEffect } from "react";
+ import { Link } from "react-router-dom";
+-import Table from "../../core/common/dataTable/index";
+-import { manageusersData } from "../../core/data/json/manageuser";
++import Datatable from "../../core/common/dataTable/index";
+ import { TableData } from "../../core/data/interface";
+ import PredefinedDateRanges from "../../core/common/datePicker";
+ import CommonSelect from "../../core/common/commonSelect";
+ import { Reason } from "../../core/common/selectoption/selectoption";
+ import { all_routes } from "../router/all_routes";
+ import TooltipOption from "../../core/common/tooltipOption";
++import axios from "axios";
++import Swal from 'sweetalert2';
++
++/**
++ * User Management Page
++ * @author haythem
++ * @description This component displays a list of users with filtering, pagination and search capabilities
++ * @date March 2025
++ */
++
++// Interface for User data
++interface User {
++  _id: string;
++  firstName: string;
++  lastName: string;
++  email: string;
++  role: string;
++  profilePicture?: string;
++  isEmailVerified: boolean;
++  isActive?: boolean;
++  createdAt: string;
++}
++
++interface ApiResponse {
++  users: User[];
++}
+ 
+ const Manageusers = () => {
+   const routes = all_routes;
+-  const data = manageusersData;
++  const [userData, setUserData] = useState<User[]>([]);
++  const [loading, setLoading] = useState<boolean>(true);
++  const [error, setError] = useState<string | null>(null);
++  const [sortField, setSortField] = useState<string>('createdAt');
++  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
++  const [filterStatus, setFilterStatus] = useState<string>('');
++
++  // Function to fetch users from API
++  const fetchUsers = async () => {
++    setLoading(true);
++    try {
++      const response = await axios.get(
++        `http://localhost:5000/api/users`
++      );
++      
++      // Ensure userData is always an array
++      if (response.data && response.data.users && Array.isArray(response.data.users)) {
++        // Prenez le tableau users à l'intérieur de l'objet response.data
++        setUserData(response.data.users);
++      } else if (Array.isArray(response.data)) {
++        // Si la réponse est déjà un tableau
++        setUserData(response.data);
++      } else {
++        // Si response.data n'est pas au format attendu
++        console.error("API response format is unexpected:", response.data);
++        setUserData([]);
++      }
++      setError(null);
++    } catch (err) {
++      console.error("Error fetching users:", err);
++      setError("Failed to load users. Please try again later.");
++      setUserData([]);
++    } finally {
++      setLoading(false);
++    }
++  };
++
++  // Fetch users when component mounts
++  useEffect(() => {
++    fetchUsers();
++  }, []);
++
++  // Fonction pour trier les données
++  const handleSort = (field: string) => {
++    if (sortField === field) {
++      // Si on clique sur le même champ, on inverse l'ordre
++      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
++    } else {
++      // Si nouveau champ, on trie par défaut en ordre ascendant
++      setSortField(field);
++      setSortOrder('asc');
++    }
++  };
++
++  // Fonction pour appliquer le tri aux données
++  const sortedData = [...userData].sort((a, b) => {
++    let aValue: any = a[sortField as keyof User];
++    let bValue: any = b[sortField as keyof User];
++    
++    // Cas spéciaux pour certains champs
++    if (sortField === 'firstName') {
++      aValue = `${a.firstName} ${a.lastName}`.toLowerCase();
++      bValue = `${b.firstName} ${b.lastName}`.toLowerCase();
++    }
++    
++    if (sortOrder === 'asc') {
++      return aValue > bValue ? 1 : -1;
++    } else {
++      return aValue < bValue ? 1 : -1;
++    }
++  });
++
++  // Fonction pour filtrer par statut (actif/inactif)
++  const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
++    setFilterStatus(e.target.value);
++    fetchUsers(); // Idéalement, adaptez fetchUsers pour prendre en compte filterStatus
++  };
++
++  // Fonction pour mettre à jour le statut actif/inactif d'un utilisateur
++  const updateUserStatus = async (userId: string, isActive: boolean) => {
++    try {
++      const response = await axios.put(
++        `http://localhost:5000/api/users/${userId}`,
++        { isActive }
++      );
++      
++      if (response.data.success) {
++        // Mise à jour réussie
++        Swal.fire({
++          title: 'Updated!',
++          text: `User status changed to ${isActive ? 'Active' : 'Inactive'}`,
++          icon: 'success',
++          timer: 1500
++        });
++        
++        // Rafraîchir la liste des utilisateurs
++        fetchUsers();
++      } else {
++        throw new Error(response.data.message || 'Error updating user status');
++      }
++    } catch (error) {
++      console.error('Error updating user status:', error);
++      
++      Swal.fire({
++        title: 'Error!',
++        text: error instanceof Error ? error.message : 'Failed to update user status',
++        icon: 'error'
++      });
++    }
++  };
++
++  // Handle search input change
++  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
++    // Removed the implementation of this function
++  };
++
++  // Handle role filter change
++  const handleRoleFilterChange = (selectedOption: any) => {
++    // Removed the implementation of this function
++  };
++
++  // Handle page change
++  const handlePageChange = (page: number) => {
++    // Removed the implementation of this function
++  };
++
++  // Reset filters
++  const handleResetFilters = () => {
++    // Removed the implementation of this function
++  };
++
+   const columns = [
+     {
+-      title: "ID",
+-      dataIndex: "id",
+-      render: (text: string, record: any, index: number) => (
+-        <>
+-          <Link to="#" className="link-primary">
+-            {record.id}
+-          </Link>
+-        </>
++      title: "User",
++      dataIndex: "firstName",
++      render: (firstName: string, record: User) => (
++        <div className="table-avatar user-profile">
++          <a href="#" className="avatar">
++            <img src={record.profilePicture || "/assets/img/profiles/default-avatar.jpg"} alt="User Image" />
++          </a>
++          <div>
++            <h5>
++              <a href="#">
++                {record.firstName} {record.lastName}
++              </a>
++            </h5>
++            <p>{record.email}</p>
++          </div>
++        </div>
+       ),
+-      sorter: (a: TableData, b: TableData) => a.id.length - b.id.length,
+     },
+-
+     {
+-      title: "Name",
+-      dataIndex: "name",
+-      sorter: (a: TableData, b: TableData) => a.name.length - b.name.length,
+-    },
+-    {
+-      title: "Class",
+-      dataIndex: "class",
+-      sorter: (a: TableData, b: TableData) => a.class.length - b.class.length,
++      title: "Email Verified",
++      dataIndex: "isEmailVerified",
++      render: (isVerified: boolean) => (
++        <span className={`badge ${isVerified ? "bg-success" : "bg-danger"}`}>
++          {isVerified ? "Verified" : "Not Verified"}
++        </span>
++      ),
+     },
+     {
+-      title: "Section",
+-      dataIndex: "section",
+-      sorter: (a: TableData, b: TableData) =>
+-        a.section.length - b.section.length,
++      title: "Role",
++      dataIndex: "role",
++      render: (role: string, record: User) => (
++        <div className="dropdown">
++          <button 
++            className={`btn btn-sm dropdown-toggle ${getRoleButtonClass(role)}`} 
++            type="button" 
++            data-bs-toggle="dropdown" 
++            aria-expanded="false"
++          >
++            {capitalizeFirstLetter(role)}
++          </button>
++          <ul className="dropdown-menu">
++            <li>
++              <a 
++                className="dropdown-item" 
++                href="#" 
++                onClick={(e) => updateUserRole(record._id, 'admin', e)}
++              >
++                Admin
++              </a>
++            </li>
++            <li>
++              <a 
++                className="dropdown-item" 
++                href="#" 
++                onClick={(e) => updateUserRole(record._id, 'hr', e)}
++              >
++                HR
++              </a>
++            </li>
++            <li>
++              <a 
++                className="dropdown-item" 
++                href="#" 
++                onClick={(e) => updateUserRole(record._id, 'user', e)}
++              >
++                User
++              </a>
++            </li>
++            <li>
++              <a 
++                className="dropdown-item" 
++                href="#" 
++                onClick={(e) => updateUserRole(record._id, 'employer', e)}
++              >
++                Employer
++              </a>
++            </li>
++            <li>
++              <a 
++                className="dropdown-item" 
++                href="#" 
++                onClick={(e) => updateUserRole(record._id, 'candidate', e)}
++              >
++                Candidate
++              </a>
++            </li>
++          </ul>
++        </div>
++      )
+     },
+     {
+-      title: "DateOfJoined",
+-      dataIndex: "dateOfJoined",
+-      sorter: (a: TableData, b: TableData) =>
+-        a.dateOfJoined.length - b.dateOfJoined.length,
++      title: "Status",
++      dataIndex: "isActive",
++      render: (isActive: boolean, record: User) => (
++        <div className="form-check form-switch">
++          <input 
++            className="form-check-input" 
++            type="checkbox" 
++            id={`status-${record._id}`}
++            checked={isActive !== false} // Traite undefined comme actif (pour les utilisateurs existants)
++            onChange={(e) => updateUserStatus(record._id, e.target.checked)}
++          />
++          <label 
++            className={`badge ${isActive !== false ? 'bg-success' : 'bg-danger'}`} 
++            htmlFor={`status-${record._id}`}
++          >
++            {isActive !== false ? 'Active' : 'Inactive'}
++          </label>
++        </div>
++      ),
+     },
+     {
+-      title: "Status",
+-      dataIndex: "status",
+-      render: (text: string) => (
+-        <>
+-          {text === "Active" ? (
+-            <span className="badge badge-soft-success d-inline-flex align-items-center">
+-              <i className="ti ti-circle-filled fs-5 me-1"></i>
+-              {text}
+-            </span>
+-          ) : (
+-            <span className="badge badge-soft-danger d-inline-flex align-items-center">
+-              <i className="ti ti-circle-filled fs-5 me-1"></i>
+-              {text}
+-            </span>
+-          )}
+-        </>
++      title: "Created",
++      dataIndex: "createdAt",
++      render: (date: string) => (
++        <span>{date ? new Date(date).toLocaleDateString() : "N/A"}</span>
+       ),
+-      sorter: (a: any, b: any) => a.status.length - b.status.length,
+     },
+     {
+-      title: "Action",
+-      dataIndex: "action",
+-      render: () => (
+-        <>
+-          <div className="d-flex align-items-center">
+-            <div className="dropdown">
+-              <Link
+-                to="#"
+-                className="btn btn-white btn-icon btn-sm d-flex align-items-center justify-content-center rounded-circle p-0"
+-                data-bs-toggle="dropdown"
+-                aria-expanded="false"
+-              >
+-                <i className="ti ti-dots-vertical fs-14" />
+-              </Link>
+-              <ul className="dropdown-menu dropdown-menu-right p-3">
+-                {/* <li>
+-                  <Link className="dropdown-item rounded-1" to="#">
+-                    <i className="ti ti-edit-circle me-2" />
+-                    Edit
+-                  </Link>
+-                </li> */}
+-                <li>
+-                  <Link
+-                    className="dropdown-item rounded-1"
+-                    to="#"
+-                  >
+-                    <i className="ti ti-trash-x me-2" />
+-                    Delete
+-                  </Link>
+-                </li>
+-              </ul>
+-            </div>
+-          </div>
+-        </>
++      title: "Actions",
++      dataIndex: "_id",
++      render: (id: string, record: User) => (
++        <div className="d-flex align-items-center">
++          <Link
++            to="#"
++            className="btn btn-sm btn-secondary me-2"
++            title="Edit"
++            onClick={() => handleEditClick(record)}
++          >
++            <i className="feather-edit"></i>
++          </Link>
++          <Link
++            to="#"
++            className="btn btn-sm btn-danger"
++            title="Delete"
++            onClick={() => handleDeleteUser(id)}
++          >
++            <i className="feather-trash-2"></i>
++          </Link>
++        </div>
+       ),
+     },
+   ];
++
++  // Helper function pour obtenir la classe du bouton en fonction du rôle
++  const getRoleButtonClass = (role: string): string => {
++    switch (role) {
++      case 'admin':
++        return 'btn-danger';
++      case 'hr':
++        return 'btn-info';
++      case 'employer':
++        return 'btn-primary';
++      case 'candidate':
++        return 'btn-success';
++      default:
++        return 'btn-secondary';
++    }
++  };
++
++  // Helper function pour capitaliser la première lettre
++  const capitalizeFirstLetter = (str: string): string => {
++    return str.charAt(0).toUpperCase() + str.slice(1);
++  };
++
++  // Fonction pour mettre à jour le rôle d'un utilisateur
++  const updateUserRole = async (userId: string, newRole: string, e?: React.MouseEvent) => {
++    if (e) e.preventDefault();
++    
++    try {
++      const response = await axios.put(
++        `http://localhost:5000/api/users/${userId}`,
++        { role: newRole }
++      );
++      
++      if (response.data.success) {
++        // Mise à jour réussie
++        Swal.fire({
++          title: 'Updated!',
++          text: `User role changed to ${capitalizeFirstLetter(newRole)}`,
++          icon: 'success',
++          timer: 1500
++        });
++        
++        // Rafraîchir la liste des utilisateurs
++        fetchUsers();
++      } else {
++        throw new Error(response.data.message || 'Error updating user role');
++      }
++    } catch (error) {
++      console.error('Error updating user role:', error);
++      
++      Swal.fire({
++        title: 'Error!',
++        text: error instanceof Error ? error.message : 'Failed to update user role',
++        icon: 'error'
++      });
++    }
++  };
++
++  // Function to handle user deletion
++  const handleDeleteUser = async (userId: string) => {
++    try {
++      // Show confirmation dialog
++      const result = await Swal.fire({
++        title: 'Are you sure?',
++        text: "You won't be able to revert this!",
++        icon: 'warning',
++        showCancelButton: true,
++        confirmButtonColor: '#3085d6',
++        cancelButtonColor: '#d33',
++        confirmButtonText: 'Yes, delete it!'
++      });
++
++      // If user confirms deletion
++      if (result.isConfirmed) {
++        // Call API to delete user
++        const response = await axios.delete(`http://localhost:5000/api/users/${userId}`);
++        
++        if (response.data.success) {
++          // Show success message
++          Swal.fire({
++            title: 'Deleted!',
++            text: 'User has been deleted.',
++            icon: 'success',
++            timer: 1500
++          });
++          
++          // Refresh user list
++          fetchUsers();
++        } else {
++          throw new Error(response.data.message || 'Error deleting user');
++        }
++      }
++    } catch (error) {
++      console.error('Error deleting user:', error);
++      
++      // Show error message
++      Swal.fire({
++        title: 'Error!',
++        text: error instanceof Error ? error.message : 'Failed to delete user',
++        icon: 'error'
++      });
++    }
++  };
++
++  // State for managing the edit user modal
++  const [showEditModal, setShowEditModal] = useState<boolean>(false);
++  const [selectedUser, setSelectedUser] = useState<User | null>(null);
++  const [formData, setFormData] = useState({
++    firstName: '',
++    lastName: '',
++    email: '',
++    role: '',
++    isActive: true
++  });
++
++  // Open edit modal with user data
++  const handleEditClick = (user: User) => {
++    setSelectedUser(user);
++    setFormData({
++      firstName: user.firstName || '',
++      lastName: user.lastName || '',
++      email: user.email || '',
++      role: user.role || '',
++      isActive: user.isActive !== false
++    });
++    setShowEditModal(true);
++  };
++
++  // Handle form input changes
++  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
++    const { name, value } = e.target;
++    setFormData(prev => ({
++      ...prev,
++      [name]: value
++    }));
++  };
++
++  // Handle user update
++  const handleUpdateUser = async (e: React.FormEvent) => {
++    e.preventDefault();
++    
++    if (!selectedUser) return;
++    
++    try {
++      const response = await axios.put(
++        `http://localhost:5000/api/users/${selectedUser._id}`,
++        formData
++      );
++      
++      if (response.data.success) {
++        // Close modal
++        setShowEditModal(false);
++        
++        // Show success message
++        Swal.fire({
++          title: 'Updated!',
++          text: 'User information has been updated.',
++          icon: 'success',
++          timer: 1500
++        });
++        
++        // Refresh user list
++        fetchUsers();
++      } else {
++        throw new Error(response.data.message || 'Error updating user');
++      }
++    } catch (error) {
++      console.error('Error updating user:', error);
++      
++      // Show error message
++      Swal.fire({
++        title: 'Error!',
++        text: error instanceof Error ? error.message : 'Failed to update user',
++        icon: 'error'
++      });
++    }
++  };
++
+   const dropdownMenuRef = useRef<HTMLDivElement | null>(null);
+   const handleApplyClick = () => {
+     if (dropdownMenuRef.current) {
+       dropdownMenuRef.current.classList.remove("show");
+     }
+   };
++
++  // Role options for the dropdown
++  const roleOptions = [
++    { value: "", label: "All Roles" },
++    { value: "admin", label: "Admin" },
++    { value: "hr", label: "HR" },
++    { value: "candidate", label: "Candidate" },
++    { value: "visitor", label: "Visitor" }
++  ];
++
+   return (
+     <div>
+       <>
+@@ -137,16 +530,16 @@ const Manageusers = () => {
+                 </nav>
+               </div>
+               <div className="d-flex my-xl-auto right-content align-items-center flex-wrap">
+-              <TooltipOption />
+-                {/* <div className="mb-2">
++                <TooltipOption />
++                <div className="mb-2">
+                   <Link
+-                    to="#"
++                    to="/add-user"
+                     className="btn btn-primary d-flex align-items-center"
+                   >
+                     <i className="ti ti-square-rounded-plus me-2" />
+                     Add User
+                   </Link>
+-                </div> */}
++                </div>
+               </div>
+             </div>
+             {/* /Page Header */}
+@@ -155,8 +548,13 @@ const Manageusers = () => {
+               <div className="card-header d-flex align-items-center justify-content-between flex-wrap pb-0">
+                 <h4 className="mb-3">Users List</h4>
+                 <div className="d-flex align-items-center flex-wrap">
+-                  <div className="input-icon-start mb-3 me-2 position-relative">
+-                    <PredefinedDateRanges />
++                  <div className="mb-3">
++                    <input
++                      type="text"
++                      className="form-control"
++                      placeholder="Search users..."
++                      // Removed the implementation of this input
++                    />
+                   </div>
+                   <div className="dropdown mb-3 me-2">
+                     <Link
+@@ -180,17 +578,22 @@ const Manageusers = () => {
+                           <div className="row">
+                             <div className="col-md-12">
+                               <div className="mb-0">
+-                                <label className="form-label">Users</label>
++                                <label className="form-label">Role</label>
+                                 <CommonSelect
+                                   className="select"
+-                                  options={Reason}
++                                  options={roleOptions}
++                                  onChange={handleRoleFilterChange}
+                                 />
+                               </div>
+                             </div>
+                           </div>
+                         </div>
+                         <div className="p-3 d-flex align-items-center justify-content-end">
+-                          <Link to="#" className="btn btn-light me-3">
++                          <Link 
++                            to="#" 
++                            className="btn btn-light me-3"
++                            // Removed the implementation of this link
++                          >
+                             Reset
+                           </Link>
+                           <Link
+@@ -204,55 +607,193 @@ const Manageusers = () => {
+                       </form>
+                     </div>
+                   </div>
+-                  <div className="dropdown mb-3">
+-                    <Link
+-                      to="#"
+-                      className="btn btn-outline-light bg-white dropdown-toggle"
+-                      data-bs-toggle="dropdown"
+-                    >
+-                      <i className="ti ti-sort-ascending-2 me-2" />
+-                      Sort by A-Z
+-                    </Link>
+-                    <ul className="dropdown-menu p-3">
+-                      <li>
+-                        <Link to="#" className="dropdown-item rounded-1 active">
+-                          Ascending
+-                        </Link>
+-                      </li>
+-                      <li>
+-                        <Link to="#" className="dropdown-item rounded-1">
+-                          Descending
+-                        </Link>
+-                      </li>
+-                      <li>
+-                        <Link to="#" className="dropdown-item rounded-1">
+-                          Recently Viewed
+-                        </Link>
+-                      </li>
+-                      <li>
+-                        <Link to="#" className="dropdown-item rounded-1">
+-                          Recently Added
+-                        </Link>
+-                      </li>
+-                    </ul>
+-                  </div>
+                 </div>
+               </div>
+-              {/* User List */}
+-              <div className="card-body p-0 py-3">
+-                <Table columns={columns} dataSource={data} Selection={true} />
++              <div className="card-body">
++                {loading ? (
++                  <div className="text-center my-5">
++                    <div className="spinner-border text-primary" role="status">
++                      <span className="visually-hidden">Loading...</span>
++                    </div>
++                    <p className="mt-2">Loading users...</p>
++                  </div>
++                ) : error ? (
++                  <div className="alert alert-danger" role="alert">
++                    {error}
++                  </div>
++                ) : userData.length === 0 ? (
++                  <div className="alert alert-info" role="alert">
++                    No users found.
++                  </div>
++                ) : (
++                  <>
++                    <div className="table-sorting-section mb-3">
++                      <div className="row align-items-center">
++                        <div className="col-md-6">
++                          <h5 className="card-title">Users List</h5>
++                        </div>
++                        <div className="col-md-6">
++                          <div className="sort-options text-end">
++                            <button 
++                              className={`btn btn-sm ${sortField === 'firstName' ? (sortOrder === 'asc' ? 'btn-primary' : 'btn-info') : 'btn-outline-secondary'}`}
++                              onClick={() => handleSort('firstName')}
++                            >
++                              Name {sortField === 'firstName' && (sortOrder === 'asc' ? '↑' : '↓')}
++                            </button>
++                            <button 
++                              className={`btn btn-sm ms-2 ${sortField === 'email' ? (sortOrder === 'asc' ? 'btn-primary' : 'btn-info') : 'btn-outline-secondary'}`}
++                              onClick={() => handleSort('email')}
++                            >
++                              Email {sortField === 'email' && (sortOrder === 'asc' ? '↑' : '↓')}
++                            </button>
++                            <button 
++                              className={`btn btn-sm ms-2 ${sortField === 'role' ? (sortOrder === 'asc' ? 'btn-primary' : 'btn-info') : 'btn-outline-secondary'}`}
++                              onClick={() => handleSort('role')}
++                            >
++                              Role {sortField === 'role' && (sortOrder === 'asc' ? '↑' : '↓')}
++                            </button>
++                            <button 
++                              className={`btn btn-sm ms-2 ${sortField === 'createdAt' ? (sortOrder === 'asc' ? 'btn-primary' : 'btn-info') : 'btn-outline-secondary'}`}
++                              onClick={() => handleSort('createdAt')}
++                            >
++                              Date {sortField === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
++                            </button>
++                          </div>
++                        </div>
++                      </div>
++                    </div>
++                    <div className="table-responsive">
++                      <Datatable columns={columns} dataSource={sortedData} Selection={false} />
++                    </div>
++                  </>
++                )}
+               </div>
+-              {/* /User List */}
+             </div>
+             {/* /Filter Section */}
+-            <div className="row align-items-center">
+-              <div className="col-md-12">
+-                <div className="datatable-paginate mt-4" />
++          </div>
++        </div>
++        {/* /Page Wrapper */}
++        <div className="mt-4">
++          {/* Edit User Modal */}
++          {showEditModal && selectedUser && (
++            <div className="modal fade show" style={{ display: 'block' }}>
++              <div className="modal-dialog modal-dialog-centered">
++                <div className="modal-content">
++                  <div className="modal-header">
++                    <h5 className="modal-title">Edit User</h5>
++                    <button 
++                      type="button" 
++                      className="btn-close" 
++                      onClick={() => setShowEditModal(false)}
++                    ></button>
++                  </div>
++                  <form onSubmit={handleUpdateUser}>
++                    <div className="modal-body">
++                      <div className="mb-3">
++                        <label className="form-label">First Name</label>
++                        <input
++                          type="text"
++                          className="form-control"
++                          name="firstName"
++                          value={formData.firstName}
++                          onChange={handleInputChange}
++                          required
++                        />
++                      </div>
++                      <div className="mb-3">
++                        <label className="form-label">Last Name</label>
++                        <input
++                          type="text"
++                          className="form-control"
++                          name="lastName"
++                          value={formData.lastName}
++                          onChange={handleInputChange}
++                          required
++                        />
++                      </div>
++                      <div className="mb-3">
++                        <label className="form-label">Email</label>
++                        <input
++                          type="email"
++                          className="form-control"
++                          name="email"
++                          value={formData.email}
++                          onChange={handleInputChange}
++                          required
++                        />
++                      </div>
++                      <div className="mb-3">
++                        <label className="form-label">Role</label>
++                        <select 
++                          className="form-select" 
++                          name="role"
++                          value={formData.role}
++                          onChange={handleInputChange}
++                          required
++                        >
++                          <option value="">Select Role</option>
++                          <option value="admin">Admin</option>
++                          <option value="hr">HR</option>
++                          <option value="user">User</option>
++                          <option value="employer">Employer</option>
++                          <option value="candidate">Candidate</option>
++                        </select>
++                      </div>
++                      <div className="mb-3">
++                        <label className="form-label">Status</label>
++                        <div className="form-check form-switch">
++                          <input
++                            className="form-check-input"
++                            type="checkbox"
++                            name="isActive"
++                            checked={formData.isActive !== false}
++                            onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
++                            id="statusToggle"
++                          />
++                          <label className="form-check-label" htmlFor="statusToggle">
++                            {formData.isActive !== false ? 'Active' : 'Inactive'}
++                          </label>
++                        </div>
++                      </div>
++                    </div>
++                    <div className="modal-footer">
++                      <button 
++                        type="button" 
++                        className="btn btn-secondary"
++                        onClick={() => setShowEditModal(false)}
++                      >
++                        Cancel
++                      </button>
++                      <button 
++                        type="submit" 
++                        className="btn btn-primary"
++                      >
++                        Save Changes
++                      </button>
++                    </div>
++                  </form>
++                </div>
+               </div>
++              <div className="modal-backdrop fade show"></div>
+             </div>
++          )}
++        </div>
++        <div className="col-sm-12 col-md-3">
++          <div className="dataTables_length" id="status_filter">
++            <label>
++              Status
++              <select
++                className="form-select form-control-sm"
++                onChange={handleStatusFilterChange}
++                value={filterStatus}
++              >
++                <option value="">All</option>
++                <option value="active">Active</option>
++                <option value="inactive">Inactive</option>
++              </select>
++            </label>
+           </div>
+         </div>
+-        {/* /Page Wrapper */}
+       </>
+     </div>
+   );
+diff --git a/Back-end/config/emailService.js b/Back-end/config/emailService.js
+index 8870314..d354ca5 100644
+--- a/Back-end/config/emailService.js
++++ b/Back-end/config/emailService.js
+@@ -1,13 +1,16 @@
+ const nodemailer = require('nodemailer');
+ const getEmailTemplate = require('../templates/emailVerification');
+ 
+-const transporter = nodemailer.createTransport({
++// Utiliser le transporteur spécifique pour les emails de vérification
++const transporter = global.verificationEmailTransporter || nodemailer.createTransport({
+     service: 'gmail',
+     auth: {
+-        user: process.env.EMAIL_APP_USER,
+-        pass: process.env.EMAIL_APP_PASSWORD,
+-        port: process.env.SMTP_PORT,
+-
++        user: process.env.EMAIL_APP_USER, // fadi6895@gmail.com
++        pass: process.env.EMAIL_APP_PASSWORD
++    },
++    port: process.env.SMTP_PORT,
++    tls: {
++        rejectUnauthorized: false
+     }
+ });
+ 
+@@ -16,19 +19,26 @@ const sendVerificationEmail = async (email, verificationToken, firstName) => {
+     const htmlContent = getEmailTemplate(verificationUrl, firstName || 'there');
+ 
+     const mailOptions = {
+-        from: `"TuniHire" <${process.env.EMAIL_USER}>`,
++        from: `"TuniHire" <${process.env.EMAIL_APP_USER}>`, // Utilisez EMAIL_APP_USER
+         to: email,
+         subject: 'Verify Your Email Address',
+         html: htmlContent
+     };
+ 
+     try {
++        console.log(`Attempting to send verification email to: ${email} from: ${process.env.EMAIL_APP_USER}`);
+         await transporter.sendMail(mailOptions);
+         console.log('Verification email sent successfully to:', email);
++        return { success: true };
+     } catch (error) {
+         console.error('Error sending verification email:', error);
++        // En développement, on continue même si l'email échoue
++        if (process.env.NODE_ENV === 'development') {
++            console.log('Development mode: continuing despite email failure');
++            return { success: false, error: error.message };
++        }
+         throw error;
+     }
+ };
+ 
+-module.exports = { sendVerificationEmail };
++module.exports = { sendVerificationEmail };
+\ No newline at end of file
+diff --git a/Back-end/controllers/userController.js b/Back-end/controllers/userController.js
+index d5ebd72..15bdafc 100644
+--- a/Back-end/controllers/userController.js
++++ b/Back-end/controllers/userController.js
+@@ -3,15 +3,61 @@ const jwt = require("jsonwebtoken");
+ const crypto = require("crypto");
+ const User = require("../models/User");
+ const { generateOTP, sendOTPEmail } = require("../utils/emailUtils");
+-const sendVerificationEmail = require('../config/emailService').sendVerificationEmail;
++const { sendVerificationEmail } = require('../config/emailService');
+ 
+ // Get all users
+ const getUsers = async (req, res) => {
+     try {
+-        const users = await User.find();
+-        res.status(200).json(users);
++        const { page = 1, limit = 10, role, search, status } = req.query;
++        
++        // Build the filter object
++        const filter = {};
++        
++        // Add role filter if provided
++        if (role) {
++            filter.role = role;
++        }
++        
++        // Add status filter if provided
++        if (status) {
++            filter.isActive = status === 'active';
++        }
++        
++        // Add search functionality
++        if (search) {
++            filter.$or = [
++                { firstName: { $regex: search, $options: 'i' } },
++                { lastName: { $regex: search, $options: 'i' } },
++                { email: { $regex: search, $options: 'i' } }
++            ];
++        }
++        
++        // Calculate pagination
++        const skip = (parseInt(page) - 1) * parseInt(limit);
++        
++        // Execute query with pagination
++        const users = await User.find(filter)
++            .select('firstName lastName email role profilePicture isEmailVerified isActive createdAt')
++            .skip(skip)
++            .limit(parseInt(limit))
++            .sort({ createdAt: -1 });
++        
++        // Get total count for pagination
++        const totalUsers = await User.countDocuments(filter);
++        
++        res.status(200).json({
++            users,
++            totalPages: Math.ceil(totalUsers / parseInt(limit)),
++            currentPage: parseInt(page),
++            totalUsers
++        });
+     } catch (error) {
+-        res.status(500).json({ message: error.message });
++        console.error('Error fetching users:', error);
++        res.status(500).json({ 
++            success: false,
++            message: 'Error fetching users',
++            error: error.message
++        });
+     }
+ };
+ 
+@@ -114,6 +160,7 @@ const euclideanDistance = (desc1, desc2) => {
+     }
+     return Math.sqrt(sum);
+ };
++
+ // Sign in a user
+ const signIn = async (req, res) => {
+     const { email, password } = req.body;
+@@ -169,13 +216,14 @@ const signInn = async (req, res) => {
+         if (!user) {
+             return res.status(400).json({ message: "User not found" });
+         }
+-                // Check email verification status first
+-                if (!user.isEmailVerified) {
+-                    return res.status(403).json({ 
+-                        message: "Please verify your email before signing in",
+-                        isEmailVerified: false
+-                    });
+-                }
++        
++        // Check email verification status first
++        if (!user.isEmailVerified) {
++            return res.status(403).json({ 
++                message: "Please verify your email before signing in",
++                isEmailVerified: false
++            });
++        }
+ 
+         // If the user signed up through Google, ask them to use Google sign-in
+         if (user.googleId && !user.password) {
+@@ -496,9 +544,113 @@ const verifyEmail = async (req, res) => {
+     }
+ };
+ 
++/**
++ * Update a user by ID
++ * @author haythem
++ * @description API endpoint to update user information
++ * @date March 2025
++ */
++const updateUser = async (req, res) => {
++    try {
++        const userId = req.params.id;
++        const { firstName, lastName, email, role, isActive } = req.body;
++        
++        // Find user and check if exists
++        const user = await User.findById(userId);
++        if (!user) {
++            return res.status(404).json({ 
++                success: false, 
++                message: 'User not found' 
++            });
++        }
++
++        // Check if email is being changed and if it already exists
++        if (email && email !== user.email) {
++            const existingUser = await User.findOne({ email });
++            if (existingUser) {
++                return res.status(400).json({
++                    success: false,
++                    message: 'Email already in use by another account'
++                });
++            }
++        }
++        
++        // Update user fields if provided
++        if (firstName) user.firstName = firstName;
++        if (lastName) user.lastName = lastName;
++        if (email) user.email = email;
++        if (role) user.role = role;
++        if (isActive !== undefined) user.isActive = isActive;
++        
++        // Save updated user
++        await user.save();
++        
++        res.status(200).json({ 
++            success: true, 
++            message: 'User updated successfully',
++            user: {
++                _id: user._id,
++                firstName: user.firstName,
++                lastName: user.lastName,
++                email: user.email,
++                role: user.role,
++                isActive: user.isActive,
++                profilePicture: user.profilePicture,
++                isEmailVerified: user.isEmailVerified,
++                createdAt: user.createdAt
++            }
++        });
++    } catch (error) {
++        console.error('Error updating user:', error);
++        res.status(500).json({ 
++            success: false, 
++            message: 'Error updating user', 
++            error: error.message 
++        });
++    }
++};
++
++/**
++ * Delete a user by ID
++ * @author haythem
++ * @description API endpoint to delete a user from the database
++ * @date March 2025
++ */
++const deleteUser = async (req, res) => {
++    try {
++        const userId = req.params.id;
++        
++        // Find user and check if exists
++        const user = await User.findById(userId);
++        if (!user) {
++            return res.status(404).json({ 
++                success: false, 
++                message: 'User not found' 
++            });
++        }
++        
++        // Delete the user
++        await User.findByIdAndDelete(userId);
++        
++        res.status(200).json({ 
++            success: true, 
++            message: 'User deleted successfully' 
++        });
++    } catch (error) {
++        console.error('Error deleting user:', error);
++        res.status(500).json({ 
++            success: false, 
++            message: 'Error deleting user', 
++            error: error.message 
++        });
++    }
++};
++
+ module.exports = {
+     getUsers,
+     createUser,
++    updateUser,
++    deleteUser,
+     signIn,
+     signInWithFaceID,
+     signOut,
+diff --git a/Back-end/routes/userRoutes.js b/Back-end/routes/userRoutes.js
+index 0c58105..5e1fe9d 100644
+--- a/Back-end/routes/userRoutes.js
++++ b/Back-end/routes/userRoutes.js
+@@ -1,11 +1,17 @@
+ const express = require("express");
+-const { getUsers, createUser, signIn, signOut, signInWithFaceID, verifyOtp, resendOtp, verifyEmail,signInn } = require("../controllers/userController");
++const { getUsers, createUser, signIn, signOut, signInWithFaceID, verifyOtp, resendOtp, verifyEmail,signInn, updateUser, deleteUser } = require("../controllers/userController");
+ 
+ const router = express.Router();
+ 
+ // Route to get all users
+ router.get("/", getUsers);
+ 
++// Route to delete a user
++router.delete("/:id", deleteUser);
++
++// Route to update a user
++router.put("/:id", updateUser);
++
+ // Route to sign up/create a new user
+ router.post("/signup", createUser);
+ 
+diff --git a/Back-end/server.js b/Back-end/server.js
+index b31a1d8..7f39d9b 100644
+--- a/Back-end/server.js
++++ b/Back-end/server.js
+@@ -6,10 +6,12 @@ const session = require("express-session");
+ const cookieParser = require("cookie-parser");
+ const passport = require('passport');
+ const GoogleStrategy = require('passport-google-oauth20').Strategy;
++const nodemailer = require('nodemailer');
+ require("dotenv").config(); // Load environment variables
+ const connectDB = require("./config/db");
+ const User = require('./models/User');
+ const jwt = require('jsonwebtoken');
++const mongoose = require('mongoose');
+ require('./config/githubAuth'); // Add this line to require GitHub auth config
+ 
+ // CORS configuration
+@@ -29,6 +31,57 @@ app.use(cookieParser());
+ // Connect to MongoDB
+ connectDB();
+ 
++// Configuration du transporteur pour les emails de vérification (fadi6895@gmail.com)
++const verificationEmailTransporter = nodemailer.createTransport({
++  service: 'gmail',
++  auth: {
++    user: process.env.EMAIL_APP_USER, // fadi6895@gmail.com
++    pass: process.env.EMAIL_APP_PASSWORD // nkkz lgba vttt lxql
++  },
++  port: process.env.SMTP_PORT,
++  tls: {
++    rejectUnauthorized: false
++  }
++});
++
++// Configuration du transporteur pour les emails OTP (nihedabdworks@gmail.com)
++const otpEmailTransporter = nodemailer.createTransport({
++  service: 'gmail',
++  auth: {
++    user: process.env.EMAIL_USER, // nihedabdworks@gmail.com
++    pass: process.env.EMAIL_PASSWORD // euvl sgec ecqm tbpx
++  },
++  port: process.env.SMTP_PORT,
++  tls: {
++    rejectUnauthorized: false
++  }
++});
++
++// Rendre les transporteurs disponibles globalement
++global.verificationEmailTransporter = verificationEmailTransporter;
++global.otpEmailTransporter = otpEmailTransporter;
++
++// Tester les deux configurations
++const testEmailConfigs = async () => {
++  try {
++    console.log("Testing verification email configuration...");
++    await verificationEmailTransporter.verify();
++    console.log("Verification email configuration is valid (EMAIL_APP_USER)");
++    
++    console.log("Testing OTP email configuration...");
++    await otpEmailTransporter.verify();
++    console.log("OTP email configuration is valid (EMAIL_USER)");
++    
++    return true;
++  } catch (error) {
++    console.error("Email configuration test failed:", error);
++    return false;
++  }
++};
++
++// Exécuter le test au démarrage du serveur
++testEmailConfigs();
++
+ // Session configuration - must come after CORS and cookieParser
+ app.use(
+   session({
+@@ -138,7 +191,7 @@ app.get('/auth/google/callback',
+       
+       // Redirect to frontend with token and user data as query params
+       const userDataParam = encodeURIComponent(JSON.stringify(userData));
+-      res.redirect(`http://localhost:3000/?token=${token}&userData=${userDataParam}`);
++      res.redirect('http://localhost:3000/?token=${token}&userData=${userDataParam}');
+     } catch (error) {
+       console.error("Error in Google callback:", error);
+       res.redirect('http://localhost:3000/page-signin?error=Authentication failed');
+@@ -190,7 +243,7 @@ app.get('/auth/github/callback',
+   },
+   function(err, req, res, next) {
+     console.error("GitHub auth error:", err);
+-    res.redirect('http://localhost:3000/page-signin?error=' + encodeURIComponent(err.message || 'Authentication failed'));
++    res.redirect(`http://localhost:3000/page-signin?error=${encodeURIComponent(err.message || 'Authentication failed')}`);
+   }
+ );
+ 
+@@ -252,4 +305,5 @@ app.use((err, req, res, next) => {
+ const PORT = process.env.PORT || 5000;
+ app.listen(PORT, () => {
+   console.log(`Server running on port ${PORT}`);
++  console.log(`MongoDB Connected: ${mongoose.connection.host}`);
+ });
+\ No newline at end of file
+diff --git a/Back-end/utils/emailUtils.js b/Back-end/utils/emailUtils.js
+index c4df910..ffb393b 100644
+--- a/Back-end/utils/emailUtils.js
++++ b/Back-end/utils/emailUtils.js
+@@ -1,30 +1,17 @@
+ const nodemailer = require('nodemailer');
+ 
+-// Create a transporter using environment variables
+-const createTransporter = () => {
+-  console.log("Email configuration:", {
+-    service: 'gmail',
+-    user: process.env.EMAIL_USER ? process.env.EMAIL_USER.substring(0, 3) + '***' : 'not-set',
+-    pass: process.env.EMAIL_PASSWORD ? '*****' : 'not-set'
+-  });
+-
+-  // Check if email credentials are properly set
+-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+-    console.error("WARNING: Email credentials are not properly configured in .env file!");
+-    console.error("Set EMAIL_USER and EMAIL_PASSWORD in your .env file");
++// Utiliser le transporteur spécifique pour les emails OTP
++const transporter = global.otpEmailTransporter || nodemailer.createTransport({
++  service: 'gmail',
++  auth: {
++    user: process.env.EMAIL_USER, // nihedabdworks@gmail.com
++    pass: process.env.EMAIL_PASSWORD
++  },
++  port: process.env.SMTP_PORT,
++  tls: {
++    rejectUnauthorized: false
+   }
+-
+-  return nodemailer.createTransport({
+-    service: 'gmail',
+-    auth: {
+-      user: process.env.EMAIL_USER || 'your-email@gmail.com', // Set up in your .env file
+-      pass: process.env.EMAIL_PASSWORD || 'your-app-password' // Set up in your .env file
+-    }
+-  });
+-};
+-
+-// Create the transporter once
+-const transporter = createTransporter();
++});
+ 
+ /**
+  * Generate a random OTP with specified length
+@@ -48,10 +35,10 @@ const generateOTP = (length = 4) => {
+  * @returns {Promise<object>} - Email sending result
+  */
+ const sendOTPEmail = async (email, otp, firstName = '') => {
+-  console.log(`Attempting to send OTP email to: ${email}`);
++  console.log(`Attempting to send OTP email to: ${email} from: ${process.env.EMAIL_USER}`);
+   
+   const mailOptions = {
+-    from: process.env.EMAIL_USER || 'your-email@gmail.com',
++    from: `"TuniHire" <${process.env.EMAIL_USER}>`, // Utilisez EMAIL_USER
+     to: email,
+     subject: 'Your Login Verification Code',
+     html: `
+@@ -75,17 +62,18 @@ const sendOTPEmail = async (email, otp, firstName = '') => {
+   };
+ 
+   try {
+-    console.log('Sending email with nodemailer...');
++    console.log('Sending OTP email with nodemailer...');
+     const info = await transporter.sendMail(mailOptions);
+-    console.log('Email sent successfully:', info.messageId);
++    console.log('OTP email sent successfully:', info.messageId);
+     return { success: true, messageId: info.messageId };
+   } catch (error) {
+-    console.error('Error sending email:', error);
++    console.error('Error sending OTP email:', error);
+     console.error('Email configuration issue - please check your .env file settings');
+-    console.error('For Gmail, make sure to:');
+-    console.error('1. Enable "Less secure app access" or');
+-    console.error('2. Use an App Password if 2FA is enabled');
+-    console.error('3. Make sure the email and password are correct');
++    // En développement, continuez même si l'email échoue
++    if (process.env.NODE_ENV === 'development') {
++      console.log('Development mode: continuing despite email failure');
++      return { success: false, error: error.message };
++    }
+     return { success: false, error: error.message };
+   }
+ };
+@@ -96,31 +84,24 @@ const sendOTPEmail = async (email, otp, firstName = '') => {
+  */
+ const testEmailConfig = async () => {
+   try {
+-    console.log('Testing email configuration...');
++    console.log('Testing OTP email configuration...');
+     
+     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+-      console.error('Email credentials are not set in environment variables');
++      console.error('OTP Email credentials are not set in environment variables');
+       return false;
+     }
+     
+     await transporter.verify();
+-    console.log('Email configuration is valid and ready to send messages');
++    console.log('OTP Email configuration is valid and ready to send messages');
+     return true;
+   } catch (error) {
+-    console.error('Email configuration test failed:', error);
++    console.error('OTP Email configuration test failed:', error);
+     return false;
+   }
+ };
+ 
+-// Run the test on module load
+-testEmailConfig().then(isValid => {
+-  if (!isValid) {
+-    console.warn('WARNING: Email functionality may not work properly!');
+-  }
+-});
+-
+ module.exports = {
+   generateOTP,
+   sendOTPEmail,
+   testEmailConfig
+-};
++};
+\ No newline at end of file
+-- 
+2.42.0.windows.2
+
