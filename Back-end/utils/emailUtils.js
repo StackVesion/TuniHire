@@ -1,30 +1,17 @@
 const nodemailer = require('nodemailer');
 
-// Create a transporter using environment variables
-const createTransporter = () => {
-  console.log("Email configuration:", {
-    service: 'gmail',
-    user: process.env.EMAIL_USER ? process.env.EMAIL_USER.substring(0, 3) + '***' : 'not-set',
-    pass: process.env.EMAIL_PASSWORD ? '*****' : 'not-set'
-  });
-
-  // Check if email credentials are properly set
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-    console.error("WARNING: Email credentials are not properly configured in .env file!");
-    console.error("Set EMAIL_USER and EMAIL_PASSWORD in your .env file");
+// Utiliser le transporteur spécifique pour les emails OTP
+const transporter = global.otpEmailTransporter || nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER, // nihedabdworks@gmail.com
+    pass: process.env.EMAIL_PASSWORD
+  },
+  port: process.env.SMTP_PORT,
+  tls: {
+    rejectUnauthorized: false
   }
-
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER || 'your-email@gmail.com', // Set up in your .env file
-      pass: process.env.EMAIL_PASSWORD || 'your-app-password' // Set up in your .env file
-    }
-  });
-};
-
-// Create the transporter once
-const transporter = createTransporter();
+});
 
 /**
  * Generate a random OTP with specified length
@@ -48,10 +35,10 @@ const generateOTP = (length = 4) => {
  * @returns {Promise<object>} - Email sending result
  */
 const sendOTPEmail = async (email, otp, firstName = '') => {
-  console.log(`Attempting to send OTP email to: ${email}`);
+  console.log(`Attempting to send OTP email to: ${email} from: ${process.env.EMAIL_USER}`);
   
   const mailOptions = {
-    from: process.env.EMAIL_USER || 'your-email@gmail.com',
+    from: `"TuniHire" <${process.env.EMAIL_USER}>`, // Utilisez EMAIL_USER
     to: email,
     subject: 'Your Login Verification Code',
     html: `
@@ -75,17 +62,18 @@ const sendOTPEmail = async (email, otp, firstName = '') => {
   };
 
   try {
-    console.log('Sending email with nodemailer...');
+    console.log('Sending OTP email with nodemailer...');
     const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully:', info.messageId);
+    console.log('OTP email sent successfully:', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('Error sending OTP email:', error);
     console.error('Email configuration issue - please check your .env file settings');
-    console.error('For Gmail, make sure to:');
-    console.error('1. Enable "Less secure app access" or');
-    console.error('2. Use an App Password if 2FA is enabled');
-    console.error('3. Make sure the email and password are correct');
+    // En développement, continuez même si l'email échoue
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Development mode: continuing despite email failure');
+      return { success: false, error: error.message };
+    }
     return { success: false, error: error.message };
   }
 };
@@ -96,28 +84,21 @@ const sendOTPEmail = async (email, otp, firstName = '') => {
  */
 const testEmailConfig = async () => {
   try {
-    console.log('Testing email configuration...');
+    console.log('Testing OTP email configuration...');
     
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-      console.error('Email credentials are not set in environment variables');
+      console.error('OTP Email credentials are not set in environment variables');
       return false;
     }
     
     await transporter.verify();
-    console.log('Email configuration is valid and ready to send messages');
+    console.log('OTP Email configuration is valid and ready to send messages');
     return true;
   } catch (error) {
-    console.error('Email configuration test failed:', error);
+    console.error('OTP Email configuration test failed:', error);
     return false;
   }
 };
-
-// Run the test on module load
-testEmailConfig().then(isValid => {
-  if (!isValid) {
-    console.warn('WARNING: Email functionality may not work properly!');
-  }
-});
 
 module.exports = {
   generateOTP,
