@@ -114,9 +114,53 @@ const euclideanDistance = (desc1, desc2) => {
     }
     return Math.sqrt(sum);
 };
-
 // Sign in a user
 const signIn = async (req, res) => {
+    const { email, password } = req.body;
+
+    try {
+        // Check if the user exists
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ message: "User not found" });
+        }
+
+        // If the user signed up through Google, ask them to use Google sign-in
+        if (user.googleId && !user.password) {
+            return res.status(400).json({ 
+                message: "This account was created with Google. Please sign in with Google."
+            });
+        }
+
+        // Compare the provided password with the hashed password in the database
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(400).json({ message: "Invalid credentials" });
+        }
+
+        // Generate a JWT token
+        const token = jwt.sign(
+            { userId: user._id, email: user.email },
+            process.env.JWT_SECRET,
+            { expiresIn: "1h" }
+        );
+
+        // Include firstName and lastName in the response
+        res.status(200).json({ 
+            token, 
+            userId: user._id, 
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Sign in a user
+const signInn = async (req, res) => {
     const { email, password } = req.body;
 
     try {
@@ -461,5 +505,6 @@ module.exports = {
     handleGoogleUser,
     verifyOtp,
     resendOtp,
-    verifyEmail
+    verifyEmail,
+    signInn,
 };

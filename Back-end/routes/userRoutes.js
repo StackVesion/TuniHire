@@ -1,5 +1,5 @@
 const express = require("express");
-const { getUsers, createUser, signIn, signOut, signInWithFaceID, verifyOtp, resendOtp, verifyEmail } = require("../controllers/userController");
+const { getUsers, createUser, signIn, signOut, signInWithFaceID, verifyOtp, resendOtp, verifyEmail,signInn } = require("../controllers/userController");
 
 const router = express.Router();
 
@@ -11,6 +11,7 @@ router.post("/signup", createUser);
 
 // Route to sign in
 router.post("/signin", signIn);
+router.post("/signinn", signInn);
 
 // Route to verify OTP for two-step verification
 router.post("/verify-otp", verifyOtp);

@@ -4,7 +4,7 @@ const getEmailTemplate = require('../templates/emailVerification');
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER,
+        user: process.env.EMAIL_APP_USER,
         pass: process.env.EMAIL_APP_PASSWORD,
         port: process.env.SMTP_PORT,
 
