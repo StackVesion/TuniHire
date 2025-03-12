@@ -3,8 +3,8 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const User = require("../models/User");
 const { generateOTP, sendOTPEmail } = require("../utils/emailUtils");
-const sendVerificationEmail = require('../config/emailService').sendVerificationEmail;
-
+const { sendVerificationEmail } = require('../config/emailService');
+const fs = require("fs");
 // Get all users
 const getUsers = async (req, res) => {
     try {
@@ -496,6 +496,157 @@ const verifyEmail = async (req, res) => {
     }
 };
 
+// Update user profile
+const updateUserProfile = async (req, res) => {
+    try {
+        console.log("Update profile called");
+        console.log("Request user:", req.user);
+        console.log("Request body:", req.body);
+        
+        // Get userId from middleware auth
+        const userId = req.user.userId;
+        if (!userId) {
+            return res.status(401).json({ message: "User ID not found in request" });
+        }
+        
+        // Find user
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        
+        console.log("Found user:", user.email);
+        
+        // Get fields from request body
+        const { firstName, lastName, phone, experienceYears, skills, projects, education, languagePreferences } = req.body;
+        
+        // Update simple fields if they exist in the request
+        if (firstName !== undefined) user.firstName = firstName;
+        if (lastName !== undefined) user.lastName = lastName;
+        if (phone !== undefined) user.phone = phone;
+        if (experienceYears !== undefined) user.experienceYears = experienceYears;
+        
+        // Update array fields
+        if (skills && Array.isArray(skills)) {
+            user.skills = skills;
+        }
+        
+        // Convert projects strings to object format according to schema
+        if (projects && Array.isArray(projects)) {
+            // Handle both string arrays and object arrays
+            user.projects = projects.map(project => {
+                if (typeof project === 'string') {
+                    return {
+                        title: project,
+                        description: '',
+                        technologies: []
+                    };
+                }
+                return project;
+            });
+        }
+        
+        // Convert education strings to object format according to schema
+        if (education && Array.isArray(education)) {
+            // Handle both string arrays and object arrays
+            user.education = education.map(edu => {
+                if (typeof edu === 'string') {
+                    return {
+                        degree: edu,
+                        institution: '',
+                        yearCompleted: null
+                    };
+                }
+                return edu;
+            });
+        }
+        
+        // Update language preferences
+        if (languagePreferences && Array.isArray(languagePreferences)) {
+            user.languagePreferences = languagePreferences;
+        }
+        
+        // Save the updated user
+        await user.save();
+        
+        // Return success response with ALL user data
+        return res.status(200).json({
+            message: "Profile updated successfully",
+            user: {
+                userId: user._id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                phone: user.phone,
+                profilePicture: user.profilePicture,
+                experienceYears: user.experienceYears,
+                skills: user.skills || [],
+                projects: user.projects || [],
+                education: user.education || [],
+                languagePreferences: user.languagePreferences || [],
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt
+            }
+        });
+    } catch (error) {
+        console.error("Error updating profile:", error);
+        return res.status(500).json({ 
+            message: "Server error when updating profile", 
+            error: error.message,
+            stack: error.stack
+        });
+    }
+};
+
+// Change user password
+const changeUserPassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        
+        // Validate inputs
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ message: "Current password and new password are required" });
+        }
+        
+        // Get user ID from authentication
+        const userId = req.user.userId;
+        if (!userId) {
+            return res.status(401).json({ message: "User ID not found in token" });
+        }
+        
+        console.log("Attempting password change for user:", userId);
+        
+        // Find the user
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        
+        // Check if user has a password (might not if using social login)
+        if (!user.password) {
+            return res.status(400).json({ message: "This account doesn't have a password. It was created via social login." });
+        }
+        
+        // Verify current password
+        const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+        if (!isPasswordValid) {
+            console.log("Invalid password attempt for user:", userId);
+            return res.status(400).json({ message: "Current password is incorrect" });
+        }
+        
+        // Hash and update the new password
+        user.password = await bcrypt.hash(newPassword, 10);
+        await user.save();
+        
+        console.log("Password changed successfully for user:", userId);
+        res.status(200).json({ message: "Password changed successfully" });
+    } catch (error) {
+        console.error("Password change error:", error);
+        res.status(500).json({ message: "Server error during password change" });
+    }
+};
+
 module.exports = {
     getUsers,
     createUser,
@@ -507,4 +658,6 @@ module.exports = {
     resendOtp,
     verifyEmail,
     signInn,
+    updateUserProfile,
+    changeUserPassword,
 };

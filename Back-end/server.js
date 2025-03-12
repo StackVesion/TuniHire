@@ -6,10 +6,12 @@ const session = require("express-session");
 const cookieParser = require("cookie-parser");
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const nodemailer = require('nodemailer');
 require("dotenv").config(); // Load environment variables
 const connectDB = require("./config/db");
 const User = require('./models/User');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 require('./config/githubAuth'); // Add this line to require GitHub auth config
 
 // CORS configuration
@@ -28,6 +30,57 @@ app.use(cookieParser());
 
 // Connect to MongoDB
 connectDB();
+
+// Configuration du transporteur pour les emails de vérification (fadi6895@gmail.com)
+const verificationEmailTransporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_APP_USER, // fadi6895@gmail.com
+    pass: process.env.EMAIL_APP_PASSWORD // nkkz lgba vttt lxql
+  },
+  port: process.env.SMTP_PORT,
+  tls: {
+    rejectUnauthorized: false
+  }
+});
+
+// Configuration du transporteur pour les emails OTP (nihedabdworks@gmail.com)
+const otpEmailTransporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER, // nihedabdworks@gmail.com
+    pass: process.env.EMAIL_PASSWORD // euvl sgec ecqm tbpx
+  },
+  port: process.env.SMTP_PORT,
+  tls: {
+    rejectUnauthorized: false
+  }
+});
+
+// Rendre les transporteurs disponibles globalement
+global.verificationEmailTransporter = verificationEmailTransporter;
+global.otpEmailTransporter = otpEmailTransporter;
+
+// Tester les deux configurations
+const testEmailConfigs = async () => {
+  try {
+    console.log("Testing verification email configuration...");
+    await verificationEmailTransporter.verify();
+    console.log("Verification email configuration is valid (EMAIL_APP_USER)");
+    
+    console.log("Testing OTP email configuration...");
+    await otpEmailTransporter.verify();
+    console.log("OTP email configuration is valid (EMAIL_USER)");
+    
+    return true;
+  } catch (error) {
+    console.error("Email configuration test failed:", error);
+    return false;
+  }
+};
+
+// Exécuter le test au démarrage du serveur
+testEmailConfigs();
 
 // Session configuration - must come after CORS and cookieParser
 app.use(
@@ -252,4 +305,5 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`MongoDB Connected: ${mongoose.connection.host}`);
 });
