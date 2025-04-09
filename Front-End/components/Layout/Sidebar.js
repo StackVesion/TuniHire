@@ -3,6 +3,7 @@ import PerfectScrollbar from 'react-perfect-scrollbar';
 import 'react-perfect-scrollbar/dist/css/styles.css';
 import { useState, useEffect } from "react";
 import { useRouter } from 'next/router';
+import { getCurrentUser, clearUserData } from '../../utils/authUtils';
 
 const Sidebar = ({ openClass }) => {
     const router = useRouter();
@@ -11,14 +12,14 @@ const Sidebar = ({ openClass }) => {
         status: false,
         key: "",
     });
-    const [scroll, setScroll] = useState(0)
+    const [scroll, setScroll] = useState(0);
     const [isToggled, setToggled] = useState(false);
 
     useEffect(() => {
         // Load user data from localStorage
-        const userData = localStorage.getItem("user");
-        if (userData) {
-            setUser(JSON.parse(userData));
+        const currentUser = getCurrentUser();
+        if (currentUser) {
+            setUser(currentUser);
         }
     }, []);
 
@@ -43,39 +44,17 @@ const Sidebar = ({ openClass }) => {
             
             // Show confirmation dialog
             const result = await Swal.fire({
-                title: 'Are you sure?',
-                text: 'You will be logged out of your account',
-                icon: 'question',
+                title: 'Logout',
+                text: 'Are you sure you want to logout?',
+                icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Yes, log out!',
+                confirmButtonText: 'Yes, Logout',
                 cancelButtonText: 'Cancel'
             });
 
             if (result.isConfirmed) {
-                // Check if user is Google-authenticated
-                const isGoogleUser = user && user.googleId;
-                
-                if (isGoogleUser) {
-                    // Google logout
-                    await fetch("http://localhost:5000/api/users/google/logout", { 
-                        credentials: "include"
-                    });
-                } else {
-                    // Regular logout
-                    await fetch("http://localhost:5000/api/users/signout", {
-                        method: "POST",
-                        credentials: "include",
-                        headers: {
-                            "Content-Type": "application/json"
-                        }
-                    });
-                }
-
                 // Clear localStorage
-                localStorage.removeItem("token");
-                localStorage.removeItem("user");
+                clearUserData();
                 
                 // Show success message
                 Swal.fire({
@@ -113,144 +92,90 @@ const Sidebar = ({ openClass }) => {
                                 {/* mobile menu start*/}
                                 <nav>
                                     <ul className="mobile-menu font-heading">
-                                         <li className={isActive.key == 1 ? "has-children active" : "has-children"}>
-                                            <span onClick={() => handleToggle(1)} className="menu-expand"><i className="fi-rr-angle-small-down"></i></span>
-
+                                        <li>
                                             <Link legacyBehavior href="/"><a className="active">Home</a></Link>
-
-                                            <ul className={isActive.key == 1 ? "sub-menu d-block" : "sub-menu d-none"}>
-                                                <li>
-                                                    <Link legacyBehavior href="/"><a>Home 1</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/index-2"><a>Home 2</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/index-3"><a>Home 3</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/index-4"><a>Home 4</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/index-5"><a>Home 5</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/index-6"><a>Home 6</a></Link>
-                                                    </li>
-                                            </ul>
                                         </li>
-                                         <li className={isActive.key == 2 ? "has-children active" : "has-children"}>
-                                            <span onClick={() => handleToggle(2)} className="menu-expand"><i className="fi-rr-angle-small-down"></i></span>
-
+                                        <li>
                                             <Link legacyBehavior href="/jobs-grid"><a>Find a Job</a></Link>
-
-                                            <ul className={isActive.key == 2 ? "sub-menu d-block" : "sub-menu d-none"}>
-                                                <li>
-                                                    <Link legacyBehavior href="/jobs-grid"><a>Jobs Grid</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/jobs-list"><a>Jobs List</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/job-details"><a>Jobs Details</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/job-details-2"><a>Jobs Details 2            </a></Link>
-                                                    </li>
-                                            </ul>
                                         </li>
-                                         <li className={isActive.key == 3 ? "has-children active" : "has-children"}>
-                                            <span onClick={() => handleToggle(3)} className="menu-expand"><i className="fi-rr-angle-small-down"></i></span>
-
+                                        <li>
                                             <Link legacyBehavior href="/companies-grid"><a>Recruiters</a></Link>
-
-                                            <ul className={isActive.key == 3 ? "sub-menu d-block" : "sub-menu d-none"}>
-                                                <li>
-                                                    <Link legacyBehavior href="/companies-grid"><a>Recruiters</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/company-details"><a>Company Details</a></Link>
-                                                    </li>
-                                            </ul>
                                         </li>
-                                         <li className={isActive.key == 4 ? "has-children active" : "has-children"}>
-                                            <span onClick={() => handleToggle(4)} className="menu-expand"><i className="fi-rr-angle-small-down"></i></span>
-
+                                        <li>
                                             <Link legacyBehavior href="/candidates-grid"><a>Candidates</a></Link>
-
-                                            <ul className={isActive.key == 4 ? "sub-menu d-block" : "sub-menu d-none"}>
-                                                <li>
-                                                    <Link legacyBehavior href="/candidates-grid"><a>Candidates Grid</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/candidate-details"><a>Candidate Details</a></Link>
-                                                    </li>
-                                            </ul>
                                         </li>
-                                         <li className={isActive.key == 5 ? "has-children active" : "has-children"}>
-                                            <span onClick={() => handleToggle(5)} className="menu-expand"><i className="fi-rr-angle-small-down"></i></span>
-
-                                            <Link legacyBehavior href="/blog-grid"><a>Pages</a></Link>
-
-                                            <ul className={isActive.key == 5 ? "sub-menu d-block" : "sub-menu d-none"}>
-                                                <li>
-                                                    <Link legacyBehavior href="/page-about"><a>About Us</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/page-pricing"><a>Pricing Plan</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/page-contact"><a>Contact Us</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/page-register"><a>Register</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/page-signin"><a>Signin</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/page-reset-password"><a>Reset Password</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/page-content-protected"><a>Content Protected</a></Link>
-                                                    </li>
-                                            </ul>
-                                        </li>
-                                         <li className={isActive.key == 6 ? "has-children active" : "has-children"}>
-                                            <span onClick={() => handleToggle(6)} className="menu-expand"><i className="fi-rr-angle-small-down"></i></span>
-
-                                            <Link legacyBehavior href="/blog-grid"><a>Blog</a></Link>
-
-                                            <ul className={isActive.key == 6 ? "sub-menu d-block" : "sub-menu d-none"}>
-                                                <li>
-                                                    <Link legacyBehavior href="/blog-grid"><a>Blog Grid</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/blog-grid-2"><a>Blog Grid 2</a></Link>
-                                                    </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/blog-details"><a>Blog Single</a></Link>
-                                                    </li>
-                                            </ul>
+                                        <li>
+                                            <Link legacyBehavior href="/page-about"><a>About</a></Link>
                                         </li>
                                         <li>
                                             <Link legacyBehavior href="/page-contact"><a>Contact</a></Link>
-                                            </li>
+                                        </li>
                                     </ul>
                                 </nav>
                             </div>
                             <div className="mobile-account">
                                 <h6 className="mb-10">Your Account</h6>
                                 <ul className="mobile-menu font-heading">
-                                    <li>
-                                        <Link legacyBehavior href="#"><a className="sidebar-link"><i className="fi-rr-settings me-2 animate__animated animate__pulse"></i>Account Settings</a></Link>
-                                    </li>
-                                    <li>
-                                        <Link legacyBehavior href="/candidate-profile"><a className="sidebar-link"><i className="fi-rr-user me-2 animate__animated animate__pulse"></i>My Profile</a></Link>
-                                    </li>
-                                    <li>
-                                        <a href="#" onClick={handleLogout} className="sidebar-link"><i className="fi-rr-sign-out me-2 animate__animated animate__pulse"></i>Sign Out</a>
-                                    </li>
+                                    {user ? (
+                                        <>
+                                            {user.role && (user.role.toString().toUpperCase() === 'HR') && (
+                                                <li>
+                                                    <a 
+                                                        onClick={() => {
+                                                            const token = localStorage.getItem('token');
+                                                            if (token) {
+                                                                window.location.href = `http://localhost:3001?token=${token}`;
+                                                            } else {
+                                                                router.push('/page-signin');
+                                                            }
+                                                        }}
+                                                        className="sidebar-link"
+                                                    >
+                                                        <i className="fi-rr-dashboard me-2 text-primary"></i> HR Dashboard
+                                                    </a>
+                                                </li>
+                                            )}
+                                            
+                                            {user.role && (user.role === 'candidate' || user.role === 'Candidate' || 
+                                              user.role === 'admin' || user.role === 'Admin') && (
+                                                <li>
+                                                    <a 
+                                                        onClick={() => {
+                                                            const token = localStorage.getItem('token');
+                                                            if (token) {
+                                                                window.location.href = `http://localhost:3002/?token=${token}`;
+                                                            } else {
+                                                                router.push('/page-signin');
+                                                            }
+                                                        }}
+                                                        className="sidebar-link"
+                                                    >
+                                                        <i className="fi-rr-dashboard me-2 text-primary"></i> Dashboard
+                                                    </a>
+                                                </li>
+                                            )}
+                                            <li>
+                                                <Link legacyBehavior href="/candidate-profile"><a className="sidebar-link"><i className="fi-rr-user me-2 text-primary"></i>My Profile</a></Link>
+                                            </li>
+                                            <li>
+                                                <Link legacyBehavior href="/candidate-settings"><a className="sidebar-link"><i className="fi-rr-settings me-2 text-primary"></i>Settings</a></Link>
+                                            </li>
+                                            <li>
+                                                <a href="#" onClick={handleLogout} className="sidebar-link">
+                                                    <i className="fi-rr-sign-out me-2 text-primary"></i>Sign Out
+                                                </a>
+                                            </li>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <li>
+                                                <Link legacyBehavior href="/page-register"><a className="sidebar-link"><i className="fi-rr-user-add me-2 text-primary"></i>Register</a></Link>
+                                            </li>
+                                            <li>
+                                                <Link legacyBehavior href="/page-signin"><a className="sidebar-link"><i className="fi-rr-sign-in me-2 text-primary"></i>Sign In</a></Link>
+                                            </li>
+                                        </>
+                                    )}
                                 </ul>
                             </div>
                             <div className="site-copyright">Copyright 2022 JobBox. Designed by AliThemes.</div>
@@ -264,15 +189,17 @@ const Sidebar = ({ openClass }) => {
                     display: flex;
                     align-items: center;
                     transition: all 0.3s ease;
+                    padding: 8px 12px;
+                    border-radius: 5px;
+                    cursor: pointer;
                 }
                 
                 .sidebar-link:hover {
                     transform: translateX(5px);
                 }
                 
-                .animate__pulse {
-                    animation-duration: 3s;
-                    animation-iteration-count: infinite;
+                .text-primary {
+                    color: #3c65f5 !important;
                 }
             `}</style>
         </>

@@ -13,7 +13,7 @@ const UserSchema = new mongoose.Schema({
   }},
   role: { 
     type: String, 
-    enum: ["admin", "HR", "candidate", "visitor"] 
+    enum: ["admin", "HR", "candidate"] 
   },
   phone: { type: String },
   profilePicture: { type: String },
@@ -37,11 +37,9 @@ const UserSchema = new mongoose.Schema({
   phoneNumber: String,
   faceDescriptor: { type: Array, default: null },
   faceId: { type: String, unique: true, sparse: true },
-  // OTP for two-step verification
   otp: { type: String },
   otpExpiry: { type: Date },
   isOtpVerified: { type: Boolean, default: false },
-  // Email verification
   isEmailVerified: { type: Boolean, default: false },
   emailVerificationToken: String,
   emailVerificationExpires: Date

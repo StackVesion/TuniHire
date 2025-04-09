@@ -3,11 +3,27 @@ import Layout from "@/components/layout/Layout"
 import BrandSlider from "@/components/slider/BrandSlider"
 import { Menu } from '@headlessui/react'
 import Link from "next/link"
+import withAuth from "@/utils/withAuth"
+import { useEffect, useState } from "react"
 
-export default function Home() {
+function Home({ user }) {
+    const [roleDisplay, setRoleDisplay] = useState('');
+    
+    useEffect(() => {
+        // Set role display text based on user role
+        if (user) {
+            const role = user.role.toString().toUpperCase();
+            setRoleDisplay(role === 'HR' ? 'HR Dashboard' : 'Candidate Dashboard');
+        }
+    }, [user]);
     return (
         <>
             <Layout breadcrumbTitle="Dashboard" breadcrumbActive="Dashboard">
+                <div className="alert alert-info mb-20">
+                    <h5>Welcome to your {roleDisplay}</h5>
+                    <p>You are logged in as {user?.firstName} {user?.lastName} ({user?.role})</p>
+                </div>
+
                 <div className="col-xxl-8 col-xl-7 col-lg-7">
                     <div className="section-box">
                         <div className="row">
@@ -506,3 +522,7 @@ export default function Home() {
         </>
     )
 }
+
+// Export with auth HOC
+// Allow both HR and Candidate roles to access the dashboard
+export default withAuth(Home, ['HR', 'candidate'])

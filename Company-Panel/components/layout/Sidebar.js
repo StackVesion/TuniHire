@@ -1,39 +1,79 @@
 import Link from "next/link"
 import { useRouter } from "next/router"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { buildStyles, CircularProgressbar } from 'react-circular-progressbar'
 import 'react-circular-progressbar/dist/styles.css'
+import { getCurrentUser } from "../../utils/authUtils"
 
 const percentage = 67;
 export default function Sidebar() {
     const [isToggled, setToggled] = useState(false);
+    const [user, setUser] = useState(null);
     const toggleTrueFalse = () => setToggled(!isToggled);
     const router = useRouter();
+    
+    useEffect(() => {
+        // Use our auth utility to get the current user
+        const currentUser = getCurrentUser();
+        if (currentUser) {
+            console.log('Sidebar: Found user', currentUser.firstName, currentUser.role);
+            setUser(currentUser);
+        } else {
+            console.warn('Sidebar: No user found in localStorage');
+        }
+    }, []);
     return (
         <>
             <div className={`nav ${isToggled ? "close-nav" : ""}`}><a className={`btn btn-expanded ${isToggled ? "btn-collapsed" : ""}`} onClick={toggleTrueFalse} />
                 <nav className="nav-main-menu">
                     <ul className="main-menu">
-                        <li> <Link className={router.pathname == "/" ? "dashboard2 active" : "dashboard2"} href="/"><img src="assets/imgs/page/dashboard/dashboard.svg" alt="jobBox" /><span className="name">Dashboard</span></Link>
-                        </li>
-                        <li> <Link className={router.pathname == "/candidates" ? "dashboard2 active" : "dashboard2"} href="/candidates"><img src="assets/imgs/page/dashboard/candidates.svg" alt="jobBox" /><span className="name">Candidates</span></Link>
-                        </li>
-                        <li> <Link className={router.pathname == "/recruiters" ? "dashboard2 active" : "dashboard2"} href="/recruiters"><img src="assets/imgs/page/dashboard/recruiters.svg" alt="jobBox" /><span className="name">Recruiters</span></Link>
-                        </li>
-                        <li> <Link className={router.pathname == "/my-job-grid" ? "dashboard2 active" : "dashboard2"} href="/my-job-grid"><img src="assets/imgs/page/dashboard/jobs.svg" alt="jobBox" /><span className="name">My Jobs</span></Link>
-                        </li>
-                        <li> <Link className={router.pathname == "/my-tasks-list" ? "dashboard2 active" : "dashboard2"} href="/my-tasks-list"><img src="assets/imgs/page/dashboard/tasks.svg" alt="jobBox" /><span className="name">Tasks List</span></Link>
-                        </li>
-                        <li> <Link className={router.pathname == "/profile" ? "dashboard2 active" : "dashboard2"} href="/profile"><img src="assets/imgs/page/dashboard/profiles.svg" alt="jobBox" /><span className="name">My Profiles</span></Link>
-                        </li>
-                        <li> <Link className={router.pathname == "/my-resume" ? "dashboard2 active" : "dashboard2"} href="/my-resume"><img src="assets/imgs/page/dashboard/cv-manage.svg" alt="jobBox" /><span className="name">CV Manage</span></Link>
-                        </li>
-                        <li> <Link className={router.pathname == "/settings" ? "dashboard2 active" : "dashboard2"} href="/settings"><img src="assets/imgs/page/dashboard/settings.svg" alt="jobBox" /><span className="name">Setting</span></Link>
-                        </li>
-                        <li> <Link className={router.pathname == "/authentication" ? "dashboard2 active" : "dashboard2"} href="/authentication"><img src="assets/imgs/page/dashboard/authentication.svg" alt="jobBox" /><span className="name">Authentication</span></Link>
-                        </li>
-                        <li> <Link className={router.pathname == "/login" ? "dashboard2 active" : "dashboard2"} href="/login"><img src="assets/imgs/page/dashboard/logout.svg" alt="jobBox" /><span className="name">Logout</span></Link>
-                        </li>
+                        {/* CANDIDATE ROLE: Candidate-specific menu items */}
+                        {user && user.role && user.role.toString().toUpperCase() === 'CANDIDATE' && (
+                            <>
+                                <li><Link className={router.pathname === "/" ? "dashboard2 active" : "dashboard2"} href="/"><img src="assets/imgs/page/dashboard/dashboard.svg" alt="jobBox" /><span className="name">Candidate Dashboard</span></Link></li>
+                                <li><Link className={router.pathname === "/apply-company" ? "dashboard2 active" : "dashboard2"} href="/apply-company"><img src="assets/imgs/page/dashboard/building.svg" alt="jobBox" /><span className="name">Apply for Company</span></Link></li>
+                                <li><Link className={router.pathname === "/jobs" ? "dashboard2 active" : "dashboard2"} href="/jobs"><img src="assets/imgs/page/dashboard/jobs.svg" alt="jobBox" /><span className="name">Find Jobs</span></Link></li>
+                                <li><Link className={router.pathname === "/my-resume" ? "dashboard2 active" : "dashboard2"} href="/my-resume"><img src="assets/imgs/page/dashboard/cv-manage.svg" alt="jobBox" /><span className="name">My Resume</span></Link></li>
+                                <li><Link className={router.pathname === "/applications" ? "dashboard2 active" : "dashboard2"} href="/applications"><img src="assets/imgs/page/dashboard/tasks.svg" alt="jobBox" /><span className="name">My Applications</span></Link></li>
+                                <li><Link className={router.pathname === "/saved-jobs" ? "dashboard2 active" : "dashboard2"} href="/saved-jobs"><img src="assets/imgs/page/dashboard/bookmarks.svg" alt="jobBox" /><span className="name">Saved Jobs</span></Link></li>
+                                <li><Link className={router.pathname === "/profile" ? "dashboard2 active" : "dashboard2"} href="/profile"><img src="assets/imgs/page/dashboard/profiles.svg" alt="jobBox" /><span className="name">My Profile</span></Link></li>
+                                <li><Link className={router.pathname === "/settings" ? "dashboard2 active" : "dashboard2"} href="/settings"><img src="assets/imgs/page/dashboard/settings.svg" alt="jobBox" /><span className="name">Settings</span></Link></li>
+                            </>
+                        )}
+                        
+                        {/* HR ROLE: HR-specific menu items */}
+                        {user && user.role && user.role.toString().toUpperCase() === 'HR' && (
+                            <>
+                                <li><Link className={router.pathname === "/" ? "dashboard2 active" : "dashboard2"} href="/"><img src="assets/imgs/page/dashboard/dashboard.svg" alt="jobBox" /><span className="name">Company Dashboard</span></Link></li>
+                                <li><Link className={router.pathname === "/post-job" ? "dashboard2 active" : "dashboard2"} href="/post-job"><img src="assets/imgs/page/dashboard/recruitment.svg" alt="jobBox" /><span className="name">Post a Job</span></Link></li>
+                                <li><Link className={router.pathname === "/my-job-grid" ? "dashboard2 active" : "dashboard2"} href="/my-job-grid"><img src="assets/imgs/page/dashboard/jobs.svg" alt="jobBox" /><span className="name">Manage Jobs</span></Link></li>
+                                <li><Link className={router.pathname === "/candidates" ? "dashboard2 active" : "dashboard2"} href="/candidates"><img src="assets/imgs/page/dashboard/candidates.svg" alt="jobBox" /><span className="name">All Candidates</span></Link></li>
+                                <li><Link className={router.pathname === "/applications" ? "dashboard2 active" : "dashboard2"} href="/applications"><img src="assets/imgs/page/dashboard/tasks.svg" alt="jobBox" /><span className="name">Applications</span></Link></li>
+                                <li><Link className={router.pathname === "/company-settings" ? "dashboard2 active" : "dashboard2"} href="/company-settings"><img src="assets/imgs/page/dashboard/profiles.svg" alt="jobBox" /><span className="name">Company Profile</span></Link></li>
+                                <li><Link className={router.pathname === "/profile" ? "dashboard2 active" : "dashboard2"} href="/profile"><img src="assets/imgs/page/dashboard/profiles.svg" alt="jobBox" /><span className="name">My Profile</span></Link></li>
+                                <li><Link className={router.pathname === "/settings" ? "dashboard2 active" : "dashboard2"} href="/settings"><img src="assets/imgs/page/dashboard/settings.svg" alt="jobBox" /><span className="name">Settings</span></Link></li>
+                            </>
+                        )}
+                        
+                        {/* Default menu if no user or role not recognized */}
+                        {(!user || !user.role) && (
+                            <>
+                                <li><Link className={router.pathname === "/" ? "dashboard2 active" : "dashboard2"} href="/"><img src="assets/imgs/page/dashboard/dashboard.svg" alt="jobBox" /><span className="name">Dashboard</span></Link></li>
+                                <li><Link className={router.pathname === "/login" ? "dashboard2 active" : "dashboard2"} href="/login"><img src="assets/imgs/page/dashboard/login.svg" alt="jobBox" /><span className="name">Login</span></Link></li>
+                            </>
+                        )}
+                        {user && (
+                            <li onClick={() => {
+                                localStorage.removeItem('token');
+                                localStorage.removeItem('user');
+                                window.location.href = '/login';
+                            }} className="cursor-pointer">
+                                <a className="dashboard2">
+                                    <img src="assets/imgs/page/dashboard/logout.svg" alt="jobBox" />
+                                    <span className="name">Logout</span>
+                                </a>
+                            </li>
+                        )}
                     </ul>
                 </nav>
                 <div className="border-bottom mb-20 mt-20" />
