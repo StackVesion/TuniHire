@@ -3,13 +3,114 @@ const authMiddleware = require("../middleware/authMiddleware");
 const User = require("../models/User"); // Add this line to import the User model
 const multer = require("multer");
 const path = require("path");
-const { getUsers, createUser, signIn, signOut, signInWithFaceID,updateUserProfile,changeUserPassword, verifyOtp, resendOtp, verifyEmail,signInn, updateUser, deleteUser } = require("../controllers/userController");
+const crypto = require("crypto");
+const { sendVerificationEmail } = require('../config/emailService');
+const { getUsers, createUser, signIn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, signInn, updateUser, deleteUser, validateToken, generateNewVerificationToken } = require("../controllers/userController");
 
 const router = express.Router();
 
 // Test endpoint for JWT verification
 router.get("/test-auth", authMiddleware, (req, res) => {
     return res.status(200).json({ message: "Authentication successful", user: req.user });
+});
+
+// Route pour valider un token JWT
+router.get("/validate-token", authMiddleware, validateToken);
+
+// Nouvelle implémentation directe de vérification d'email pour contourner les problèmes
+router.get("/verify-email/:token", async (req, res) => {
+    const { token } = req.params;
+    
+    try {
+        console.log("Direct route: Verifying email with token:", token);
+        
+        // Trouver l'utilisateur par token
+        const user = await User.findOne({ emailVerificationToken: token });
+        
+        if (!user) {
+            console.log("No user found with token:", token);
+            return res.status(400).json({ message: "Token invalide ou inexistant" });
+        }
+        
+        // Mettre à jour le statut de vérification
+        user.isEmailVerified = true;
+        user.emailVerificationToken = undefined;
+        user.emailVerificationExpires = undefined;
+        
+        await user.save();
+        console.log("Email verified successfully for:", user.email);
+        
+        // Rediriger vers le frontend avec un message de succès
+        return res.status(200).json({ 
+            message: "Email vérifié avec succès",
+            email: user.email
+        });
+    } catch (error) {
+        console.error("Verification error:", error);
+        return res.status(500).json({ message: "Erreur serveur lors de la vérification" });
+    }
+});
+
+// Route pour générer un nouveau token de vérification d'email
+router.get("/resend-verification/:email", generateNewVerificationToken);
+
+// Route pour la vérification directe par ID utilisateur (pour le support administratif)
+router.post("/admin/verify-email", async (req, res) => {
+    try {
+        const { email } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({ message: "Email requis" });
+        }
+        
+        const user = await User.findOne({ email });
+        
+        if (!user) {
+            return res.status(404).json({ message: "Utilisateur non trouvé" });
+        }
+        
+        user.isEmailVerified = true;
+        user.emailVerificationToken = undefined;
+        user.emailVerificationExpires = undefined;
+        
+        await user.save();
+        
+        return res.status(200).json({ 
+            message: "Email vérifié manuellement avec succès", 
+            email: user.email 
+        });
+    } catch (error) {
+        console.error("Manual verification error:", error);
+        return res.status(500).json({ message: "Erreur serveur" });
+    }
+});
+
+// Route de diagnostic pour les tokens de vérification d'email
+router.get("/diagnostic/email-tokens", async (req, res) => {
+    try {
+        // Récupérer tous les utilisateurs avec tokens de vérification
+        const users = await User.find({ emailVerificationToken: { $exists: true, $ne: null } })
+            .select('email emailVerificationToken emailVerificationExpires isEmailVerified');
+        
+        // Formater pour l'affichage
+        const formattedUsers = users.map(user => ({
+            email: user.email,
+            tokenExists: !!user.emailVerificationToken,
+            tokenLength: user.emailVerificationToken ? user.emailVerificationToken.length : 0,
+            isExpired: user.emailVerificationExpires ? user.emailVerificationExpires < Date.now() : null,
+            expiryDate: user.emailVerificationExpires,
+            isVerified: user.isEmailVerified
+        }));
+        
+        return res.status(200).json({
+            count: formattedUsers.length,
+            users: formattedUsers,
+            currentTime: new Date()
+        });
+    } catch (error) {
+        console.error("Diagnostic error:", error);
+        return res.status(500).json({ error: error.message });
+    }
 });
 
 // Route to get all users
