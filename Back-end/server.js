@@ -16,7 +16,7 @@ require('./config/githubAuth'); // Add this line to require GitHub auth config
 
 // CORS configuration
 const corsOptions = {
-  origin: 'http://localhost:3000',
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
   credentials: true,
 };
 

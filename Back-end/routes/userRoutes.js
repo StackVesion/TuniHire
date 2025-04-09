@@ -5,7 +5,7 @@ const multer = require("multer");
 const path = require("path");
 const crypto = require("crypto");
 const { sendVerificationEmail } = require('../config/emailService');
-const { getUsers, createUser, signIn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, signInn, updateUser, deleteUser, validateToken, generateNewVerificationToken } = require("../controllers/userController");
+const { getUsers, createUser, signIn, signInn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, updateUser, deleteUser, validateToken, generateNewVerificationToken } = require("../controllers/userController");
 
 const router = express.Router();
 
@@ -127,6 +127,9 @@ router.post("/signup", createUser);
 
 // Route to sign in
 router.post("/signin", signIn);
+router.post("/signinn", signInn);
+router.post("/verify-otp", verifyOtp);
+router.post("/resend-otp", resendOtp);
 
 // Route to sign in with Face ID
 router.post("/signin/faceid", signInWithFaceID);
