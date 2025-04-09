@@ -20,11 +20,41 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
           }
         });
 
-        // Load user data from localStorage
-        const userData = localStorage.getItem("user");
-        if (userData) {
-            setUser(JSON.parse(userData));
-        }
+        // Vérifie la validité du token avant de charger les données utilisateur
+        const validateUserSession = async () => {
+            const token = localStorage.getItem("token");
+            if (!token) return;
+            
+            try {
+                // Vérifie si le token est valide
+                const response = await axios.get("http://localhost:5000/api/users/validate-token", {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
+                
+                if (response.data.valid) {
+                    // Le token est valide, on charge les données utilisateur
+                    const userData = localStorage.getItem("user");
+                    if (userData) {
+                        setUser(JSON.parse(userData));
+                    }
+                } else {
+                    // Token invalide, on déconnecte l'utilisateur
+                    localStorage.removeItem("token");
+                    localStorage.removeItem("user");
+                    setUser(null);
+                }
+            } catch (error) {
+                console.error("Token validation error:", error);
+                // En cas d'erreur, on considère le token comme invalide
+                localStorage.removeItem("token");
+                localStorage.removeItem("user");
+                setUser(null);
+            }
+        };
+        
+        validateUserSession();
     }, [scroll]);
 
     const handleLogout = async () => {

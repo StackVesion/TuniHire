@@ -99,6 +99,8 @@ const createUser = async (req, res) => {
 
         // Hash du mot de passe
         const hashedPassword = await bcrypt.hash(password, 10);
+        
+        // Vérification du format faceDescriptor uniquement s'il est fourni
         if (faceDescriptor && (!Array.isArray(faceDescriptor) || faceDescriptor.some(isNaN))) {
             return res.status(400).json({ message: "Invalid face descriptor format" });
         }
@@ -106,7 +108,7 @@ const createUser = async (req, res) => {
         const emailVerificationToken = crypto.randomBytes(32).toString('hex');
         const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-        // Génération du faceId si un faceDescriptor est fourni
+        // Génération du faceId uniquement si un faceDescriptor est fourni
         let faceId = null;
         if (faceDescriptor) {
             faceId = generateFaceId(faceDescriptor);
@@ -140,7 +142,12 @@ const createUser = async (req, res) => {
             { expiresIn: "1h" }
         );
 
-        res.status(201).json({ token, userId: newUser._id, email: newUser.email });
+        res.status(201).json({ 
+            token, 
+            userId: newUser._id, 
+            email: newUser.email,
+            hasFaceId: !!faceId
+        });
 
     } catch (error) {
         console.error(" Error creating user:", error);
@@ -521,27 +528,77 @@ const verifyEmail = async (req, res) => {
     const { token } = req.params;
 
     try {
-        const user = await User.findOne({
-            emailVerificationToken: token,
-            emailVerificationExpires: { $gt: Date.now() }
-        });
-
-        if (!user) {
+        // Ajouter des logs pour le débogage
+        console.log("Attempting to verify email with token:", token);
+        
+        // Vérifier si le token est valide
+        if (!token || token.length < 10) {
+            console.log("Invalid token format:", token);
             return res.status(400).json({
-                message: "Invalid or expired verification token"
+                message: "Format de token invalide"
             });
         }
 
+        // Rechercher l'utilisateur par le token uniquement d'abord
+        let user = await User.findOne({
+            emailVerificationToken: token
+        });
+
+        // Ajouter des logs pour voir quels utilisateurs existent avec des tokens de vérification
+        console.log("Searching for token:", token);
+        const usersWithTokens = await User.find({ emailVerificationToken: { $exists: true } })
+            .select('email emailVerificationToken emailVerificationExpires');
+        console.log("Users with verification tokens:", JSON.stringify(usersWithTokens, null, 2));
+
+        if (!user) {
+            console.log("No user found with this verification token");
+            return res.status(400).json({
+                message: "Token de vérification invalide ou inexistant"
+            });
+        }
+
+        // Ajouter plus de détails sur l'utilisateur trouvé
+        console.log("User found:", {
+            email: user.email,
+            isEmailVerified: user.isEmailVerified,
+            tokenExpiry: user.emailVerificationExpires,
+            currentTime: new Date()
+        });
+
+        // Vérifier maintenant si le token est expiré
+        if (user.emailVerificationExpires && user.emailVerificationExpires < Date.now()) {
+            console.log("Token expired. Expiry:", user.emailVerificationExpires, "Current:", Date.now());
+            return res.status(400).json({
+                message: "Le lien de vérification a expiré",
+                expired: true
+            });
+        }
+
+        // Si l'utilisateur est déjà vérifié
+        if (user.isEmailVerified) {
+            console.log("User email already verified:", user.email);
+            return res.status(200).json({
+                message: "Email déjà vérifié",
+                alreadyVerified: true
+            });
+        }
+
+        // Mettre à jour l'utilisateur
         user.isEmailVerified = true;
         user.emailVerificationToken = undefined;
         user.emailVerificationExpires = undefined;
         await user.save();
 
+        console.log("Email verified successfully for user:", user.email);
         res.status(200).json({
-            message: "Email verified successfully"
+            message: "Email vérifié avec succès"
         });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error("Email verification error:", error);
+        res.status(500).json({ 
+            message: "Une erreur est survenue lors de la vérification de l'email",
+            error: error.message 
+        });
     }
 };
 
@@ -798,19 +855,93 @@ const deleteUser = async (req, res) => {
     }
 };
 
+// Validate JWT token
+const validateToken = async (req, res) => {
+    try {
+        // Si la requête arrive ici, cela signifie que le middleware authMiddleware 
+        // a déjà vérifié et validé le token avec succès
+        return res.status(200).json({ 
+            valid: true,
+            userId: req.user.userId
+        });
+    } catch (error) {
+        console.error("Error validating token:", error);
+        return res.status(401).json({ 
+            valid: false,
+            message: "Invalid token" 
+        });
+    }
+};
+
+// Fonction de diagnostic et réparation pour la vérification d'email
+const generateNewVerificationToken = async (req, res) => {
+    try {
+        const { email } = req.params;
+        
+        // Vérifier si l'email est fourni
+        if (!email) {
+            return res.status(400).json({ message: "Email requis" });
+        }
+        
+        // Chercher l'utilisateur
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: "Utilisateur non trouvé" });
+        }
+        
+        // Vérifier si l'email est déjà vérifié
+        if (user.isEmailVerified) {
+            return res.status(200).json({ 
+                message: "Email déjà vérifié",
+                isVerified: true 
+            });
+        }
+        
+        // Générer un nouveau token
+        const emailVerificationToken = crypto.randomBytes(32).toString('hex');
+        const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 heures
+        
+        // Mettre à jour l'utilisateur
+        user.emailVerificationToken = emailVerificationToken;
+        user.emailVerificationExpires = emailVerificationExpires;
+        await user.save();
+        
+        // Envoyer un nouvel email de vérification
+        try {
+            await sendVerificationEmail(user.email, emailVerificationToken, user.firstName);
+            console.log("New verification email sent to:", user.email);
+        } catch (emailError) {
+            console.error("Error sending verification email:", emailError);
+            // On continue même si l'email échoue
+        }
+        
+        return res.status(200).json({
+            message: "Nouveau token généré avec succès",
+            verificationUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email/${emailVerificationToken}`,
+            token: emailVerificationToken,
+            expires: emailVerificationExpires
+        });
+        
+    } catch (error) {
+        console.error("Error generating new verification token:", error);
+        return res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getUsers,
     createUser,
     updateUser,
     deleteUser,
     signIn,
+    signInn,
     signInWithFaceID,
     signOut,
-    handleGoogleUser,
     verifyOtp,
     resendOtp,
     verifyEmail,
-    signInn,
     updateUserProfile,
     changeUserPassword,
+    validateToken,
+    generateNewVerificationToken
 };

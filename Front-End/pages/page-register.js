@@ -19,6 +19,7 @@ export default function Register() {
     });
 
     const [faceDescriptor, setFaceDescriptor] = useState(null);
+    const [useFaceId, setUseFaceId] = useState(false);
     const webcamRef = useRef(null);
     const [error, setError] = useState("");
     const router = useRouter();
@@ -91,14 +92,15 @@ export default function Register() {
             return;
         }
 
-        if (!faceDescriptor) {
-            setError("Veuillez capturer votre visage avant de soumettre.");
+        // Vérification du Face ID seulement si l'option est activée
+        if (useFaceId && !faceDescriptor) {
+            setError("Vous avez activé Face ID mais n'avez pas capturé votre visage. Veuillez le capturer ou désactiver l'option Face ID.");
             return;
         }
 
         const requestBody = {
             ...formData,
-            faceDescriptor: faceDescriptor ? Array.from(faceDescriptor) : undefined // ✅ Supprime faceDescriptor si null
+            faceDescriptor: useFaceId && faceDescriptor ? Array.from(faceDescriptor) : undefined
         };
 
         console.log("📤 Données envoyées :", requestBody);
@@ -168,12 +170,31 @@ export default function Register() {
                                     </div>
                                 ))}
                                 <div className="form-group">
-                                    <label className="form-label">Face ID</label>
-                                    <Webcam ref={webcamRef} screenshotFormat="image/png" width="100%" />
-                                    <button type="button" className="btn btn-secondary mt-2" onClick={captureFace}>
-                                        Capture Face
-                                    </button>
+                                    <label className="form-label d-flex align-items-center">
+                                        <input 
+                                            type="checkbox" 
+                                            className="me-2" 
+                                            checked={useFaceId}
+                                            onChange={(e) => setUseFaceId(e.target.checked)}
+                                        />
+                                        Activer Face ID (optionnel)
+                                    </label>
                                 </div>
+                                {useFaceId && (
+                                    <div className="form-group">
+                                        <label className="form-label">Face ID</label>
+                                        <Webcam ref={webcamRef} screenshotFormat="image/png" width="100%" />
+                                        <button type="button" className="btn btn-secondary mt-2" onClick={captureFace}>
+                                            Capture Face
+                                        </button>
+                                        {faceDescriptor && (
+                                            <div className="alert alert-success mt-2">
+                                                <i className="fas fa-check-circle me-2"></i>
+                                                Visage capturé avec succès!
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                                 <div className="form-group">
                                     <button className="btn btn-brand-1 hover-up w-100" type="submit">
                                         Submit & Register

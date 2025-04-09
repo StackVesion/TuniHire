@@ -5,6 +5,10 @@ import Layout from "../../components/Layout/Layout";
 
 export default function VerifyEmail() {
     const [status, setStatus] = useState('verifying');
+    const [errorMessage, setErrorMessage] = useState('');
+    const [isExpired, setIsExpired] = useState(false);
+    const [isAlreadyVerified, setIsAlreadyVerified] = useState(false);
+    const [email, setEmail] = useState('');
     const router = useRouter();
     const { token } = router.query;
 
@@ -16,13 +20,70 @@ export default function VerifyEmail() {
 
     const verifyEmail = async () => {
         try {
-            const response = await axios.get(`http://localhost:5000/api/users/verify-email/${token}`);
-            setStatus('success');
+            console.log("Verifying email with token:", token);
+            // Ajout d'un délai pour s'assurer que le serveur a le temps de répondre
+            setTimeout(async () => {
+                try {
+                    const response = await axios.get(`http://localhost:5000/api/users/verify-email/${token}`);
+                    
+                    console.log("Verification response:", response.data);
+                    
+                    if (response.data.email) {
+                        setEmail(response.data.email);
+                    }
+                    
+                    if (response.data.alreadyVerified) {
+                        setIsAlreadyVerified(true);
+                    }
+                    
+                    setStatus('success');
+                    
+                    // Redirection après 3 secondes
+                    setTimeout(() => {
+                        router.push('/page-signin');
+                    }, 3000);
+                } catch (error) {
+                    handleError(error);
+                }
+            }, 1000);
+        } catch (error) {
+            handleError(error);
+        }
+    };
+    
+    const handleError = (error) => {
+        console.error('Verification error:', error);
+        
+        // Analyser l'erreur pour déterminer le message approprié
+        if (error.response) {
+            console.log("Error response data:", error.response.data);
+            setErrorMessage(error.response.data.message || "La vérification a échoué");
+            
+            if (error.response.data.expired) {
+                setIsExpired(true);
+            }
+        } else {
+            setErrorMessage("Une erreur est survenue lors de la connexion au serveur");
+        }
+        
+        setStatus('error');
+    };
+    
+    const handleResendVerification = async () => {
+        if (!email) return;
+        
+        try {
+            setStatus('resending');
+            const response = await axios.get(`http://localhost:5000/api/users/resend-verification/${email}`);
+            console.log("Resend response:", response.data);
+            
+            setStatus('resent');
             setTimeout(() => {
                 router.push('/page-signin');
             }, 3000);
         } catch (error) {
-            console.error('Verification error:', error);
+            console.error("Resend error:", error);
+            setErrorMessage("Impossible d'envoyer un nouveau lien de vérification");
             setStatus('error');
         }
     };
@@ -32,34 +93,65 @@ export default function VerifyEmail() {
             <div className="container">
                 <div className="row justify-content-center mt-100 mb-80">
                     <div className="col-lg-6 text-center">
-                        {status === 'verifying' && (
+                        {(status === 'verifying') && (
                             <div className="verification-pending">
                                 <div className="spinner-border text-primary mb-3" role="status">
                                     <span className="visually-hidden">Loading...</span>
                                 </div>
-                                <h3>Verifying your email...</h3>
-                                <p>Please wait while we verify your email address.</p>
+                                <h3>Vérification de votre email...</h3>
+                                <p>Veuillez patienter pendant que nous vérifions votre adresse email.</p>
                             </div>
                         )}
-
-                        {status === 'success' && (
+                        
+                        {(status === 'resending') && (
+                            <div className="verification-pending">
+                                <div className="spinner-border text-primary mb-3" role="status">
+                                    <span className="visually-hidden">Loading...</span>
+                                </div>
+                                <h3>Envoi d'un nouveau lien...</h3>
+                                <p>Veuillez patienter pendant que nous envoyons un nouveau lien de vérification.</p>
+                            </div>
+                        )}
+                        
+                        {(status === 'resent') && (
                             <div className="verification-success">
                                 <div className="verification-icon text-success">✓</div>
-                                <h3>Email Verified Successfully!</h3>
-                                <p>Your email has been verified. Redirecting to login page...</p>
+                                <h3>Nouveau lien envoyé !</h3>
+                                <p>Un nouveau lien de vérification a été envoyé à votre adresse email. Redirection vers la page de connexion...</p>
                             </div>
                         )}
 
-                        {status === 'error' && (
+                        {(status === 'success') && (
+                            <div className="verification-success">
+                                <div className="verification-icon text-success">✓</div>
+                                <h3>{isAlreadyVerified ? "Email déjà vérifié" : "Email vérifié avec succès!"}</h3>
+                                <p>{isAlreadyVerified 
+                                    ? "Votre email a déjà été vérifié précédemment." 
+                                    : "Votre email a été vérifié avec succès."} Redirection vers la page de connexion...</p>
+                            </div>
+                        )}
+
+                        {(status === 'error') && (
                             <div className="verification-error">
                                 <div className="verification-icon text-danger">✕</div>
-                                <h3>Verification Failed</h3>
-                                <p>The verification link may have expired or is invalid.</p>
+                                <h3>La vérification a échoué</h3>
+                                <p>{errorMessage || "Le lien de vérification est peut-être expiré ou invalide."}</p>
+                                {isExpired && (
+                                    <p>Vous pouvez demander un nouveau lien de vérification.</p>
+                                )}
+                                {email && (
+                                    <button 
+                                        className="btn btn-primary mt-3 me-2"
+                                        onClick={handleResendVerification}
+                                    >
+                                        Demander un nouveau lien
+                                    </button>
+                                )}
                                 <button 
-                                    className="btn btn-primary mt-3"
+                                    className="btn btn-outline-primary mt-3"
                                     onClick={() => router.push('/page-signin')}
                                 >
-                                    Go to Login
+                                    Aller à la page de connexion
                                 </button>
                             </div>
                         )}
