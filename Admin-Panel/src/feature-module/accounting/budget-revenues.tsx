@@ -12,6 +12,9 @@ const BudgetRevenues = () => {
     const data = budgetRevenuesData;
     const columns = [
         {
+
+
+
           title: "Revenue Name",
           dataIndex: "RevenueName",
           render: (text: string) => (
@@ -333,3 +336,31 @@ const BudgetRevenues = () => {
 };
 
 export default BudgetRevenues;
+
+
+/*<ul className="dropdown-menu  dropdown-menu-end p-3">
+<li>
+  <Link
+    to="#"
+    className="dropdown-item rounded-1"
+  >
+    Category
+  </Link>
+</li>
+<li>
+  <Link
+    to="#"
+    className="dropdown-item rounded-1"
+  >
+    Project
+  </Link>
+</li>
+<li>
+  <Link
+    to="#"
+    className="dropdown-item rounded-1"
+  >
+    Category
+  </Link>
+</li>
+</ul>*/
