@@ -3,11 +3,12 @@ import Link from "next/link"
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import axios from 'axios'
-import { getCurrentUser, clearUserData } from '../../utils/authUtils'
+import { getCurrentUser, clearUserData, getToken } from '../../utils/authUtils'
 
 export default function Header() {
     const [scroll, setScroll] = useState(0);
     const [user, setUser] = useState(null);
+    const [companyStatus, setCompanyStatus] = useState(null);
     const router = useRouter();
     
     useEffect(() => {
@@ -23,6 +24,9 @@ export default function Header() {
         if (currentUser) {
             console.log('Header: User found', currentUser.firstName, currentUser.role);
             setUser(currentUser);
+            
+            // Fetch company status for the user
+            fetchCompanyStatus(currentUser._id);
         } else {
             console.warn('Header: No user found in auth utils');
             // Fallback to direct localStorage check
@@ -32,12 +36,39 @@ export default function Header() {
                     const parsedUser = JSON.parse(userData);
                     console.log('Header: Fallback user found', parsedUser.firstName, parsedUser.role);
                     setUser(parsedUser);
+                    
+                    // Fetch company status for the user
+                    fetchCompanyStatus(parsedUser._id);
                 } catch (err) {
                     console.error('Header: Failed to parse user data', err);
                 }
             }
         }
     }, [scroll]);
+    
+    // Function to fetch company status for the current user
+    const fetchCompanyStatus = async (userId) => {
+        try {
+            const token = getToken();
+            if (!token) {
+                console.error('No token found');
+                return;
+            }
+            
+            const response = await axios.get('http://localhost:5000/api/companies/user/my-company', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            console.log('Company status:', response.data);
+            setCompanyStatus(response.data);
+        } catch (error) {
+            console.log('Error fetching company status:', error.response?.data || error.message);
+            // If error is 404, it means the user doesn't have a company yet
+            if (error.response && error.response.status === 404) {
+                setCompanyStatus({ exists: false });
+            }
+        }
+    };
     
     const handleLogout = async () => {
         try {
@@ -63,11 +94,11 @@ export default function Header() {
                 <div className="container">
                     <div className="main-header">
                         <div className="header-left">
-                            <div className="header-logo"><Link className="d-flex" href="/"><img alt="jobBox" src="assets/imgs/page/dashboard/logo.svg" /></Link></div>
+                            <div className="header-logo"><Link className="d-flex" href="/"><img alt="jobBox" src="assets/logoBanner.png" /></Link></div>
                             {user && user.role && (
                                 <span className="btn btn-grey-small ml-10">
                                     {user.role.toString().toUpperCase() === 'HR' ? 'HR Dashboard' : 
-                                     user.role.toString().toLowerCase() === 'candidate' ? 'Candidate Area' : 
+                                     user.role.toString().toUpperCase() === 'CANDIDATE' ? 'Candidate Dashboard' : 
                                      'Dashboard'}
                                 </span>
                             )}
@@ -79,25 +110,38 @@ export default function Header() {
                                 </form>
                             </div>
                         </div>
-                        <div className="header-menu d-none d-md-block">
-                            <ul>
-                                <li> <Link href="#">Home </Link></li>
-                                <li> <Link href="#">About us </Link></li>
-                                <li> <Link href="#">Contact</Link></li>
-                            </ul>
-                        </div>
+                        
                         <div className="header-right">
                             <div className="block-signin">
-                                {/* HR: Single action button for posting jobs */}
-                                {user && (user.role === 'HR' || user.role === 'hr' || user.role.toString().toUpperCase() === 'HR') && (
-                                    <Link className="btn btn-default btn-md hover-up mr-15" href="/post-job" style={{ minWidth: '120px' }}>
-                                        <i className="fi-rr-briefcase mr-5"></i> Post Job
-                                    </Link>
+                                {/* HR ROLE: Different buttons based on company status */}
+                                {user && user.role && user.role.toString().toUpperCase() === 'HR' && (
+                                    <>
+                                        {/* HR with approved company: Post Job button */}
+                                        {companyStatus && companyStatus.company && companyStatus.company.status === 'Approved' && (
+                                            <Link className="btn btn-default btn-md hover-up mr-15" href="/post-job" style={{ minWidth: '120px' }}>
+                                                <i className="fi-rr-briefcase mr-5"></i> Post Job
+                                            </Link>
+                                        )}
+                                        
+                                        {/* HR with pending company: Disabled button */}
+                                        {companyStatus && companyStatus.company && companyStatus.company.status === 'Pending' && (
+                                            <button className="btn btn-grey btn-md mr-15" disabled style={{ minWidth: '200px', cursor: 'not-allowed' }}>
+                                                <i className="fi-rr-time-forward mr-5"></i> Application Pending
+                                            </button>
+                                        )}
+                                        
+                                        {/* HR with no company: Apply For Company button */}
+                                        {(!companyStatus || !companyStatus.company) && (
+                                            <Link className="btn btn-default btn-md hover-up mr-15" href="/apply-company" style={{ minWidth: '160px' }}>
+                                                <i className="fi-rr-building mr-5"></i> Create Company
+                                            </Link>
+                                        )}
+                                    </>
                                 )}
                                 
-                                {/* Candidate: Single action button for applying to company */}
-                                {user && (user.role === 'candidate' || user.role === 'Candidate') && (
-                                    <Link className="btn btn-default btn-md hover-up mr-15" href="/create-company" style={{ minWidth: '160px' }}>
+                                {/* CANDIDATE ROLE: Show Apply for Company button if user is a candidate */}
+                                {user && user.role && user.role.toString().toUpperCase() === 'CANDIDATE' && (
+                                    <Link className="btn btn-default btn-md hover-up mr-15" href="/apply-company" style={{ minWidth: '160px' }}>
                                         <i className="fi-rr-building mr-5"></i> Apply For Company
                                     </Link>
                                 )}

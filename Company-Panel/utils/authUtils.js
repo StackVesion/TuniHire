@@ -67,3 +67,16 @@ export const hasUserRole = (requiredRoles) => {
   
   return roles.includes(user.role);
 };
+
+// Get token from localStorage
+export const getToken = () => {
+  try {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined') return null;
+    
+    return localStorage.getItem('token');
+  } catch (error) {
+    console.error('Error getting token:', error);
+    return null;
+  }
+};

@@ -208,195 +208,23 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                         <div className="header-nav">
                             <nav className="nav-main-menu">
                                 <ul className="main-menu">
-                                    <li className="has-children">
-                                    <Link legacyBehavior href="/"><a className="active">Home</a></Link>
-
-                                        <ul className="sub-menu">
-                                            <li>
-                                                <Link legacyBehavior href="/"><a>Home 1</a></Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="/index-2"><a>Home 2</a></Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="/index-3"><a>Home 3</a></Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="/index-4"><a>Home 4</a></Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="/index-5"><a>Home 5</a></Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="/index-6"><a>Home 6</a></Link>
-                                            </li>
-                                        </ul>
-                                    </li>
-                                    {/* Dashboard buttons based on user role */}
-                                    <li>
-                                        {user ? (
-                                            <>
-                                                {/* Debug info */}
-                                                {console.log('User in Header menu:', user.firstName, user.role)}
-                                                {console.log('Role type:', typeof user.role, 'Role value:', user.role)}
-                                                {console.log('Role comparison HR:', user.role === 'HR', 'hr:', user.role === 'hr')}
-                                                
-                                                {/* HR Dashboard button - more permissive check */}
-                                                {(user.role && (user.role.toString().toUpperCase() === 'HR')) && (
-                                                    <a 
-                                                        onClick={() => {
-                                                            // Use auth utilities to get and verify the user
-                                                            const currentUser = getCurrentUser();
-                                                            const token = localStorage.getItem('token');
-                                                            if (token && currentUser) {
-                                                                console.log('Redirecting HR user to company panel');
-                                                                // Explicitly refresh localStorage to ensure it's available
-                                                                // This helps with cross-domain session persistence
-                                                                localStorage.setItem('token', token);
-                                                                localStorage.setItem('user', JSON.stringify(currentUser));
-                                                                
-                                                                // Pass token in URL for better cross-domain persistence
-                                                                window.location.href = `http://localhost:3001?token=${token}`;
-                                                            } else {
-                                                                console.error('No valid session found');
-                                                                router.push('/page-signin');
-                                                            }
-                                                        }} 
-                                                        className={`cursor-pointer ${styles.dashboardBtn}`}
-                                                        style={{ color: '#3c65f5', fontWeight: 'bold' }}
-                                                    >
-                                                        My Company
-                                                    </a>
-                                                )}
-                                                
-                                                {/* Failsafe button that shows for HR role regardless of case or type */}
-                                                {(user && user.role && typeof user.role === 'string' && 
-                                                  !((user.role.toString().toUpperCase() === 'HR') || 
-                                                    user.role === 'candidate' || user.role === 'Candidate' || 
-                                                    user.role === 'admin' || user.role === 'Admin')) && (
-                                                    <a 
-                                                        onClick={() => {
-                                                            const currentUser = getCurrentUser();
-                                                            const token = localStorage.getItem('token');
-                                                            if (token && currentUser) {
-                                                                console.log(`Redirecting user with role [${currentUser.role}] to company panel`);
-                                                                localStorage.setItem('token', token);
-                                                                localStorage.setItem('user', JSON.stringify(currentUser));
-                                                                window.location.href = `http://localhost:3001?token=${token}`;
-                                                            } else {
-                                                                console.error('No valid session found');
-                                                                router.push('/page-signin');
-                                                            }
-                                                        }}
-                                                        className={`cursor-pointer ${styles.dashboardBtn}`}
-                                                        style={{ color: '#3c65f5', fontWeight: 'bold' }}
-                                                    >
-                                                        Dashboard ({user.role})
-                                                    </a>
-                                                )}
-                                                
-                                                {/* Candidate Dashboard - Case insensitive role check */}
-                                                {(user.role === 'candidate' || user.role === 'Candidate') && (
-                                                    <a 
-                                                        onClick={() => {
-                                                            // Use auth utilities to get and verify the user
-                                                            const currentUser = getCurrentUser();
-                                                            const token = localStorage.getItem('token');
-                                                            if (token && currentUser) {
-                                                                console.log('Redirecting candidate user to dashboard');
-                                                                // Explicitly refresh localStorage to ensure it's available
-                                                                // This helps with cross-domain session persistence
-                                                                localStorage.setItem('token', token);
-                                                                localStorage.setItem('user', JSON.stringify(currentUser));
-                                                                window.location.href = `http://localhost:3001/?token=${token}`;
-                                                            } else {
-                                                                console.error('No valid session found');
-                                                                router.push('/page-signin');
-                                                            }
-                                                        }} 
-                                                        className={`cursor-pointer ${styles.dashboardBtn}`}
-                                                        style={{ color: '#3c65f5', fontWeight: 'bold' }}
-                                                    >
-                                                        Dashboard
-                                                    </a>
-                                                )}
-                                                {/* Admin Dashboard - Case insensitive role check */}
-                                                {(user.role === 'admin' || user.role === 'Admin') && (
-                                                    <a 
-                                                        onClick={() => {
-                                                            // Use auth utilities to get and verify the user
-                                                            const currentUser = getCurrentUser();
-                                                            const token = localStorage.getItem('token');
-                                                            if (token && currentUser) {
-                                                                console.log('Redirecting admin user to admin panel');
-                                                                // Explicitly refresh localStorage to ensure it's available
-                                                                // This helps with cross-domain session persistence
-                                                                localStorage.setItem('token', token);
-                                                                localStorage.setItem('user', JSON.stringify(currentUser));
-                                                                window.location.href = `http://localhost:3002/?token=${token}`;
-                                                            } else {
-                                                                console.error('No valid session found');
-                                                                router.push('/page-signin');
-                                                            }
-                                                        }} 
-                                                        className={`cursor-pointer ${styles.dashboardBtn}`}
-                                                        style={{ color: '#3c65f5', fontWeight: 'bold' }}
-                                                    >
-                                                        Dashboard
-                                                    </a>
-                                                )}
-                                            </>
-                                        ) : (
-                                            <Link legacyBehavior href="/jobs-grid"><a>Find a Job</a></Link>
-                                        )}
-                                    </li>
-                                    <li className="has-children">
+                                <li>
+                                        <Link legacyBehavior href="/"><a>Home</a></Link>
+                                </li>
+                                <li>
                                         <Link legacyBehavior href="/jobs-grid"><a>Find a Job</a></Link>
-
-                                        <ul className="sub-menu">
-                                            <li>
-                                                <Link legacyBehavior href="/jobs-grid"><a>Jobs Grid</a></Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="/jobs-list"><a>Jobs List</a></Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="/job-details"><a>Jobs Details</a></Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="/job-details-2"><a>Jobs Details 2</a></Link>
-                                            </li>
-                                        </ul>
-                                    </li>
-                                    <li className="has-children">
+                                </li>
+                                <li>
                                         <Link legacyBehavior href="/companies-grid"><a>Recruiters</a></Link>
-
-                                        <ul className="sub-menu">
-                                            <li>
-                                                <Link legacyBehavior href="/companies-grid"><a>Recruiters</a></Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="/company-details"><a>Company Details</a></Link>
-                                            </li>
-                                        </ul>
-                                    </li>
-                                    <li className="has-children">
+                                </li>
+                                <li>
                                         <Link legacyBehavior href="/candidates-grid"><a>Candidates</a></Link>
-
-                                        <ul className="sub-menu">
-                                            <li>
-                                                <Link legacyBehavior href="/candidates-grid"><a>Candidates Grid</a></Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="/candidate-details"><a>Candidate Details</a></Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="/candidate-profile"><a>Candidate Profile</a></Link>
-                                            </li>
-                                        </ul>
-                                    </li>
+                                </li>
+                                <li>
+                                        <Link legacyBehavior href="/blog-grid"><a>Community</a></Link>
+                                </li>
                                     <li className="has-children">
-                                        <Link legacyBehavior href="/blog-grid"><a>Pages</a></Link>
+                                        <Link legacyBehavior href="/page-about"><a>About</a></Link>
 
                                         <ul className="sub-menu">
                                             <li>
@@ -409,34 +237,11 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                                 <Link legacyBehavior href="/page-contact"><a>Contact Us</a></Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="/page-register"><a>Register</a></Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="/page-signin"><a>Signin</a></Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="/page-reset-password"><a>Reset Password</a></Link>
-                                            </li>
-                                            <li>
                                                 <Link legacyBehavior href="/page-content-protected"><a>Content Protected</a></Link>
                                             </li>
                                         </ul>
                                     </li>
-                                    <li className="has-children">
-                                        <Link legacyBehavior href="/blog-grid"><a>Blog</a></Link>
-
-                                        <ul className="sub-menu">
-                                            <li>
-                                                <Link legacyBehavior href="/blog-grid"><a>Blog Grid</a></Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="/blog-grid-2"><a>Blog Grid 2</a></Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="/blog-details"><a>Blog Single</a></Link>
-                                            </li>
-                                        </ul>
-                                    </li>
+                                    
                                     <li>
                                         <Link legacyBehavior href="/page-contact"><a>Contact</a></Link>
                                     </li>
@@ -552,10 +357,10 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                                 )}
                                             </div>
 
-                                            {/* Dropdown Menu */}
+                                             {/* Dropdown Menu */}
                                             {showProfileDropdown && (
                                                 <div className="dropdown-profile-menu">
-                                                    <div className="dropdown-header p-3 border-bottom">
+                                                    <div className="dropdown-header p-3 border-bottom text-center">
                                                         <strong>{user.firstName} {user.lastName}</strong>
                                                         <p className="small text-muted mb-0">{user.email}</p>
                                                         <span className="badge bg-light text-dark mt-1">
@@ -564,21 +369,21 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                                     </div>
                                                     <div className="dropdown-body p-2">
                                                         <Link legacyBehavior href="/candidate-profile">
-                                                            <a className="dropdown-item py-2 px-3 rounded">
-                                                                <i className="fi-rr-user me-2"></i> My Profile
+                                                            <a className="dropdown-item py-2 px-3 rounded text-center">
+                                                                <i className="fi-rr-user me-2 text-primary animate__animated animate__pulse"></i> My Profile
                                                             </a>
                                                         </Link>
                                                         <Link legacyBehavior href="/candidate-settings">
-                                                            <a className="dropdown-item py-2 px-3 rounded">
-                                                                <i className="fi-rr-settings me-2"></i> Settings
+                                                            <a className="dropdown-item py-2 px-3 rounded text-center">
+                                                                <i className="fi-rr-settings me-2 text-primary animate__animated animate__pulse"></i> Settings
                                                             </a>
                                                         </Link>
                                                         <hr className="dropdown-divider my-2" />
                                                         <button 
                                                             onClick={user.faceId ? handleFaceLogout : handleLogout} 
-                                                            className="dropdown-item py-2 px-3 rounded text-danger"
+                                                            className="dropdown-item py-2 px-3 rounded text-center text-danger"
                                                         >
-                                                            <i className="fi-rr-sign-out me-2"></i> Logout
+                                                            <i className="fi-rr-sign-out me-2 text-primary animate__animated animate__pulse"></i> Logout
                                                         </button>
                                                     </div>
                                                 </div>
@@ -609,78 +414,27 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                 {/* mobile menu start*/}
                                 <nav>
                                     <ul className="mobile-menu font-heading">
-                                        <li className="has-children">
-                                            <Link legacyBehavior href="/"><a className="active">Home</a></Link>
-
-                                            <ul className="sub-menu">
-                                                <li>
-                                                    <Link legacyBehavior href="/"><a>Home 1</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/index-2"><a>Home 2</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/index-3"><a>Home 3</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/index-4"><a>Home 4</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/index-5"><a>Home 5</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/index-6"><a>Home 6</a></Link>
-                                                </li>
-                                            </ul>
+                                        <li>
+                                            <Link legacyBehavior href="/"><a>Home</a></Link>
                                         </li>
-                                        <li className="has-children">
+                                        <li>
                                             <Link legacyBehavior href="/jobs-grid"><a>Find a Job</a></Link>
-
-                                            <ul className="sub-menu">
-                                                <li>
-                                                    <Link legacyBehavior href="/jobs-grid"><a>Jobs Grid</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/jobs-list"><a>Jobs List</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/job-details"><a>Jobs Details</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/job-details-2"><a>Jobs Details 2</a></Link>
-                                                </li>
-                                            </ul>
                                         </li>
-                                        <li className="has-children">
+                                        <li>
                                             <Link legacyBehavior href="/companies-grid"><a>Recruiters</a></Link>
-
-                                            <ul className="sub-menu">
-                                                <li>
-                                                    <Link legacyBehavior href="/companies-grid"><a>Recruiters</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/company-details"><a>Company Details</a></Link>
-                                                </li>
-                                            </ul>
                                         </li>
-                                        <li className="has-children">
+                                        <li>
                                             <Link legacyBehavior href="/candidates-grid"><a>Candidates</a></Link>
-
-                                            <ul className="sub-menu">
-                                                <li>
-                                                    <Link legacyBehavior href="/candidates-grid"><a>Candidates Grid</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/candidate-details"><a>Candidate Details</a></Link>
-                                                </li>
-                                            </ul>
+                                        </li>
+                                        <li>
+                                            <Link legacyBehavior href="/blog-grid"><a>Community</a></Link>
                                         </li>
                                         <li className="has-children">
-                                            <Link legacyBehavior href="/blog-grid"><a>Pages</a></Link>
+                                            <Link legacyBehavior href="/blog-grid"><a>About</a></Link>
 
                                             <ul className="sub-menu">
                                                 <li>
-                                                    <Link legacyBehavior href="/page-about"><a>About Us</a></Link>
+                                                    <Link legacyBehavior href="/page-about"><a>About us</a></Link>
                                                 </li>
                                                 <li>
                                                     <Link legacyBehavior href="/page-pricing"><a>Pricing Plan</a></Link>
@@ -689,31 +443,7 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                                     <Link legacyBehavior href="/page-contact"><a>Contact Us</a></Link>
                                                 </li>
                                                 <li>
-                                                    <Link legacyBehavior href="/page-register"><a>Register</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/page-signin"><a>Signin</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/page-reset-password"><a>Reset Password</a></Link>
-                                                </li>
-                                                <li>
                                                     <Link legacyBehavior href="/page-content-protected"><a>Content Protected</a></Link>
-                                                </li>
-                                            </ul>
-                                        </li>
-                                        <li className="has-children">
-                                            <Link legacyBehavior href="/blog-grid"><a>Blog</a></Link>
-
-                                            <ul className="sub-menu">
-                                                <li>
-                                                    <Link legacyBehavior href="/blog-grid"><a>Blog Grid</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/blog-grid-2"><a>Blog Grid 2</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/blog-details"><a>Blog Single</a></Link>
                                                 </li>
                                             </ul>
                                         </li>
@@ -761,74 +491,20 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                 {/* mobile menu start*/}
                                 <nav>
                                     <ul className="mobile-menu font-heading">
-                                        <li className="has-children">
-                                            <Link legacyBehavior href="/"><a className="active">Home</a></Link>
-
-                                            <ul className="sub-menu">
-                                                <li>
-                                                    <Link legacyBehavior href="/"><a>Home 1</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/index-2"><a>Home 2</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/index-3"><a>Home 3</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/index-4"><a>Home 4</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/index-5"><a>Home 5</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/index-6"><a>Home 6</a></Link>
-                                                </li>
-                                            </ul>
-                                        </li>
-                                        <li className="has-children">
+                                    <li>
+                                            <Link legacyBehavior href="/"><a>Home</a></Link>
+                                        </li><li>
                                             <Link legacyBehavior href="/jobs-grid"><a>Find a Job</a></Link>
-
-                                            <ul className="sub-menu">
-                                                <li>
-                                                    <Link legacyBehavior href="/jobs-grid"><a>Jobs Grid</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/jobs-list"><a>Jobs List</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/job-details"><a>Jobs Details</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/job-details-2"><a>Jobs Details 2</a></Link>
-                                                </li>
-                                            </ul>
-                                        </li>
-                                        <li className="has-children">
+                                        </li><li>
                                             <Link legacyBehavior href="/companies-grid"><a>Recruiters</a></Link>
-
-                                            <ul className="sub-menu">
-                                                <li>
-                                                    <Link legacyBehavior href="/companies-grid"><a>Recruiters</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/company-details"><a>Company Details</a></Link>
-                                                </li>
-                                            </ul>
-                                        </li>
-                                        <li className="has-children">
+                                        </li><li>
                                             <Link legacyBehavior href="/candidates-grid"><a>Candidates</a></Link>
-
-                                            <ul className="sub-menu">
-                                                <li>
-                                                    <Link legacyBehavior href="/candidates-grid"><a>Candidates Grid</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/candidate-details"><a>Candidate Details</a></Link>
-                                                </li>
-                                            </ul>
+                                        </li>
+                                        <li>
+                                            <Link legacyBehavior href="/blog-grid"><a>Community</a></Link>
                                         </li>
                                         <li className="has-children">
-                                            <Link legacyBehavior href="/blog-grid"><a>Pages</a></Link>
+                                            <Link legacyBehavior href="/page-about"><a>About</a></Link>
 
                                             <ul className="sub-menu">
                                                 <li>
@@ -839,33 +515,6 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                                 </li>
                                                 <li>
                                                     <Link legacyBehavior href="/page-contact"><a>Contact Us</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/page-register"><a>Register</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/page-signin"><a>Signin</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/page-reset-password"><a>Reset Password</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/page-content-protected"><a>Content Protected</a></Link>
-                                                </li>
-                                            </ul>
-                                        </li>
-                                        <li className="has-children">
-                                            <Link legacyBehavior href="/blog-grid"><a>Blog</a></Link>
-
-                                            <ul className="sub-menu">
-                                                <li>
-                                                    <Link legacyBehavior href="/blog-grid"><a>Blog Grid</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/blog-grid-2"><a>Blog Grid 2</a></Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="/blog-details"><a>Blog Single</a></Link>
                                                 </li>
                                             </ul>
                                         </li>
@@ -937,6 +586,46 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                 .animate__pulse {
                     animation-duration: 2s;
                     animation-iteration-count: infinite;
+                    animation-name: pulse;
+                }
+                
+                @keyframes pulse {
+                    0% {
+                        transform: scale(1);
+                    }
+                    50% {
+                        transform: scale(1.1);
+                    }
+                    100% {
+                        transform: scale(1);
+                    }
+                }
+                
+                .dropdown-profile-menu {
+                    position: absolute;
+                    right: 0;
+                    top: 55px;
+                    width: 280px;
+                    background-color: #fff;
+                    border-radius: 8px;
+                    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+                    z-index: 1000;
+                }
+
+                .dropdown-item {
+                    transition: all 0.2s ease;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .dropdown-item:hover {
+                    background-color: #f8f9fa;
+                    transform: scale(1.05);
+                }
+                
+                .text-primary {
+                    color: #3c65f5 !important;
                 }
             `}</style>
         </>

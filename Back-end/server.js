@@ -163,6 +163,7 @@ app.use(passport.session());
 
 // Routes
 app.use("/api/users", require("./routes/userRoutes"));
+app.use("/api/companies", require("./routes/company"));
 
 // Google auth routes
 app.get('/auth/google',
