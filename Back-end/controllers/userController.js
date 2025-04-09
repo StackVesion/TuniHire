@@ -855,14 +855,38 @@ const deleteUser = async (req, res) => {
     }
 };
 
-// Validate JWT token
+// Validate JWT token and return full user data for session persistence
 const validateToken = async (req, res) => {
     try {
         // Si la requête arrive ici, cela signifie que le middleware authMiddleware 
         // a déjà vérifié et validé le token avec succès
+        
+        // Get the complete user object to maintain session data across domains
+        const user = await User.findById(req.user.userId).select('-password');
+        
+        if (!user) {
+            console.error('User not found for token validation, userId:', req.user.userId);
+            return res.status(404).json({ 
+                valid: false, 
+                message: "User not found" 
+            });
+        }
+        
+        console.log('Token validated successfully for user:', user.email, user.role);
+        
+        // Return full user object for client-side session management
         return res.status(200).json({ 
             valid: true,
-            userId: req.user.userId
+            userId: req.user.userId,
+            user: {
+                _id: user._id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                isEmailVerified: user.isEmailVerified,
+                profilePicture: user.profilePicture
+            }
         });
     } catch (error) {
         console.error("Error validating token:", error);
