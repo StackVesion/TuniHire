@@ -2,15 +2,141 @@
 import Link from "next/link";
 import Layout from "../components/Layout/Layout";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import Swal from "sweetalert2";
+import { useRouter } from "next/router";
 
 export default function CompanyDetails() {
     const [activeIndex, setActiveIndex] = useState(1);
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const router = useRouter();
 
     const handleOnClick = (index) => {
         setActiveIndex(index); // remove the curly braces
     };
 
+    useEffect(() => {
+        // Fetch user data when component mounts
+        const fetchUserData = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    const response = await axios.get('http://localhost:5000/api/users/profile', {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    setUser(response.data.user);
+                }
+            } catch (error) {
+                console.error('Error fetching user data:', error);
+            }
+        };
+
+        fetchUserData();
+    }, []);
+
+    // Function to handle Apply for Company button click
+    const handleApplyForCompany = async () => {
+        try {
+            if (!user) {
+                Swal.fire({
+                    title: 'Please Login',
+                    text: 'You need to be logged in to apply for a company',
+                    icon: 'warning',
+                    confirmButtonText: 'Go to Login',
+                    showCancelButton: true,
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        router.push('/login');
+                    }
+                });
+                return;
+            }
+
+            // Verify user role is candidate
+            if (user.role !== 'candidate') {
+                Swal.fire({
+                    title: 'Not Eligible',
+                    text: 'Only candidates can apply for creating a company',
+                    icon: 'error',
+                });
+                return;
+            }
+
+            // Show company creation form
+            const { value: formValues } = await Swal.fire({
+                title: 'Create Company',
+                html:
+                    '<input id="swal-name" class="swal2-input" placeholder="Company Name*" required>' +
+                    '<input id="swal-email" class="swal2-input" placeholder="Company Email*" required>' +
+                    '<input id="swal-website" class="swal2-input" placeholder="Website">' +
+                    '<input id="swal-category" class="swal2-input" placeholder="Category">' +
+                    '<input id="swal-employees" class="swal2-input" type="number" placeholder="Number of Employees">',
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Submit',
+                preConfirm: () => {
+                    const name = document.getElementById('swal-name').value;
+                    const email = document.getElementById('swal-email').value;
+                    
+                    // Basic validation
+                    if (!name || !email) {
+                        Swal.showValidationMessage('Company name and email are required');
+                        return false;
+                    }
+                    
+                    return {
+                        name: name,
+                        email: email,
+                        website: document.getElementById('swal-website').value,
+                        category: document.getElementById('swal-category').value,
+                        numberOfEmployees: document.getElementById('swal-employees').value || 0
+                    }
+                }
+            });
+
+            if (formValues) {
+                setLoading(true);
+                
+                // Get token from localStorage
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    throw new Error('Not authenticated');
+                }
+
+                // Call API to create company
+                const response = await axios.post(
+                    'http://localhost:5000/api/companies',
+                    formValues,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+
+                setLoading(false);
+                
+                // Show success message
+                Swal.fire({
+                    title: 'Application Submitted!',
+                    text: 'Your company application has been submitted and is pending approval',
+                    icon: 'success',
+                }).then(() => {
+                    // Redirect to dashboard or refresh page
+                    router.push('/company-details');
+                });
+            }
+        } catch (error) {
+            setLoading(false);
+            console.error('Error creating company:', error);
+            
+            // Show error message
+            Swal.fire({
+                title: 'Error!',
+                text: error.response?.data?.message || 'Failed to create company. Please try again.',
+                icon: 'error',
+            });
+        }
+    };
+    
     return (
         <>
             <Layout>
@@ -32,9 +158,19 @@ export default function CompanyDetails() {
                                         <p className="mt-5 font-md color-text-paragraph-2 mb-15">Our Mission to make working life simple</p>
                                     </div>
                                     <div className="col-lg-4 col-md-12 text-lg-end">
-                                        <Link legacyBehavior href="page-contact">
-                                            <a className="btn btn-call-icon btn-apply btn-apply-big">Contact us</a>
-                                        </Link>
+                                        {user && user.role === "candidate" ? (
+                                            <button 
+                                                className="btn btn-call-icon btn-apply btn-apply-big" 
+                                                onClick={handleApplyForCompany}
+                                                disabled={loading}
+                                            >
+                                                {loading ? 'Processing...' : 'Apply for Company'}
+                                            </button>
+                                        ) : (
+                                            <Link legacyBehavior href="page-contact">
+                                                <a className="btn btn-call-icon btn-apply btn-apply-big">Contact us</a>
+                                            </Link>
+                                        )}
                                     </div>
                                 </div>
                             </div>

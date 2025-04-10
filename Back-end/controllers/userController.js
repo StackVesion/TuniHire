@@ -952,6 +952,60 @@ const generateNewVerificationToken = async (req, res) => {
     }
 };
 
+// Define updateUserRole as a regular function instead of using exports.updateUserRole
+const updateUserRole = async (req, res) => {
+  try {
+    console.log("updateUserRole called with params:", req.params);
+    console.log("updateUserRole called with body:", req.body);
+    
+    const userId = req.params.id;
+    const { role } = req.body;
+
+    if (!userId) {
+      console.error("Missing userId in request params");
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    if (!role) {
+      console.error("Missing role in request body");
+      return res.status(400).json({ message: "Role is required" });
+    }
+
+    console.log(`Attempting to find user with ID: ${userId}`);
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      console.error(`User not found with ID: ${userId}`);
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    console.log(`Found user: ${user.email}. Current role: ${user.role}. New role: ${role}`);
+    
+    user.role = role;
+    await user.save();
+
+    console.log(`Role updated successfully for user: ${user.email} to ${role}`);
+    
+    res.status(200).json({ 
+      success: true,
+      message: "User role updated successfully", 
+      user: {
+        _id: user._id,
+        email: user.email,
+        role: user.role
+      } 
+    });
+  } catch (error) {
+    console.error("Error updating user role:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Internal server error", 
+      error: error.message 
+    });
+  }
+};
+
+// Keep the main module.exports with all functions
 module.exports = {
     getUsers,
     createUser,
@@ -967,5 +1021,6 @@ module.exports = {
     updateUserProfile,
     changeUserPassword,
     validateToken,
-    generateNewVerificationToken
+    generateNewVerificationToken,
+    updateUserRole
 };

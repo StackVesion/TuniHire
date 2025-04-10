@@ -5,7 +5,7 @@ const multer = require("multer");
 const path = require("path");
 const crypto = require("crypto");
 const { sendVerificationEmail } = require('../config/emailService');
-const { getUsers, createUser, signIn, signInn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, updateUser, deleteUser, validateToken, generateNewVerificationToken } = require("../controllers/userController");
+const { getUsers, createUser, signIn, signInn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, updateUser, deleteUser, validateToken, generateNewVerificationToken, updateUserRole } = require("../controllers/userController");
 
 const router = express.Router();
 
@@ -142,6 +142,9 @@ router.put("/update-profile", authMiddleware, updateUserProfile);
 
 // Route to change user password
 router.put("/change-password", authMiddleware, changeUserPassword);
+
+// Route to update user role
+router.put("/update-role/:id", updateUserRole);
 
 // Route to validate a token and return user info (for cross-site auth)
 router.get("/me", authMiddleware, async (req, res) => {

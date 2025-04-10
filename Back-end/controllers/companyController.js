@@ -199,3 +199,42 @@ exports.getPendingCompanies = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Reject company (with deletion)
+exports.rejectCompany = async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: "Not authorized to reject companies" });
+    }
+    
+    const companyId = req.params.id;
+    console.log("Attempting to reject (delete) company with ID:", companyId);
+    
+    // Find the company
+    const company = await Company.findById(companyId);
+    
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+    
+    // Instead of updating the status, delete the company entirely
+    await Company.findByIdAndDelete(companyId);
+    
+    console.log("Company successfully deleted:", companyId);
+    
+    res.status(200).json({ 
+      success: true,
+      message: "Company rejected and deleted successfully"
+    });
+  } catch (error) {
+    console.error("Error rejecting company:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Internal server error", 
+      error: error.message 
+    });
+  }
+};
+
+
