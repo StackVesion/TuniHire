@@ -193,16 +193,24 @@ const signIn = async (req, res) => {
             return res.status(400).json({ message: "Invalid credentials" });
         }
 
-        // Generate a JWT token
+        // Generate a JWT access token (short-lived)
         const token = jwt.sign(
             { userId: user._id, email: user.email },
-            process.env.JWT_SECRET,
+            process.env.JWT_SECRET || 'your-jwt-secret',
             { expiresIn: "1h" }
+        );
+        
+        // Generate a refresh token (long-lived)
+        const refreshToken = jwt.sign(
+            { userId: user._id, email: user.email },
+            process.env.JWT_REFRESH_SECRET || 'your-refresh-secret',
+            { expiresIn: "7d" } // 7 days
         );
 
         // Include firstName and lastName in the response
         res.status(200).json({ 
             token, 
+            refreshToken,
             userId: user._id, 
             email: user.email,
             firstName: user.firstName,
@@ -312,45 +320,64 @@ const signInn = async (req, res) => {
 const verifyOtp = async (req, res) => {
     const { email, otp } = req.body;
 
+    if (!email || !otp) {
+        return res.status(400).json({ message: "Email and OTP are required" });
+    }
+
     try {
-        // Find the user by email
+        // Find user by email
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({ message: "User not found" });
         }
 
-        // Check if OTP is valid and not expired
+        // Check if OTP exists and matches
         if (!user.otp || user.otp !== otp) {
-            return res.status(400).json({ message: "Invalid verification code" });
+            return res.status(400).json({ message: "Invalid OTP" });
         }
 
-        if (!user.otpExpiry || new Date() > user.otpExpiry) {
-            return res.status(400).json({ message: "Verification code has expired" });
+        // Check if OTP is expired
+        if (user.otpExpiry < new Date()) {
+            return res.status(400).json({ message: "OTP has expired" });
         }
 
-        // Mark OTP as verified
+        // OTP verified successfully, mark user OTP as verified
         user.isOtpVerified = true;
         await user.save();
 
-        // Generate a JWT token
+        // Generate access token
         const token = jwt.sign(
             { userId: user._id, email: user.email },
-            process.env.JWT_SECRET,
+            process.env.JWT_SECRET || 'your-jwt-secret',
             { expiresIn: "1h" }
         );
+        
+        // Generate refresh token
+        const refreshToken = jwt.sign(
+            { userId: user._id, email: user.email },
+            process.env.JWT_REFRESH_SECRET || 'your-refresh-secret',
+            { expiresIn: "7d" } // 7 days
+        );
 
-        // Include user information in the response
-        res.status(200).json({ 
-            token, 
-            userId: user._id, 
+        // Prepare user data for response
+        const userData = {
+            userId: user._id,
             email: user.email,
             firstName: user.firstName,
             lastName: user.lastName,
-            role: user.role,
-            isEmailVerified: true
+            role: user.role
+        };
+
+        // Return token and user data
+        return res.status(200).json({
+            message: "OTP verified successfully",
+            token,
+            refreshToken,
+            user: userData
         });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error("Error verifying OTP:", error);
+        return res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -858,14 +885,56 @@ const deleteUser = async (req, res) => {
 // Validate JWT token and return full user data for session persistence
 const validateToken = async (req, res) => {
     try {
-        // Si la requête arrive ici, cela signifie que le middleware authMiddleware 
-        // a déjà vérifié et validé le token avec succès
+        let token;
+        
+        // Support both methods:
+        // 1. Token in request body (new method)
+        // 2. Token in Authorization header (old method)
+        if (req.body && req.body.token) {
+            // New method: token in request body
+            token = req.body.token;
+        } else if (req.headers && req.headers.authorization) {
+            // Old method: token in Authorization header
+            const authHeader = req.headers.authorization;
+            if (authHeader.startsWith('Bearer ')) {
+                token = authHeader.substring(7);
+            }
+        }
+        
+        if (!token) {
+            return res.status(400).json({ 
+                valid: false, 
+                message: "Token is required" 
+            });
+        }
+        
+        // Verify the token
+        let decoded;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-jwt-secret');
+        } catch (tokenError) {
+            // Check if token is expired
+            if (tokenError.name === 'TokenExpiredError') {
+                return res.status(401).json({ 
+                    valid: false, 
+                    expired: true,
+                    message: "Token has expired",
+                    needsRefresh: true
+                });
+            }
+            
+            // Other token errors
+            return res.status(401).json({ 
+                valid: false, 
+                message: "Invalid token" 
+            });
+        }
         
         // Get the complete user object to maintain session data across domains
-        const user = await User.findById(req.user.userId).select('-password');
+        const user = await User.findById(decoded.userId).select('-password');
         
         if (!user) {
-            console.error('User not found for token validation, userId:', req.user.userId);
+            console.error('User not found for token validation, userId:', decoded.userId);
             return res.status(404).json({ 
                 valid: false, 
                 message: "User not found" 
@@ -877,7 +946,7 @@ const validateToken = async (req, res) => {
         // Return full user object for client-side session management
         return res.status(200).json({ 
             valid: true,
-            userId: req.user.userId,
+            userId: decoded.userId,
             user: {
                 _id: user._id,
                 email: user.email,

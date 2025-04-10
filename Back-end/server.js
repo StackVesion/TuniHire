@@ -165,6 +165,7 @@ app.use(passport.session());
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/companies", require("./routes/company"));
 app.use("/api/jobs", require("./routes/jobRoutes"));
+app.use("/api/portfolios", require("./routes/portfolioRoutes")); // Add the portfolio routes
 
 // Google auth routes
 app.get('/auth/google',

@@ -1,5 +1,6 @@
 import Preloader from "@/components/elements/Preloader"
 import { useEffect, useState } from "react"
+import { Toaster } from 'react-hot-toast'
 import "@/public/assets/css/style.css"
 
 function MyApp({ Component, pageProps }) {
@@ -13,7 +14,10 @@ function MyApp({ Component, pageProps }) {
     }, [])
     return (<>
         {!loading ? (
-            <Component {...pageProps} />
+            <>
+                <Toaster position="top-right" />
+                <Component {...pageProps} />
+            </>
         ) : (
             <Preloader />
         )}
