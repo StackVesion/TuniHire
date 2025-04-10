@@ -6,9 +6,11 @@ const JobPostSchema = new mongoose.Schema({
   requirements: { type: [String] },
   salaryRange: { type: String },
   location: { type: String },
+  workplaceType: { type: String, enum: ['Remote', 'Office', 'Hybrid'], default: 'Remote' },
   companyId: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Company' 
+    ref: 'Company',
+    required: true
   },
   createdAt: { type: Date, default: Date.now }
 });

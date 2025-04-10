@@ -5,19 +5,67 @@ import { useRouter } from 'next/router'
 import axios from 'axios'
 import { getCurrentUser, clearUserData, getToken } from '../../utils/authUtils'
 
+// Logo style for responsive design with adaptive sizing
+const getLogoStyle = (windowWidth) => {
+    // Base style for all screen sizes
+    const baseStyle = {
+        maxWidth: '150px',
+        maxHeight: '50px',
+        width: 'auto',
+        height: 'auto',
+        objectFit: 'contain',
+        transition: 'all 0.3s ease'
+    };
+
+    // Medium screens (tablets)
+    if (windowWidth < 992 && windowWidth >= 768) {
+        return {
+            ...baseStyle,
+            maxWidth: '120px',
+            maxHeight: '40px'
+        };
+    }
+    
+    // Small screens (mobile devices)
+    if (windowWidth < 768) {
+        return {
+            ...baseStyle,
+            maxWidth: '100px',
+            maxHeight: '35px'
+        };
+    }
+    
+    // Default for large screens
+    return baseStyle;
+}
+
 export default function Header() {
     const [scroll, setScroll] = useState(0);
     const [user, setUser] = useState(null);
     const [companyStatus, setCompanyStatus] = useState(null);
+    const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
     const router = useRouter();
     
     useEffect(() => {
-        document.addEventListener("scroll", () => {
+        // Handle scroll for sticky header
+        const handleScroll = () => {
             const scrollCheck = window.scrollY > 100;
             if (scrollCheck !== scroll) {
                 setScroll(scrollCheck);
             }
-        });
+        };
+
+        // Handle window resize for responsive logo
+        const handleResize = () => {
+            setWindowWidth(window.innerWidth);
+        };
+
+        // Add event listeners
+        window.addEventListener("scroll", handleScroll);
+        window.addEventListener("resize", handleResize);
+        
+        // Set initial window width
+        setWindowWidth(window.innerWidth);
         
         // Get user data using auth utils for consistency
         const currentUser = getCurrentUser();
@@ -44,7 +92,13 @@ export default function Header() {
                 }
             }
         }
-    }, [scroll]);
+        
+        // Cleanup event listeners on unmount
+        return () => {
+            window.removeEventListener("scroll", handleScroll);
+            window.removeEventListener("resize", handleResize);
+        };
+    }, []); // Empty dependency array to run only once on mount
     
     // Function to fetch company status for the current user
     const fetchCompanyStatus = async (userId) => {
@@ -94,22 +148,18 @@ export default function Header() {
                 <div className="container">
                     <div className="main-header">
                         <div className="header-left">
-                            <div className="header-logo"><Link className="d-flex" href="/"><img alt="jobBox" src="assets/logoBanner.png" /></Link></div>
-                            {user && user.role && (
-                                <span className="btn btn-grey-small ml-10">
-                                    {user.role.toString().toUpperCase() === 'HR' ? 'HR Dashboard' : 
-                                     user.role.toString().toUpperCase() === 'CANDIDATE' ? 'Candidate Dashboard' : 
-                                     'Dashboard'}
-                                </span>
-                            )}
-                        </div>
-                        <div className="header-search">
-                            <div className="box-search">
-                                <form>
-                                    <input className="form-control input-search" type="text" name="keyword" placeholder="Search" />
-                                </form>
+                            <div className="header-logo">
+                                <Link className="d-flex" href="/">
+                                    <img 
+                                        alt="TuniHire" 
+                                        src="assets/logoBanner.png" 
+                                        style={getLogoStyle(windowWidth)} 
+                                        className={`logo-img ${scroll ? 'logo-scrolled' : ''}`}
+                                    />
+                                </Link>
                             </div>
                         </div>
+                        
                         
                         <div className="header-right">
                             <div className="block-signin">

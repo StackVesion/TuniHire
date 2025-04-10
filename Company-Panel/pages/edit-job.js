@@ -4,8 +4,9 @@ import { useRouter } from "next/router"
 import axios from "axios"
 import Swal from "sweetalert2"
 
-export default function Home() {
+export default function EditJob() {
     const [loading, setLoading] = useState(false)
+    const [fetchLoading, setFetchLoading] = useState(true)
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -15,6 +16,50 @@ export default function Home() {
         tags: ''
     })
     const router = useRouter()
+    const { id } = router.query
+
+    // Fetch job details when component mounts
+    useEffect(() => {
+        if (id) {
+            fetchJobDetails()
+        }
+    }, [id])
+
+    const fetchJobDetails = async () => {
+        setFetchLoading(true)
+        try {
+            const token = localStorage.getItem('token')
+            if (!token) {
+                router.push('/page-signin')
+                return
+            }
+
+            const response = await axios.get(`http://localhost:5000/api/jobs/${id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+
+            // Transform API response to form data format
+            const job = response.data
+            setFormData({
+                title: job.title || '',
+                description: job.description || '',
+                location: job.location || '',
+                workplaceType: job.workplaceType || 'Remote',
+                salaryRange: job.salaryRange || '',
+                tags: job.requirements ? job.requirements.join(', ') : ''
+            })
+        } catch (error) {
+            console.error('Error fetching job details:', error)
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to load job details. Please try again.',
+            })
+            router.push('/my-job-grid')
+        } finally {
+            setFetchLoading(false)
+        }
+    }
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -36,29 +81,17 @@ export default function Home() {
         setLoading(true)
 
         try {
-            // Get token and user data from localStorage
+            // Get authentication token
             const token = localStorage.getItem('token')
             if (!token) {
                 router.push('/page-signin')
                 return
             }
 
-            // Get company ID from userData
-            const userData = JSON.parse(localStorage.getItem('userData'))
-            if (!userData) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Authentication Error',
-                    text: 'Please sign in again to continue',
-                })
-                router.push('/page-signin')
-                return
-            }
-
-            // Directly get the company where the user is HR (createdBy field)
+            // Get the company ID to ensure we maintain the correct association
             let companyId;
             try {
-                // Get the company directly from my-company endpoint
+                // Get the company directly
                 const companyResponse = await axios.get('http://localhost:5000/api/companies/user/my-company', {
                     headers: { Authorization: `Bearer ${token}` }
                 })
@@ -66,31 +99,18 @@ export default function Home() {
                 // The API returns the company inside a 'company' property
                 const companyData = companyResponse.data.company || companyResponse.data
                 
-                if (!companyData || !companyData._id) {
-                    console.error('Company data structure:', companyResponse.data)
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Company Required',
-                        text: 'No company found associated with your account',
-                    })
-                    router.push('/my-job-grid')
-                    return
+                if (companyData && companyData._id) {
+                    companyId = companyData._id;
+                    console.log('Updating job for company:', companyData.name, 'with ID:', companyId);
+                } else {
+                    console.error('Company data structure:', companyResponse.data);
                 }
-                
-                console.log('Creating job for company:', companyData.name, 'with ID:', companyData._id)
-                companyId = companyData._id;
-            } catch (error) {
-                console.error('Error fetching company:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Failed to retrieve company information. Please try again.',
-                })
-                setLoading(false);
-                return;
+            } catch (companyError) {
+                console.error('Error fetching company:', companyError);
+                // Continue with update even if company fetch fails - we'll use the existing companyId
             }
-
-            // Prepare job data for submission
+            
+            // Prepare job data for update
             const jobData = {
                 title: formData.title,
                 description: formData.description,
@@ -98,28 +118,29 @@ export default function Home() {
                 workplaceType: formData.workplaceType,
                 salaryRange: formData.salaryRange,
                 requirements: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : [],
-                companyId: companyId
+                // Include companyId only if we retrieved it
+                ...(companyId && { companyId })
             }
 
-            // Submit job data to API
-            const response = await axios.post('http://localhost:5000/api/jobs', jobData, {
+            // Send update request
+            await axios.put(`http://localhost:5000/api/jobs/${id}`, jobData, {
                 headers: { Authorization: `Bearer ${token}` }
             })
 
             Swal.fire({
                 icon: 'success',
-                title: 'Job Posted!',
-                text: 'Your job has been posted successfully',
+                title: 'Job Updated!',
+                text: 'Your job has been updated successfully',
             })
 
             // Redirect to my jobs page
             router.push('/my-job-grid')
         } catch (error) {
-            console.error('Error posting job:', error)
+            console.error('Error updating job:', error)
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: error.response?.data?.error || 'Failed to post job. Please try again.',
+                text: error.response?.data?.error || 'Failed to update job. Please try again.',
             })
         } finally {
             setLoading(false)
@@ -128,14 +149,22 @@ export default function Home() {
     
     return (
         <>
-            <Layout breadcrumbTitle="My Profile" breadcrumbActive="My Profile">
+            <Layout breadcrumbTitle="Edit Job" breadcrumbActive="Edit Job">
                 <div className="row">
                     <div className="col-lg-12">
                         <div className="section-box">
                         <div className="container">
                             <div className="panel-white mb-30">
                             <div className="box-padding bg-postjob">
-                                <h5 className="icon-edu">Tell us about your role</h5>
+                                <h5 className="icon-edu">Edit Job Details</h5>
+                                {fetchLoading ? (
+                                    <div className="text-center py-5">
+                                        <div className="spinner-border text-primary" role="status">
+                                            <span className="visually-hidden">Loading...</span>
+                                        </div>
+                                        <p className="mt-2">Loading job details...</p>
+                                    </div>
+                                ) : (
                                 <div className="row mt-30">
                                 <div className="col-lg-9">
                                     <form onSubmit={handleSubmit}>
@@ -159,7 +188,7 @@ export default function Home() {
                                     <div className="col-lg-12">
                                         <div className="form-group mb-30">
                                         <label className="font-sm color-text-mutted mb-10">
-                                            Add your job description *
+                                            Job description *
                                         </label>
                                         <textarea
                                             className="form-control"
@@ -180,7 +209,11 @@ export default function Home() {
                                         <input
                                             className="form-control"
                                             type="text"
-                                            placeholder='e.g. "New York City" or "San Francisco”'
+                                            name="location"
+                                            value={formData.location}
+                                            onChange={handleChange}
+                                            placeholder='e.g. "New York City" or "San Francisco"'
+                                            required
                                         />
                                         </div>
                                     </div>
@@ -238,22 +271,29 @@ export default function Home() {
                                         />
                                         </div>
                                     </div>
-
                                     <div className="col-lg-12">
-                                        <div className="form-group mt-10">
+                                        <div className="form-group mt-10 d-flex">
                                         <button 
                                             type="submit" 
-                                            className="btn btn-default btn-brand icon-tick"
+                                            className="btn btn-default btn-brand icon-tick mr-5"
                                             disabled={loading}
                                         >
-                                            {loading ? 'Posting...' : 'Post New Job'}
+                                            {loading ? 'Updating...' : 'Update Job'}
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            className="btn btn-outline-primary"
+                                            onClick={() => router.push('/my-job-grid')}
+                                        >
+                                            Cancel
                                         </button>
                                         </div>
                                     </div>
                                     </div>
-                                </form>
+                                    </form>
                                 </div>
                                 </div>
+                                )}
                             </div>
                             </div>
                         </div>
