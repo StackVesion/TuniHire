@@ -30,12 +30,10 @@ export default function Sidebar() {
                         {/* CANDIDATE ROLE: Candidate-specific menu items */}
                         {user && user.role && user.role.toString().toUpperCase() === 'CANDIDATE' && (
                             <>
-                                <li><Link className={router.pathname === "/" ? "dashboard2 active" : "dashboard2"} href="/"><img src="assets/imgs/page/dashboard/dashboard.svg" alt="jobBox" /><span className="name">Candidate Dashboard</span></Link></li>
-                                <li><Link className={router.pathname === "/apply-company" ? "dashboard2 active" : "dashboard2"} href="/apply-company"><img src="assets/imgs/page/dashboard/building.svg" alt="jobBox" /><span className="name">Apply for Company</span></Link></li>
+                                <li><Link className={router.pathname === "/" ? "dashboard2 active" : "dashboard2"} href="/"><img src="assets/imgs/page/dashboard/dashboard.svg" alt="jobBox" /><span className="name">Dashboard</span></Link></li>
                                 <li><Link className={router.pathname === "/jobs" ? "dashboard2 active" : "dashboard2"} href="/jobs"><img src="assets/imgs/page/dashboard/jobs.svg" alt="jobBox" /><span className="name">Find Jobs</span></Link></li>
                                 <li><Link className={router.pathname === "/my-resume" ? "dashboard2 active" : "dashboard2"} href="/my-resume"><img src="assets/imgs/page/dashboard/cv-manage.svg" alt="jobBox" /><span className="name">My Resume</span></Link></li>
                                 <li><Link className={router.pathname === "/applications" ? "dashboard2 active" : "dashboard2"} href="/applications"><img src="assets/imgs/page/dashboard/tasks.svg" alt="jobBox" /><span className="name">My Applications</span></Link></li>
-                                <li><Link className={router.pathname === "/saved-jobs" ? "dashboard2 active" : "dashboard2"} href="/saved-jobs"><img src="assets/imgs/page/dashboard/bookmarks.svg" alt="jobBox" /><span className="name">Saved Jobs</span></Link></li>
                                 <li><Link className={router.pathname === "/profile" ? "dashboard2 active" : "dashboard2"} href="/profile"><img src="assets/imgs/page/dashboard/profiles.svg" alt="jobBox" /><span className="name">My Profile</span></Link></li>
                                 <li><Link className={router.pathname === "/settings" ? "dashboard2 active" : "dashboard2"} href="/settings"><img src="assets/imgs/page/dashboard/settings.svg" alt="jobBox" /><span className="name">Settings</span></Link></li>
                             </>
@@ -45,7 +43,6 @@ export default function Sidebar() {
                         {user && user.role && user.role.toString().toUpperCase() === 'HR' && (
                             <>
                                 <li><Link className={router.pathname === "/" ? "dashboard2 active" : "dashboard2"} href="/"><img src="assets/imgs/page/dashboard/dashboard.svg" alt="jobBox" /><span className="name">Company Dashboard</span></Link></li>
-                                <li><Link className={router.pathname === "/post-job" ? "dashboard2 active" : "dashboard2"} href="/post-job"><img src="assets/imgs/page/dashboard/recruitment.svg" alt="jobBox" /><span className="name">Post a Job</span></Link></li>
                                 <li><Link className={router.pathname === "/my-job-grid" ? "dashboard2 active" : "dashboard2"} href="/my-job-grid"><img src="assets/imgs/page/dashboard/jobs.svg" alt="jobBox" /><span className="name">Manage Jobs</span></Link></li>
                                 <li><Link className={router.pathname === "/candidates" ? "dashboard2 active" : "dashboard2"} href="/candidates"><img src="assets/imgs/page/dashboard/candidates.svg" alt="jobBox" /><span className="name">All Candidates</span></Link></li>
                                 <li><Link className={router.pathname === "/applications" ? "dashboard2 active" : "dashboard2"} href="/applications"><img src="assets/imgs/page/dashboard/tasks.svg" alt="jobBox" /><span className="name">Applications</span></Link></li>
