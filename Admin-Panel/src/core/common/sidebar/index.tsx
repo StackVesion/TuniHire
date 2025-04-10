@@ -354,7 +354,12 @@ const Sidebar = () => {
                     </li>
                 </React.Fragment>
                 ))}
-
+                <li>
+                  <Link to="/admin/companies" className="sidebar-link">
+                    <i className="ti ti-building"></i>
+                    <span>Companies</span>
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>

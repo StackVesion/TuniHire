@@ -136,8 +136,7 @@ const Sidebar = ({ openClass }) => {
                                                 </li>
                                             )}
                                             
-                                            {user.role && (user.role === 'candidate' || user.role === 'Candidate' || 
-                                              user.role === 'admin' || user.role === 'Admin') && (
+                                            {user.role && (user.role === 'candidate' || user.role === 'Candidate') && (
                                                 <li>
                                                     <a 
                                                         onClick={() => {
@@ -153,6 +152,49 @@ const Sidebar = ({ openClass }) => {
                                                         <i className="fi-rr-dashboard me-2 text-primary"></i> Dashboard
                                                     </a>
                                                 </li>
+                                            )}
+                                            
+                                            {user.role && (user.role === 'admin' || user.role === 'Admin') && (
+                                                <>
+                                                    <li className="admin-section">
+                                                        <span className="admin-section-header">Administration</span>
+                                                    </li>
+                                                    <li>
+                                                        <Link legacyBehavior href="/admin">
+                                                            <a className="sidebar-link">
+                                                                <i className="fi-rr-dashboard me-2 text-primary"></i> Tableau de bord
+                                                            </a>
+                                                        </Link>
+                                                    </li>
+                                                    <li>
+                                                        <Link legacyBehavior href="/admin/companies">
+                                                            <a className="sidebar-link">
+                                                                <i className="fi-rr-building me-2 text-primary"></i> Entreprises
+                                                            </a>
+                                                        </Link>
+                                                    </li>
+                                                    <li>
+                                                        <Link legacyBehavior href="/admin/newsletters">
+                                                            <a className="sidebar-link">
+                                                                <i className="fi-rr-envelope me-2 text-primary"></i> Newsletters
+                                                            </a>
+                                                        </Link>
+                                                    </li>
+                                                    <li>
+                                                        <Link legacyBehavior href="/admin/courses">
+                                                            <a className="sidebar-link">
+                                                                <i className="fi-rr-book me-2 text-primary"></i> Cours
+                                                            </a>
+                                                        </Link>
+                                                    </li>
+                                                    <li>
+                                                        <Link legacyBehavior href="/admin/reclamations">
+                                                            <a className="sidebar-link">
+                                                                <i className="fi-rr-flag me-2 text-primary"></i> Réclamations
+                                                            </a>
+                                                        </Link>
+                                                    </li>
+                                                </>
                                             )}
                                             <li>
                                                 <Link legacyBehavior href="/candidate-profile"><a className="sidebar-link"><i className="fi-rr-user me-2 text-primary"></i>My Profile</a></Link>
@@ -200,6 +242,21 @@ const Sidebar = ({ openClass }) => {
                 
                 .text-primary {
                     color: #3c65f5 !important;
+                }
+                
+                .admin-section {
+                    margin-top: 10px;
+                    margin-bottom: 5px;
+                }
+                
+                .admin-section-header {
+                    font-weight: 600;
+                    color: #3c65f5;
+                    font-size: 14px;
+                    text-transform: uppercase;
+                    padding: 8px 12px;
+                    display: block;
+                    border-bottom: 1px solid #e0e6f7;
                 }
             `}</style>
         </>

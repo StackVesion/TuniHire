@@ -19,6 +19,10 @@ router.delete("/:id", verifyToken, companyController.deleteCompany);
 
 // Admin only routes
 router.get("/admin/pending", verifyToken, isAdmin, companyController.getPendingCompanies);
-router.put("/admin/approve/:id", verifyToken, isAdmin, companyController.approveCompany);
+router.put("/approve/:id", verifyToken, isAdmin, (req, res, next) => {
+  console.log('Authorization header:', req.headers.authorization); // Log the Authorization header
+  next();
+}, companyController.approveCompany);
+router.put("/reject/:id", verifyToken, isAdmin, companyController.rejectCompany);
 
 module.exports = router;
