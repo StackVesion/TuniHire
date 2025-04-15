@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import CertificateForm from './CertificateForm';
+import { createAuthAxios } from '@/utils/authUtils';
 
 const CertificateSection = ({ portfolio, userId, onUpdate, onRemove }) => {
     const [showForm, setShowForm] = useState(false);
@@ -37,9 +38,30 @@ const CertificateSection = ({ portfolio, userId, onUpdate, onRemove }) => {
             confirmButtonColor: '#3085d6',
             cancelButtonColor: '#d33',
             confirmButtonText: 'Yes, delete it!'
-        }).then((result) => {
+        }).then(async (result) => {
             if (result.isConfirmed) {
-                onRemove(index);
+                try {
+                    const authAxios = createAuthAxios();
+                    const response = await authAxios.delete(`http://localhost:5000/api/portfolios/${portfolio._id}/certificates/${index}`);
+                    
+                    if (response.data.success) {
+                        onRemove(index);
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Deleted!',
+                            text: 'Your certificate has been deleted.',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error removing certificate:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to delete certificate'
+                    });
+                }
             }
         });
     };
@@ -67,13 +89,13 @@ const CertificateSection = ({ portfolio, userId, onUpdate, onRemove }) => {
             {portfolio.certificates && portfolio.certificates.length > 0 ? (
                 <ul className="dashboard-list">
                     {portfolio.certificates.map((cert, index) => (
-                        <li key={index} className="dashboard-list-item">
+                        <li key={index} className="dashboard-list-item portfolio-item">
                             <div className="dashboard-list-item-content">
                                 <h5 className="mb-2">{cert.title}</h5>
                                 <p className="mb-1">Issued by {cert.issuer}</p>
                                 <p className="text-muted small mb-2">
-                                    Issued: {new Date(cert.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}
-                                    {cert.expiration && ` u2022 Expires: ${new Date(cert.expiration).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}`}
+                                    Issued: {new Date(cert.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+                                    {cert.expiration && ` • Expires: ${new Date(cert.expiration).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}`}
                                 </p>
                                 {cert.credentialId && <p className="mb-1 small">Credential ID: {cert.credentialId}</p>}
                                 {cert.credentialUrl && (
@@ -83,7 +105,6 @@ const CertificateSection = ({ portfolio, userId, onUpdate, onRemove }) => {
                                         </a>
                                     </p>
                                 )}
-                                {cert.description && <p className="mb-0">{cert.description}</p>}
                             </div>
                             <div className="dashboard-list-item-actions">
                                 <button 

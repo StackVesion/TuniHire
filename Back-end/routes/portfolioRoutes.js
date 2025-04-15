@@ -133,6 +133,96 @@ router.delete('/certificates/:index', async (req, res) => {
     }
 });
 
+router.post('/:portfolioId/certificates', verifyToken, async (req, res) => {
+  try {
+    const portfolio = await Portfolio.findById(req.params.portfolioId);
+    
+    if (!portfolio) {
+      return res.status(404).json({ success: false, message: 'Portfolio not found' });
+    }
+    
+    const newCertificate = req.body;
+    portfolio.certificates = portfolio.certificates || [];
+    portfolio.certificates.push(newCertificate);
+    const updatedPortfolio = await portfolio.save();
+    
+    res.status(201).json({
+      success: true,
+      certificate: portfolio.certificates[portfolio.certificates.length - 1],
+      portfolio: updatedPortfolio
+    });
+  } catch (error) {
+    console.error('Error adding certificate:', error);
+    res.status(400).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+router.put('/:portfolioId/certificates/:index', verifyToken, async (req, res) => {
+  try {
+    const { index } = req.params;
+    const updatedCertificate = req.body;
+    
+    const portfolio = await Portfolio.findById(req.params.portfolioId);
+    
+    if (!portfolio) {
+      return res.status(404).json({ success: false, message: 'Portfolio not found' });
+    }
+    
+    if (!portfolio.certificates || index >= portfolio.certificates.length || index < 0) {
+      return res.status(404).json({ success: false, message: 'Certificate not found' });
+    }
+    
+    portfolio.certificates[index] = updatedCertificate;
+    const updatedPortfolio = await portfolio.save();
+    
+    res.status(200).json({
+      success: true,
+      certificate: updatedPortfolio.certificates[index],
+      portfolio: updatedPortfolio
+    });
+  } catch (error) {
+    console.error('Error updating certificate:', error);
+    res.status(400).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
+router.delete('/:portfolioId/certificates/:index', verifyToken, async (req, res) => {
+  try {
+    const { index } = req.params;
+    
+    const portfolio = await Portfolio.findById(req.params.portfolioId);
+    
+    if (!portfolio) {
+      return res.status(404).json({ success: false, message: 'Portfolio not found' });
+    }
+    
+    if (!portfolio.certificates || index >= portfolio.certificates.length || index < 0) {
+      return res.status(404).json({ success: false, message: 'Certificate not found' });
+    }
+    
+    portfolio.certificates.splice(index, 1);
+    const updatedPortfolio = await portfolio.save();
+    
+    res.status(200).json({
+      success: true,
+      message: 'Certificate removed successfully',
+      portfolio: updatedPortfolio
+    });
+  } catch (error) {
+    console.error('Error removing certificate:', error);
+    res.status(400).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 router.post('/:portfolioId/certificates/:certificateId', verifyToken, addCertificateToPortfolio);
 router.delete('/:portfolioId/certificates/:certificateId', verifyToken, removeCertificateFromPortfolio);
 
@@ -316,35 +406,137 @@ router.delete('/:id/projects/:projectIndex', verifyToken, async (req, res) => {
 // Generate CV endpoint 
 router.post('/generate-cv', verifyToken, async (req, res) => {
   try {
-    const { userId, education, experience, skills } = req.body;
+    const { userId, education, experience, skills, personalInfo } = req.body;
     
     if (!userId) {
       return res.status(400).json({ success: false, message: 'User ID is required' });
     }
     
-    // Find the portfolio for this user
-    let portfolio = await Portfolio.findOne({ userId });
+    // Find the portfolio by userId
+    const portfolio = await Portfolio.findOne({ userId });
     
     if (!portfolio) {
       return res.status(404).json({ success: false, message: 'Portfolio not found' });
     }
     
-    // Generate a mock CV file (in a real app, you would generate an actual PDF)
-    const cvFile = {
-      filename: `resume_${userId}_${Date.now()}.pdf`,
-      path: `/uploads/resumes/resume_${userId}_${Date.now()}.pdf`,
-      uploadDate: new Date(),
-      fileType: 'application/pdf'
-    };
+    // Generate a filename for the CV
+    const timestamp = new Date().getTime();
+    const cvFileName = `cv_${userId}_${timestamp}.pdf`;
+    const cvFilePath = `./public/uploads/cvs/${cvFileName}`;
     
-    // Update portfolio with CV file
-    portfolio.cvFile = cvFile;
-    const updatedPortfolio = await portfolio.save();
+    // Make sure the directory exists
+    const fs = require('fs');
+    const path = require('path');
+    const uploadsDir = path.join(__dirname, '../public/uploads/cvs');
     
-    res.status(200).json({
-      success: true,
-      message: 'CV generated successfully',
-      cvFile: updatedPortfolio.cvFile
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    
+    // Use a PDF generation library like PDFKit
+    const PDFDocument = require('pdfkit');
+    const doc = new PDFDocument();
+    
+    // Pipe the PDF into a file
+    const stream = fs.createWriteStream(cvFilePath);
+    doc.pipe(stream);
+    
+    // Add content to the PDF
+    doc.fontSize(25).text('Curriculum Vitae', { align: 'center' });
+    doc.moveDown();
+    
+    // Personal Information
+    if (personalInfo) {
+      doc.fontSize(18).text('Personal Information');
+      doc.fontSize(12).text(`Name: ${personalInfo.firstName} ${personalInfo.lastName}`);
+      if (personalInfo.email) doc.text(`Email: ${personalInfo.email}`);
+      if (personalInfo.phone) doc.text(`Phone: ${personalInfo.phone}`);
+      if (personalInfo.address) doc.text(`Address: ${personalInfo.address}`);
+      doc.moveDown();
+    }
+    
+    // Skills
+    if (skills && skills.length > 0) {
+      doc.fontSize(18).text('Skills');
+      skills.forEach(skill => {
+        doc.fontSize(12).text(`• ${skill}`);
+      });
+      doc.moveDown();
+    }
+    
+    // Education
+    if (education && education.length > 0) {
+      doc.fontSize(18).text('Education');
+      education.forEach(edu => {
+        doc.fontSize(14).text(edu.degree || 'Degree');
+        const school = edu.school ? `${edu.school}` : '';
+        const fieldOfStudy = edu.fieldOfStudy ? `, ${edu.fieldOfStudy}` : '';
+        doc.fontSize(12).text(school + fieldOfStudy);
+        
+        // Format dates
+        let dateText = '';
+        if (edu.startDate) {
+          const startDate = new Date(edu.startDate);
+          dateText += startDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        }
+        if (edu.endDate) {
+          const endDate = new Date(edu.endDate);
+          dateText += ` - ${endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}`;
+        } else if (edu.currentlyEnrolled) {
+          dateText += ' - Present';
+        }
+        
+        if (dateText) doc.text(dateText);
+        if (edu.description) doc.text(edu.description);
+        doc.moveDown();
+      });
+    }
+    
+    // Experience
+    if (experience && experience.length > 0) {
+      doc.fontSize(18).text('Experience');
+      experience.forEach(exp => {
+        doc.fontSize(14).text(exp.title || 'Position');
+        const company = exp.company ? `${exp.company}` : '';
+        const location = exp.location ? `, ${exp.location}` : '';
+        doc.fontSize(12).text(company + location);
+        
+        // Format dates
+        let dateText = '';
+        if (exp.startDate) {
+          const startDate = new Date(exp.startDate);
+          dateText += startDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        }
+        if (exp.endDate) {
+          const endDate = new Date(exp.endDate);
+          dateText += ` - ${endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}`;
+        } else if (exp.currentlyEmployed) {
+          dateText += ' - Present';
+        }
+        
+        if (dateText) doc.text(dateText);
+        if (exp.description) doc.text(exp.description);
+        doc.moveDown();
+      });
+    }
+    
+    // Finalize PDF
+    doc.end();
+    
+    // When the stream is finished, send the response
+    stream.on('finish', () => {
+      // Update portfolio with CV file path
+      portfolio.cvFilePath = `/uploads/cvs/${cvFileName}`;
+      portfolio.save();
+      
+      // Return the file path to download
+      res.status(200).json({
+        success: true,
+        message: 'CV generated successfully',
+        cvPath: `/uploads/cvs/${cvFileName}`,
+        downloadUrl: `http://localhost:5000/uploads/cvs/${cvFileName}`,
+        portfolio
+      });
     });
   } catch (error) {
     console.error('Error generating CV:', error);

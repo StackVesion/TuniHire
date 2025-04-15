@@ -1,25 +1,29 @@
-import Layout from "@/components/layout/Layout"
-import { useEffect, useState } from "react"
-import axios from "axios"
-import { useRouter } from "next/router"
-import Swal from "sweetalert2"
-import Link from "next/link"
-import withAuth from "@/utils/withAuth"
-import { getToken, createAuthAxios } from "@/utils/authUtils"
-import { FaTimes, FaLock } from "react-icons/fa"
+import React, { useState, useEffect, useRef } from 'react';
+import Head from 'next/head';
+import Image from 'next/image';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+import { useRouter } from 'next/router';
+import Swal from 'sweetalert2';
+import Layout from "@/components/layout/Layout";
+import axios from "axios";
+import Link from "next/link";
+import withAuth from "@/utils/withAuth";
+import { getToken, createAuthAxios } from "@/utils/authUtils";
+import { FaTimes, FaLock } from "react-icons/fa";
 
-// Import suggestions data
-import suggestions from '../data/suggestions.json';
-
-// Import new portfolio form components
+// Import form components
 import EducationForm from '../components/portfolio/EducationForm';
 import ExperienceForm from '../components/portfolio/ExperienceForm';
 import CertificateForm from '../components/portfolio/CertificateForm';
 
-// Import new section components
+// Import section components
 import EducationSection from '../components/portfolio/EducationSection';
 import ExperienceSection from '../components/portfolio/ExperienceSection';
 import CertificateSection from '../components/portfolio/CertificateSection';
+
+// Import data
+import suggestions from '../data/suggestions.json';
 
 function Portfolio({ user }) {
     const router = useRouter();
@@ -28,6 +32,8 @@ function Portfolio({ user }) {
     const [certificates, setCertificates] = useState([]);
     const [progressPercentage, setProgressPercentage] = useState(0);
     const [showAlert, setShowAlert] = useState(false);
+    const [currentStep, setCurrentStep] = useState('about');
+    const [isDownloading, setIsDownloading] = useState(false);
     
     // Education form state
     const [educationForm, setEducationForm] = useState({
@@ -54,6 +60,17 @@ function Portfolio({ user }) {
     
     // Skills form state
     const [newSkill, setNewSkill] = useState('');
+    
+    // State variables for social links and about section
+    const [showSocialLinksForm, setShowSocialLinksForm] = useState(false);
+    const [showAboutForm, setShowAboutForm] = useState(false);
+    const [socialLinks, setSocialLinks] = useState({
+        linkedin: '',
+        github: '',
+        website: '',
+        twitter: ''
+    });
+    const [about, setAbout] = useState('');
     
     // Modal states
     const [showEducationModal, setShowEducationModal] = useState(false);
@@ -82,17 +99,6 @@ function Portfolio({ user }) {
     });
     const [showCertificateModal, setShowCertificateModal] = useState(false);
     const [editingCertificateIndex, setEditingCertificateIndex] = useState(null);
-    
-    // New state for about and social links forms
-    const [showAboutForm, setShowAboutForm] = useState(false);
-    const [showSocialLinksForm, setShowSocialLinksForm] = useState(false);
-    const [about, setAbout] = useState('');
-    const [socialLinks, setSocialLinks] = useState({
-        linkedin: '',
-        github: '',
-        website: '',
-        twitter: ''
-    });
     
     // State variables for step-by-step guide
     const [activeGuideStep, setActiveGuideStep] = useState(1);
@@ -787,7 +793,7 @@ function Portfolio({ user }) {
             setLoading(true);
             const authAxios = createAuthAxios();
             
-            // Use the custom auth axios instance with proper token handling
+            // Use the proper endpoint based on our new routes
             const response = await authAxios.patch(`http://localhost:5000/api/portfolios/about`, {
                 userId: user._id,
                 about: aboutInput
@@ -1375,12 +1381,27 @@ function Portfolio({ user }) {
             setLoading(true);
             // Call API to generate CV with the updated endpoint path
             const authAxios = createAuthAxios();
-            const response = await authAxios.post('http://localhost:5000/api/portfolios/generate-cv', {
+            
+            // Instead of fetching user data, use the user object already available
+            const personalInfo = {
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                email: user.email || '',
+                phone: user.phone || '',
+                address: user.address || ''
+            };
+            
+            // Prepare data for CV generation
+            const payload = {
                 userId: user._id,
+                personalInfo,
                 education: portfolio.education || [],
                 experience: portfolio.experience || [],
-                skills: portfolio.skills || []
-            });
+                skills: portfolio.skills || [],
+                certificates: portfolio.certificates || []
+            };
+            
+            const response = await authAxios.post('http://localhost:5000/api/portfolios/generate-cv', payload);
             
             if (response.data.success) {
                 // Update portfolio with the CV file info
@@ -1505,164 +1526,6 @@ function Portfolio({ user }) {
     const [editingExperience, setEditingExperience] = useState(null);
     const [editingCertificate, setEditingCertificate] = useState(null);
 
-    // Education handlers
-    // const handleAddEducation = () => {
-    //     setEditingEducation(null); // Ensure we're not in edit mode
-    //     setShowEducationForm(true);
-    //     setShowExperienceForm(false);
-    //     setShowCertificateForm(false);
-    // };
-
-    // const handleEditEducation = (education, index) => {
-    //     setEditingEducation({ ...education, index });
-    //     setShowEducationForm(true);
-    //     setShowExperienceForm(false);
-    //     setShowCertificateForm(false);
-    // };
-
-    // const handleEducationSuccess = (updatedPortfolio) => {
-    //     setPortfolio(updatedPortfolio);
-    //     setShowEducationForm(false);
-    //     setEditingEducation(null);
-    //     Swal.fire({
-    //         icon: 'success',
-    //         title: editingEducation ? 'Education updated successfully' : 'Education added successfully',
-    //         text: editingEducation ? 'Your education has been updated successfully.' : 'Your education has been added successfully.'
-    //     });
-    // };
-
-    // Experience handlers
-    // const handleAddExperience = () => {
-    //     setEditingExperience(null); // Ensure we're not in edit mode
-    //     setShowExperienceForm(true);
-    //     setShowEducationForm(false);
-    //     setShowCertificateForm(false);
-    // };
-
-    // const handleEditExperience = (experience, index) => {
-    //     setEditingExperience({ ...experience, index });
-    //     setShowExperienceForm(true);
-    //     setShowEducationForm(false);
-    //     setShowCertificateForm(false);
-    // };
-
-    // const handleExperienceSuccess = (updatedPortfolio) => {
-    //     setPortfolio(updatedPortfolio);
-    //     setShowExperienceForm(false);
-    //     setEditingExperience(null);
-    //     Swal.fire({
-    //         icon: 'success',
-    //         title: editingExperience ? 'Experience updated successfully' : 'Experience added successfully',
-    //         text: editingExperience ? 'Your experience has been updated successfully.' : 'Your experience has been added successfully.'
-    //     });
-    // };
-
-    // Certificate handlers
-    // const handleAddCertificate = () => {
-    //     setEditingCertificate(null); // Ensure we're not in edit mode
-    //     setShowCertificateForm(true);
-    //     setShowEducationForm(false);
-    //     setShowExperienceForm(false);
-    // };
-
-    // const handleEditCertificate = (certificate, index) => {
-    //     setEditingCertificate({ ...certificate, index });
-    //     setShowCertificateForm(true);
-    //     setShowEducationForm(false);
-    //     setShowExperienceForm(false);
-    // };
-
-    // const handleCertificateSuccess = (response) => {
-    //     // Certificate endpoint may return different structure
-    //     if (response.portfolio) {
-    //         setPortfolio(response.portfolio);
-    //     } else if (response.message) { 
-    //         // Refresh the portfolio data from the server
-    //         fetchPortfolioData();
-    //     }
-    //     setShowCertificateForm(false);
-    //     setEditingCertificate(null);
-    //     Swal.fire({
-    //         icon: 'success',
-    //         title: editingCertificate ? 'Certificate updated successfully' : 'Certificate added successfully',
-    //         text: editingCertificate ? 'Your certificate has been updated successfully.' : 'Your certificate has been added successfully.'
-    //     });
-    // };
-
-    // Function to remove education
-    // const removeEducation = async (index) => {
-    //     try {
-    //         const authAxios = createAuthAxios();
-    //         const response = await authAxios.delete(`http://localhost:5000/api/portfolios/${portfolio._id}/education/${index}`);
-            
-    //         if (response.data.success) {
-    //             setPortfolio(response.data.portfolio);
-    //             Swal.fire({
-    //                 icon: 'success',
-    //                 title: 'Education removed successfully',
-    //                 text: 'Your education entry has been deleted successfully.'
-    //             });
-    //         }
-    //     } catch (error) {
-    //         console.error('Error removing education:', error);
-    //         Swal.fire({
-    //             icon: 'error',
-    //             title: 'Error',
-    //             text: 'Failed to remove education'
-    //         });
-    //     }
-    // };
-
-    // Function to remove experience
-    // const removeExperience = async (index) => {
-    //     try {
-    //         const authAxios = createAuthAxios();
-    //         const response = await authAxios.delete(`http://localhost:5000/api/portfolios/${portfolio._id}/experience/${index}`);
-            
-    //         if (response.data.success) {
-    //             setPortfolio(response.data.portfolio);
-    //             Swal.fire({
-    //                 icon: 'success',
-    //                 title: 'Experience removed successfully',
-    //                 text: 'Your experience entry has been deleted successfully.'
-    //             });
-    //         }
-    //     } catch (error) {
-    //         console.error('Error removing experience:', error);
-    //         Swal.fire({
-    //             icon: 'error',
-    //             title: 'Error',
-    //             text: 'Failed to remove experience'
-    //         });
-    //     }
-    // };
-
-    // Function to remove certificate
-    // const removeCertificate = async (index) => {
-    //     try {
-    //         const authAxios = createAuthAxios();
-    //         const response = await authAxios.delete(`http://localhost:5000/api/portfolios/certificates/${index}`, {
-    //             data: { userId: localStorage.getItem('userId') }
-    //         });
-            
-    //         if (response.data.success) {
-    //             fetchPortfolioData();
-    //             Swal.fire({
-    //                 icon: 'success',
-    //                 title: 'Certificate removed successfully',
-    //                 text: 'Your certificate has been deleted successfully.'
-    //             });
-    //         }
-    //     } catch (error) {
-    //         console.error('Error removing certificate:', error);
-    //         Swal.fire({
-    //             icon: 'error',
-    //             title: 'Error',
-    //             text: 'Failed to remove certificate'
-    //         });
-    //     }
-    // };
-
     // Function to fetch portfolio data
     const fetchPortfolioData = async () => {
         try {
@@ -1686,80 +1549,121 @@ function Portfolio({ user }) {
     // Functions to handle education operations
     const handleEducationUpdate = (updatedPortfolio) => {
         setPortfolio(updatedPortfolio || portfolio);
-        if (!updatedPortfolio) {
-            fetchPortfolioData(); // Refresh data from server
-        }
+        setShowEducationModal(false);
     };
     
-    const handleEducationRemove = async (index) => {
-        try {
-            const authAxios = createAuthAxios();
-            const response = await authAxios.delete(`http://localhost:5000/api/portfolios/${portfolio._id}/education/${index}`);
-            
-            if (response.data.success) {
-                setPortfolio(response.data.portfolio);
-            }
-        } catch (error) {
-            console.error('Error removing education:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Failed to remove education'
-            });
-        }
+    const handleEducationRemove = (updatedPortfolio) => {
+        setPortfolio(updatedPortfolio || portfolio);
     };
 
     // Functions to handle experience operations
     const handleExperienceUpdate = (updatedPortfolio) => {
         setPortfolio(updatedPortfolio || portfolio);
-        if (!updatedPortfolio) {
-            fetchPortfolioData(); // Refresh data from server
-        }
+        setShowExperienceModal(false);
     };
     
-    const handleExperienceRemove = async (index) => {
-        try {
-            const authAxios = createAuthAxios();
-            const response = await authAxios.delete(`http://localhost:5000/api/portfolios/${portfolio._id}/experience/${index}`);
-            
-            if (response.data.success) {
-                setPortfolio(response.data.portfolio);
-            }
-        } catch (error) {
-            console.error('Error removing experience:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Failed to remove experience'
-            });
-        }
+    const handleExperienceRemove = (updatedPortfolio) => {
+        setPortfolio(updatedPortfolio || portfolio);
     };
 
     // Functions to handle certificate operations
-    const handleCertificateUpdate = (updatedPortfolio, needsRefresh = false) => {
-        if (updatedPortfolio) {
-            setPortfolio(updatedPortfolio);
-        } else if (needsRefresh) {
-            fetchPortfolioData(); // Refresh data from server
+    const handleCertificateUpdate = (data) => {
+        if (data && data.portfolio) {
+            // If we got a portfolio object directly, use it
+            setPortfolio(data.portfolio);
+        } else {
+            // Otherwise refresh from server
+            fetchPortfolioData();
         }
+        setShowCertificateModal(false);
     };
     
-    const handleCertificateRemove = async (index) => {
+    const handleCertificateRemove = (index) => {
+        // Update local state if possible
+        if (portfolio && portfolio.certificates) {
+            const updatedCertificates = [...portfolio.certificates];
+            updatedCertificates.splice(index, 1);
+            setPortfolio(prev => ({
+                ...prev,
+                certificates: updatedCertificates
+            }));
+        } else {
+            // Otherwise refresh from server
+            fetchPortfolioData();
+        }
+    };
+
+    // Function to generate and download CV
+    const handleGenerateCV = async () => {
         try {
+            setIsDownloading(true);
             const authAxios = createAuthAxios();
-            const response = await authAxios.delete(`http://localhost:5000/api/portfolios/certificates/${index}`, {
-                data: { userId: localStorage.getItem('userId') }
-            });
+            
+            // Instead of fetching user data, use the user object already available
+            const personalInfo = {
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                email: user.email || '',
+                phone: user.phone || '',
+                address: user.address || ''
+            };
+            
+            // Prepare data for CV generation
+            const payload = {
+                userId: user._id,
+                personalInfo,
+                education: portfolio.education || [],
+                experience: portfolio.experience || [],
+                skills: portfolio.skills || [],
+                certificates: portfolio.certificates || []
+            };
+            
+            const response = await authAxios.post('http://localhost:5000/api/portfolios/generate-cv', payload);
             
             if (response.data.success) {
-                fetchPortfolioData();
+                // Trigger download
+                const downloadUrl = response.data.downloadUrl;
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.setAttribute('download', 'cv.pdf');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                setPortfolio(response.data.portfolio);
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'CV Generated Successfully',
+                    text: 'Your CV has been generated and downloaded!',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
             }
         } catch (error) {
-            console.error('Error removing certificate:', error);
+            console.error('Error generating CV:', error);
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: 'Failed to remove certificate'
+                text: 'Failed to generate CV. Please try again.'
+            });
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    // Handle step completion in the guide
+    const handleStepComplete = (nextStep) => {
+        setCurrentStep(nextStep);
+        
+        // If the user finished the guide
+        if (nextStep === 'completed') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Portfolio Complete!',
+                text: 'Your portfolio has been successfully set up.',
+                timer: 2000,
+                showConfirmButton: false
             });
         }
     };
@@ -1767,6 +1671,117 @@ function Portfolio({ user }) {
     // Return the appropriate view based on portfolio existence
     return (
         <Layout breadcrumbTitle="My Portfolio" breadcrumbActive="My Portfolio">
+            <style jsx global>{`
+                /* Animations and transitions */
+                .dashboard-list-block {
+                    transition: all 0.3s ease-in-out;
+                    transform: translateY(0);
+                    opacity: 1;
+                    border-radius: 12px;
+                    padding: 25px;
+                    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+                    background: white;
+                    margin-bottom: 30px;
+                }
+                
+                .dashboard-list-block:hover {
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+                    transform: translateY(-5px);
+                }
+                
+                .skill-tags .badge {
+                    transition: all 0.2s ease;
+                    padding: 10px 15px;
+                    font-size: 14px;
+                    margin-right: 8px;
+                    margin-bottom: 8px;
+                }
+                
+                .skill-tags .badge:hover {
+                    transform: scale(1.05);
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                }
+                
+                /* Animation for section entry */
+                @keyframes fadeInUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+                
+                .dashboard-list-block {
+                    animation: fadeInUp 0.5s ease forwards;
+                }
+                
+                .dashboard-list-block:nth-child(2) { animation-delay: 0.1s; }
+                .dashboard-list-block:nth-child(3) { animation-delay: 0.2s; }
+                .dashboard-list-block:nth-child(4) { animation-delay: 0.3s; }
+                .dashboard-list-block:nth-child(5) { animation-delay: 0.4s; }
+                .dashboard-list-block:nth-child(6) { animation-delay: 0.5s; }
+                
+                /* Form animations */
+                .form-control, .btn {
+                    transition: all 0.2s ease;
+                }
+                
+                .form-control:focus {
+                    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+                    border-color: #86b7fe;
+                }
+                
+                /* Button hover effects */
+                .btn-primary:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 5px 15px rgba(13, 110, 253, 0.2);
+                }
+                
+                /* Date picker styling */
+                .react-datepicker-wrapper {
+                    width: 100%;
+                }
+                
+                .react-datepicker__input-container input {
+                    width: 100%;
+                    padding: 0.375rem 0.75rem;
+                    font-size: 1rem;
+                    font-weight: 400;
+                    line-height: 1.5;
+                    color: #212529;
+                    background-color: #fff;
+                    background-clip: padding-box;
+                    border: 1px solid #ced4da;
+                    appearance: none;
+                    border-radius: 0.25rem;
+                    transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+                }
+                
+                .react-datepicker__input-container input:focus {
+                    color: #212529;
+                    background-color: #fff;
+                    border-color: #86b7fe;
+                    outline: 0;
+                    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+                }
+                
+                /* Portfolio item styling */
+                .portfolio-item {
+                    margin-bottom: 20px;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+                    transition: all 0.3s ease;
+                }
+                
+                .portfolio-item:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+                }
+            `}</style>
             {loading ? (
                 <div className="text-center p-5">
                     <div className="spinner-border text-primary" role="status">
@@ -1780,46 +1795,7 @@ function Portfolio({ user }) {
                     <div className="row">
                         {/* Generate CV Button at the top */}
                         <div className="col-12 mb-4 d-flex justify-content-end">
-                            <button className="btn btn-primary btn-lg" onClick={() => {
-                                // Call API to generate CV
-                                const authAxios = createAuthAxios();
-                                authAxios.post('http://localhost:5000/api/portfolios/generate-cv', {
-                                    userId: user._id,
-                                    education: portfolio.education,
-                                    experience: portfolio.experience,
-                                    skills: portfolio.skills
-                                })
-                                .then(response => {
-                                    if (response.data.success) {
-                                        setPortfolio(prev => ({ ...prev, cvFile: response.data.cvFile }));
-                                        Swal.fire({
-                                            icon: 'success',
-                                            title: 'Success',
-                                            text: 'CV generated successfully',
-                                            timer: 1500,
-                                            showConfirmButton: false
-                                        });
-                                        // If this was part of the guided setup, move to next step
-                                        if (activeGuideStep === 1) {
-                                            showNextGuideStep();
-                                        }
-                                    } else {
-                                        Swal.fire({
-                                            icon: 'error',
-                                            title: 'Error',
-                                            text: 'Failed to generate CV'
-                                        });
-                                    }
-                                })
-                                .catch(error => {
-                                    console.error('Error generating CV:', error);
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Error',
-                                        text: 'Failed to generate CV'
-                                    });
-                                });
-                            }}>
+                            <button className="btn btn-primary btn-lg" onClick={handleGenerateCV}>
                                 <i className="fi-rr-file-pdf me-2"></i>
                                 Generate Resume (PDF)
                             </button>
@@ -1904,6 +1880,158 @@ function Portfolio({ user }) {
                                         </div>
                                     )}
                                 </div>
+                            </div>
+                            
+                            {/* Social Links Section */}
+                            <div className="dashboard-list-block mt-5">
+                                <div className="d-flex justify-content-between align-items-center mb-4">
+                                    <h4>Social Links</h4>
+                                    <button onClick={() => setShowSocialLinksForm(true)} className="btn btn-primary btn-sm">
+                                        <i className="fi-rr-edit me-1"></i> Edit Links
+                                    </button>
+                                </div>
+                                
+                                {showSocialLinksForm ? (
+                                    <div className="p-4 border rounded shadow-sm mb-4">
+                                        <form onSubmit={handleSocialLinksSubmit}>
+                                            <div className="mb-3">
+                                                <label>LinkedIn URL</label>
+                                                <input
+                                                    type="url"
+                                                    className="form-control"
+                                                    value={socialLinks.linkedin || ''}
+                                                    onChange={(e) => setSocialLinks({...socialLinks, linkedin: e.target.value})}
+                                                    placeholder="https://linkedin.com/in/yourprofile"
+                                                />
+                                            </div>
+                                            <div className="mb-3">
+                                                <label>GitHub URL</label>
+                                                <input
+                                                    type="url"
+                                                    className="form-control"
+                                                    value={socialLinks.github || ''}
+                                                    onChange={(e) => setSocialLinks({...socialLinks, github: e.target.value})}
+                                                    placeholder="https://github.com/yourusername"
+                                                />
+                                            </div>
+                                            <div className="mb-3">
+                                                <label>Personal Website</label>
+                                                <input
+                                                    type="url"
+                                                    className="form-control"
+                                                    value={socialLinks.website || ''}
+                                                    onChange={(e) => setSocialLinks({...socialLinks, website: e.target.value})}
+                                                    placeholder="https://yourwebsite.com"
+                                                />
+                                            </div>
+                                            <div className="mb-3">
+                                                <label>Twitter URL</label>
+                                                <input
+                                                    type="url"
+                                                    className="form-control"
+                                                    value={socialLinks.twitter || ''}
+                                                    onChange={(e) => setSocialLinks({...socialLinks, twitter: e.target.value})}
+                                                    placeholder="https://twitter.com/yourusername"
+                                                />
+                                            </div>
+                                            <div className="d-flex justify-content-end gap-2">
+                                                <button 
+                                                    type="button" 
+                                                    className="btn btn-outline-secondary" 
+                                                    onClick={() => setShowSocialLinksForm(false)}
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button type="submit" className="btn btn-primary">
+                                                    Save Links
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                ) : (
+                                    <div className="social-links">
+                                        {((portfolio?.socialLinks?.linkedin || portfolio?.socialLinks?.github || 
+                                          portfolio?.socialLinks?.website || portfolio?.socialLinks?.twitter)) ? (
+                                            <div className="d-flex flex-wrap gap-3">
+                                                {portfolio?.socialLinks?.linkedin && (
+                                                    <a href={portfolio.socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary">
+                                                        <i className="fi-brands-linkedin me-2"></i>LinkedIn
+                                                    </a>
+                                                )}
+                                                {portfolio?.socialLinks?.github && (
+                                                    <a href={portfolio.socialLinks.github} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary">
+                                                        <i className="fi-brands-github me-2"></i>GitHub
+                                                    </a>
+                                                )}
+                                                {portfolio?.socialLinks?.website && (
+                                                    <a href={portfolio.socialLinks.website} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary">
+                                                        <i className="fi-rr-globe me-2"></i>Website
+                                                    </a>
+                                                )}
+                                                {portfolio?.socialLinks?.twitter && (
+                                                    <a href={portfolio.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary">
+                                                        <i className="fi-brands-twitter me-2"></i>Twitter
+                                                    </a>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-4 border rounded">
+                                                <p className="mb-0 text-muted">No social links added yet. Add your professional profiles to connect with others.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* About Me Section */}
+                            <div className="dashboard-list-block mt-5">
+                                <div className="d-flex justify-content-between align-items-center mb-4">
+                                    <h4>About Me</h4>
+                                    <button onClick={() => setShowAboutForm(true)} className="btn btn-primary btn-sm">
+                                        <i className="fi-rr-edit me-1"></i> Edit About
+                                    </button>
+                                </div>
+                                
+                                {showAboutForm ? (
+                                    <div className="p-4 border rounded shadow-sm mb-4">
+                                        <form onSubmit={handleAboutSubmit}>
+                                            <div className="mb-3">
+                                                <label>Tell us about yourself</label>
+                                                <textarea 
+                                                    className="form-control" 
+                                                    rows="6"
+                                                    value={about || ''}
+                                                    onChange={(e) => setAbout(e.target.value)}
+                                                    placeholder="Write a brief description about yourself, your background, interests, and career goals..."
+                                                ></textarea>
+                                            </div>
+                                            <div className="d-flex justify-content-end gap-2">
+                                                <button 
+                                                    type="button" 
+                                                    className="btn btn-outline-secondary" 
+                                                    onClick={() => setShowAboutForm(false)}
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button type="submit" className="btn btn-primary">
+                                                    Save About
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                ) : (
+                                    <div className="about-section">
+                                        {portfolio?.about ? (
+                                            <div className="p-4 border rounded">
+                                                <p className="mb-0">{portfolio.about}</p>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-4 border rounded">
+                                                <p className="mb-0 text-muted">No about information added yet. Tell others about yourself to enhance your portfolio.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -2171,9 +2299,12 @@ function Portfolio({ user }) {
                                                                 <button 
                                                                     className="btn btn-sm btn-outline-danger"
                                                                     onClick={() => {
-                                                                        const updatedExperience = [...tempPortfolio.experience];
-                                                                        updatedExperience.splice(index, 1);
-                                                                        setTempPortfolio({...tempPortfolio, experience: updatedExperience});
+                                                                        // Remove this experience entry
+                                                                        setTempPortfolio(prev => {
+                                                                            const updatedExperience = [...prev.experience];
+                                                                            updatedExperience.splice(index, 1);
+                                                                            return { ...prev, experience: updatedExperience };
+                                                                        });
                                                                     }}
                                                                 >
                                                                     <i className="fi-rr-trash"></i>
@@ -2841,34 +2972,54 @@ function Portfolio({ user }) {
             ) : (
                 // PORTFOLIO CREATION PROMPT
                 <div className="container">
-                    <div className="row justify-content-center">
-                        <div className="col-md-9">
+                    <div className="row">
+                        <div className="col-md-8">
                             <div className="card shadow-sm mb-4">
-                                <div className="card-body text-center p-5">
+                                <div className="card-body p-5">
                                     <h4 className="mb-3">Create Your Portfolio</h4>
-                                    <p className="mb-4">You don't have a portfolio yet. Let's create one to showcase your skills and experience.</p>
-                                    <button className="btn btn-primary btn-lg" onClick={() => {
-                                        setTempPortfolio({
-                                            education: [],
-                                            experience: [],
-                                            projects: [],
-                                            skills: [],
-                                            certificates: [], 
-                                            socialLinks: {
-                                                linkedin: '',
-                                                github: '',
-                                                website: '',
-                                                twitter: ''
-                                            },
-                                            about: ''
-                                        });
-                                        startWizard();
-                                    }}>
-                                        <i className="fi-rr-plus me-2"></i>
-                                        Start Creating My Portfolio
-                                    </button>
+                                    <p className="mb-4">Create a professional portfolio to showcase your skills and experience to potential employers.</p>
+                                    
+                                    {currentStep === 'about' && (
+                                        <div className="portfolio-form-container mb-4 animate__animated animate__fadeIn">
+                                            <h5 className="mb-3">Tell us about yourself</h5>
+                                            <form onSubmit={(e) => {
+                                                e.preventDefault();
+                                                if (about.trim()) {
+                                                    submitPortfolio();
+                                                    handleStepComplete('education');
+                                                }
+                                            }}>
+                                                <div className="mb-4">
+                                                    <textarea 
+                                                        className="form-control"
+                                                        rows="6"
+                                                        value={about}
+                                                        onChange={(e) => setAbout(e.target.value)}
+                                                        placeholder="Write a short bio describing your professional background, interests, and goals..."
+                                                    ></textarea>
+                                                    <div className="form-text">This will be displayed at the top of your portfolio.</div>
+                                                </div>
+                                                <button type="submit" className="btn btn-primary" disabled={!about.trim()}>
+                                                    <i className="fi-rr-check me-2"></i> Create Profile & Continue
+                                                </button>
+                                            </form>
+                                        </div>
+                                    )}
+                                    
+                                    {showAlert && (
+                                        <div className="alert alert-success animate__animated animate__fadeIn">
+                                            <i className="fi-rr-check-circle me-2"></i>
+                                            <strong>Portfolio created successfully!</strong> Now add your education, experience, and more.
+                                        </div>
+                                    )}
                                 </div>
                             </div>
+                        </div>
+                        <div className="col-md-4">
+                            <PortfolioGuide 
+                                currentStep={currentStep}
+                                onStepComplete={handleStepComplete}
+                            />
                         </div>
                     </div>
                 </div>
@@ -2878,285 +3029,3 @@ function Portfolio({ user }) {
 }
 
 export default withAuth(Portfolio);
-
-/* Custom CSS for the portfolio page */
-<style jsx>{`
-    /* Progress steps styling */
-    .progress-steps {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 20px;
-    }
-    
-    .progress-step {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        position: relative;
-        width: 90px;
-    }
-    
-    .step-number {
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-    
-    .progress-step.completed .step-number {
-        background-color: #28a745;
-        color: white;
-    }
-    
-    .progress-step.current .step-number {
-        background-color: #007bff;
-        color: white;
-        animation: pulse 1.5s infinite;
-    }
-    
-    .progress-step.locked .step-number {
-        background-color: #6c757d;
-        color: white;
-    }
-    
-    .step-label {
-        font-size: 0.8rem;
-        text-align: center;
-        color: #495057;
-    }
-    
-    .progress-step.completed .step-label {
-        color: #28a745;
-        font-weight: bold;
-    }
-    
-    .progress-step.current .step-label {
-        color: #007bff;
-        font-weight: bold;
-    }
-    
-    .progress-step.locked .step-label {
-        color: #6c757d;
-    }
-    
-    /* Progress bar */
-    .progress-bar-container {
-        height: 20px;
-        background-color: #e9ecef;
-        border-radius: 10px;
-        margin: 15px 0;
-        overflow: hidden;
-    }
-    
-    .progress-bar {
-        height: 100%;
-        background-color: #007bff;
-        border-radius: 10px;
-        transition: width 0.5s ease;
-        position: relative;
-    }
-    
-    .progress-text {
-        position: absolute;
-        right: 10px;
-        color: white;
-        font-weight: bold;
-        line-height: 20px;
-        font-size: 0.8rem;
-    }
-    
-    /* Modal styling */
-    .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-    }
-    
-    .modal-container {
-        background-color: white;
-        border-radius: 8px;
-        width: 90%;
-        max-width: 600px;
-        max-height: 90vh;
-        overflow-y: auto;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-    }
-    
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px 20px;
-        border-bottom: 1px solid #dee2e6;
-    }
-    
-    .modal-header h3 {
-        margin: 0;
-        font-size: 1.25rem;
-        color: #212529;
-        display: flex;
-        align-items: center;
-    }
-    
-    .close-button {
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        color: #6c757d;
-        cursor: pointer;
-    }
-    
-    .modal-body {
-        padding: 20px;
-    }
-    
-    .modal-footer {
-        display: flex;
-        justify-content: flex-end;
-        padding: 15px 20px;
-        border-top: 1px solid #dee2e6;
-    }
-    
-    /* Form styling */
-    .form-group {
-        margin-bottom: 15px;
-    }
-    
-    .form-group label {
-        display: block;
-        margin-bottom: 5px;
-        font-weight: 500;
-        color: #212529;
-    }
-    
-    .form-group input,
-    .form-group textarea {
-        width: 100%;
-        padding: 8px 12px;
-        border: 1px solid #ced4da;
-        border-radius: 4px;
-        font-size: 1rem;
-    }
-    
-    .form-group.checkbox {
-        display: flex;
-        align-items: center;
-    }
-    
-    .form-group.checkbox input {
-        width: auto;
-        margin-right: 10px;
-    }
-    
-    .form-group.checkbox label {
-        margin-bottom: 0;
-    }
-    
-    /* Button styling for locked sections */
-    button:disabled {
-        cursor: not-allowed;
-        opacity: 0.6;
-    }
-    
-    /* Guide message styling */
-    .guide-message {
-        background-color: #f8f9fa;
-        border-left: 4px solid #007bff;
-        padding: 15px;
-        margin: 15px 0;
-        border-radius: 0 4px 4px 0;
-    }
-    
-    .guide-message p {
-        margin: 0;
-        color: #495057;
-    }
-    
-    /* Skills styling */
-    .skills-container {
-        margin-top: 15px;
-    }
-    
-    .skills-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-    
-    .skill-tag {
-        background-color: #007bff;
-        color: white;
-        padding: 5px 10px;
-        border-radius: 20px;
-        display: flex;
-        align-items: center;
-        font-size: 0.9rem;
-    }
-    
-    .remove-skill {
-        background: none;
-        border: none;
-        color: white;
-        margin-left: 5px;
-        padding: 0 5px;
-        cursor: pointer;
-    }
-    
-    .skill-input-form {
-        display: flex;
-        align-items: center;
-    }
-    
-    .skill-input-group {
-        display: flex;
-        max-width: 300px;
-    }
-    
-    /* Dashboard section styling */
-    .dashboard-section {
-        background-color: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        margin-bottom: 20px;
-        padding: 20px;
-    }
-    
-    .section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-    }
-    
-    .section-header h4 {
-        margin: 0;
-        font-size: 1.1rem;
-        color: #212529;
-        display: flex;
-        align-items: center;
-    }
-    
-    /* Animation for current step pulse */
-    @keyframes pulse {
-        0% {
-            box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7);
-        }
-        70% {
-            box-shadow: 0 0 0 7px rgba(0, 123, 255, 0);
-        }
-        100% {
-            box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
-        }
-    }
-`}</style>
