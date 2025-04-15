@@ -77,6 +77,9 @@ const Sidebar = ({ openClass }) => {
 
     const toggleTrueFalse = () => setToggled(!isToggled);
 
+    // Vérifier si on est sur la page jobs-grid
+    const isJobsPage = router.pathname === '/jobs-grid';
+
     return (
         <>
             <div className={`mobile-header-active mobile-header-wrapper-style perfect-scrollbar ${openClass}`}>
@@ -93,22 +96,34 @@ const Sidebar = ({ openClass }) => {
                                 <nav>
                                     <ul className="mobile-menu font-heading">
                                         <li>
-                                            <Link legacyBehavior href="/"><a className="active">Home</a></Link>
+                                            <Link legacyBehavior href="/">
+                                                <a className={router.pathname === '/' ? 'active' : ''}>Home</a>
+                                            </Link>
                                         </li>
                                         <li>
-                                            <Link legacyBehavior href="/jobs-grid"><a>Find a Job</a></Link>
+                                            <Link legacyBehavior href="/jobs-grid">
+                                                <a className={isJobsPage ? 'active' : ''}>Find a Job</a>
+                                            </Link>
                                         </li>
                                         <li>
-                                            <Link legacyBehavior href="/companies-grid"><a>Recruiters</a></Link>
+                                            <Link legacyBehavior href="/companies-grid">
+                                                <a className={router.pathname === '/companies-grid' ? 'active' : ''}>Recruiters</a>
+                                            </Link>
                                         </li>
                                         <li>
-                                            <Link legacyBehavior href="/candidates-grid"><a>Candidates</a></Link>
+                                            <Link legacyBehavior href="/candidates-grid">
+                                                <a className={router.pathname === '/candidates-grid' ? 'active' : ''}>Candidates</a>
+                                            </Link>
                                         </li>
                                         <li>
-                                            <Link legacyBehavior href="/page-about"><a>About</a></Link>
+                                            <Link legacyBehavior href="/page-about">
+                                                <a className={router.pathname === '/page-about' ? 'active' : ''}>About</a>
+                                            </Link>
                                         </li>
                                         <li>
-                                            <Link legacyBehavior href="/page-contact"><a>Contact</a></Link>
+                                            <Link legacyBehavior href="/page-contact">
+                                                <a className={router.pathname === '/page-contact' ? 'active' : ''}>Contact</a>
+                                            </Link>
                                         </li>
                                     </ul>
                                 </nav>
@@ -197,10 +212,18 @@ const Sidebar = ({ openClass }) => {
                                                 </>
                                             )}
                                             <li>
-                                                <Link legacyBehavior href="/candidate-profile"><a className="sidebar-link"><i className="fi-rr-user me-2 text-primary"></i>My Profile</a></Link>
+                                                <Link legacyBehavior href="/candidate-profile">
+                                                    <a className={`sidebar-link ${router.pathname === '/candidate-profile' ? 'active' : ''}`}>
+                                                        <i className="fi-rr-user me-2 text-primary"></i>My Profile
+                                                    </a>
+                                                </Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="/candidate-settings"><a className="sidebar-link"><i className="fi-rr-settings me-2 text-primary"></i>Settings</a></Link>
+                                                <Link legacyBehavior href="/candidate-settings">
+                                                    <a className={`sidebar-link ${router.pathname === '/candidate-settings' ? 'active' : ''}`}>
+                                                        <i className="fi-rr-settings me-2 text-primary"></i>Settings
+                                                    </a>
+                                                </Link>
                                             </li>
                                             <li>
                                                 <a href="#" onClick={handleLogout} className="sidebar-link">
@@ -211,10 +234,18 @@ const Sidebar = ({ openClass }) => {
                                     ) : (
                                         <>
                                             <li>
-                                                <Link legacyBehavior href="/page-register"><a className="sidebar-link"><i className="fi-rr-user-add me-2 text-primary"></i>Register</a></Link>
+                                                <Link legacyBehavior href="/page-register">
+                                                    <a className={`sidebar-link ${router.pathname === '/page-register' ? 'active' : ''}`}>
+                                                        <i className="fi-rr-user-add me-2 text-primary"></i>Register
+                                                    </a>
+                                                </Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="/page-signin"><a className="sidebar-link"><i className="fi-rr-sign-in me-2 text-primary"></i>Sign In</a></Link>
+                                                <Link legacyBehavior href="/page-signin">
+                                                    <a className={`sidebar-link ${router.pathname === '/page-signin' ? 'active' : ''}`}>
+                                                        <i className="fi-rr-sign-in me-2 text-primary"></i>Sign In
+                                                    </a>
+                                                </Link>
                                             </li>
                                         </>
                                     )}
@@ -224,7 +255,6 @@ const Sidebar = ({ openClass }) => {
                         </div>
                     </div>
                 </div>
-
             </div>
             <style jsx>{`
                 .sidebar-link {
@@ -238,6 +268,11 @@ const Sidebar = ({ openClass }) => {
                 
                 .sidebar-link:hover {
                     transform: translateX(5px);
+                }
+                
+                .sidebar-link.active {
+                    background-color: rgba(60, 101, 245, 0.1);
+                    font-weight: bold;
                 }
                 
                 .text-primary {

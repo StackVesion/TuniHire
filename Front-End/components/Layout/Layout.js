@@ -18,6 +18,7 @@ const Layout = ({ children }) => {
             document.body.classList.remove("mobile-menu-active");
         }
     }
+    
     return (
         <>
             <div className="body-overlay-1" onClick={handleRemove} />
