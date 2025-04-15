@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 
-// Define education schema
 const EducationSchema = new mongoose.Schema({
   school: { type: String, required: true },
   degree: { type: String, required: true },
@@ -12,7 +11,6 @@ const EducationSchema = new mongoose.Schema({
   location: { type: String }
 });
 
-// Define work experience schema
 const ExperienceSchema = new mongoose.Schema({
   company: { type: String, required: true },
   position: { type: String, required: true },
@@ -23,13 +21,20 @@ const ExperienceSchema = new mongoose.Schema({
   location: { type: String }
 });
 
-// Define project schema
 const ProjectSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String },
   technologies: [{ type: String }],
   link: { type: String },
   image: { type: String }
+});
+
+// Define certificate schema for portfolio (not using the course Certificate model)
+const PortfolioCertificateSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  description: { type: String },
+  skills: [{ type: String }],
+  certificateUrl: { type: String }
 });
 
 const PortfolioSchema = new mongoose.Schema({
@@ -48,10 +53,7 @@ const PortfolioSchema = new mongoose.Schema({
   experience: [ExperienceSchema],
   skills: [{ type: String }],
   projects: [ProjectSchema],
-  certificates: [{ 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Certificate' 
-  }],
+  certificates: [PortfolioCertificateSchema], // Using the embedded schema, not referencing Certificate model
   about: { type: String },
   socialLinks: {
     linkedin: { type: String },
