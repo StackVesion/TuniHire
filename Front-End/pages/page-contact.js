@@ -3,8 +3,51 @@ import Link from "next/link";
 import Layout from "../components/Layout/Layout";
 import BlogSlider from "./../components/sliders/Blog";
 import TestimonialSlider1 from "./../components/sliders/Testimonial1";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { toast } from "react-toastify";
 
 export default function Contact() {
+    const [formData, setFormData] = useState({
+        name: "",
+        email: "",
+        subject: "",
+        message: ""
+    });
+    const [loading, setLoading] = useState(false);
+
+    const handleChange = (e) => {
+        setFormData({
+            ...formData,
+            [e.target.name]: e.target.value
+        });
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+
+        try {
+            const token = localStorage.getItem('token');
+            await axios.post('http://localhost:5000/api/contact/submit', 
+                formData,
+                {
+                    withCredentials: true,
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+            toast.success('Message envoyé avec succès!');
+            setFormData({ name: "", email: "", subject: "", message: "" });
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Erreur lors de l\'envoi du message');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <>
             <Layout>
@@ -95,45 +138,70 @@ export default function Contact() {
                                     <span className="font-md color-brand-2 mt-20 d-inline-block">Contact us</span>
                                     <h2 className="mt-5 mb-10">Get in touch</h2>
                                     <p className="font-md color-text-paragraph-2">
-                                        The right move at the right time saves your investment. live
-                                        <br className="d-none d-lg-block" /> the dream of expanding your business.
+                                        Send us a message and we'll get back to you as soon as possible.
                                     </p>
-                                    <form className="contact-form-style mt-30" id="contact-form" action="#" method="post">
-                                        <div className="row wow animate__animated animate__fadeInUp" data-wow-delay=".1s">
+                                    <form className="contact-form-style mt-30" onSubmit={handleSubmit}>
+                                        <div className="row wow animate__animated animate__fadeInUp">
                                             <div className="col-lg-6 col-md-6">
                                                 <div className="input-style mb-20">
-                                                    <input className="font-sm color-text-paragraph-2" name="name" placeholder="Enter your name" type="text" />
+                                                    <input 
+                                                        className="font-sm color-text-paragraph-2"
+                                                        name="name"
+                                                        placeholder="Your name"
+                                                        type="text"
+                                                        value={formData.name}
+                                                        onChange={handleChange}
+                                                        required
+                                                    />
                                                 </div>
                                             </div>
                                             <div className="col-lg-6 col-md-6">
                                                 <div className="input-style mb-20">
-                                                    <input className="font-sm color-text-paragraph-2" name="company" placeholder="Comapy (optioanl)" type="text" />
+                                                    <input
+                                                        className="font-sm color-text-paragraph-2"
+                                                        name="email"
+                                                        placeholder="Your email"
+                                                        type="email"
+                                                        value={formData.email}
+                                                        onChange={handleChange}
+                                                        required
+                                                    />
                                                 </div>
                                             </div>
-                                            <div className="col-lg-6 col-md-6">
+                                            <div className="col-lg-12 col-md-12">
                                                 <div className="input-style mb-20">
-                                                    <input className="font-sm color-text-paragraph-2" name="email" placeholder="Your email" type="email" />
-                                                </div>
-                                            </div>
-                                            <div className="col-lg-6 col-md-6">
-                                                <div className="input-style mb-20">
-                                                    <input className="font-sm color-text-paragraph-2" name="phone" placeholder="Phone number" type="tel" />
+                                                    <input
+                                                        className="font-sm color-text-paragraph-2"
+                                                        name="subject"
+                                                        placeholder="Subject"
+                                                        type="text"
+                                                        value={formData.subject}
+                                                        onChange={handleChange}
+                                                        required
+                                                    />
                                                 </div>
                                             </div>
                                             <div className="col-lg-12 col-md-12">
                                                 <div className="textarea-style mb-30">
-                                                    <textarea className="font-sm color-text-paragraph-2" name="message" placeholder="Tell us about yourself" defaultValue={""} />
+                                                    <textarea
+                                                        className="font-sm color-text-paragraph-2"
+                                                        name="message"
+                                                        placeholder="Your message"
+                                                        value={formData.message}
+                                                        onChange={handleChange}
+                                                        required
+                                                    />
                                                 </div>
-                                                <button className="submit btn btn-send-message" type="submit">
-                                                    Send message
+                                                <button 
+                                                    className="submit btn btn-send-message"
+                                                    type="submit"
+                                                    disabled={loading}
+                                                >
+                                                    {loading ? "Sending..." : "Send message"}
                                                 </button>
-                                                <label className="ml-20">
-                                                    <input className="float-start mr-5 mt-6" type="checkbox" /> By clicking contact us button, you agree our terms and policy,
-                                                </label>
                                             </div>
                                         </div>
                                     </form>
-                                    <p className="form-messege" />
                                 </div>
                                 <div className="col-lg-4 text-center d-none d-lg-block">
                                     <img src="assets/imgs/page/contact/img.png" alt="joxBox" />

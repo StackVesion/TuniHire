@@ -6,6 +6,7 @@ import { all_routes } from '../../router/all_routes';
 import CollapseHeader from '../../../core/common/collapse-header/collapse-header';
 import CrmsModal from '../../../core/modals/crms_modal';
 import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const CompaniesGrid = () => {
   interface Company {
