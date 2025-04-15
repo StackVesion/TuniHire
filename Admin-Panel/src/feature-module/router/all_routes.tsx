@@ -339,7 +339,7 @@ export const all_routes = {
   candidatesGrid: "/candidates-grid",
   candidateslist: "/candidates",
   candidateskanban: "/candidates-kanban",
-  refferal: "/refferals",
+  refferal: "/Newsletter",
   //FINANCE & ACCOUNTS
   estimate: "/estimates",
   invoices:"/invoices",

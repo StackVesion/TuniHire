@@ -1,10 +1,19 @@
 // index.tsx
 import React, { useEffect, useState } from "react";
 import { Table } from "antd";
-import { DatatableProps } from "../../data/interface";
 
+interface DatatableProps {
+  dataSource: any[];
+  columns: any[];
+  Selection?: boolean;
+  pagination?: {
+    pageSize: number;
+    showSizeChanger: boolean;
+    showTotal: (total: number, range: [number, number]) => string;
+  };
+}
 
-const Datatable: React.FC<DatatableProps> = ({ columns, dataSource , Selection }) => {
+const Datatable: React.FC<DatatableProps> = ({ columns, dataSource, Selection }) => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<any[]>([]);
   const [searchText, setSearchText] = useState<string>("");
   const [Selections, setSelections] = useState<any>(true);
@@ -30,14 +39,12 @@ const Datatable: React.FC<DatatableProps> = ({ columns, dataSource , Selection }
   };
   useEffect(() => {
     return setSelections(Selection);
-  }, [Selection])
-  
+  }, [Selection]);
   
   return (
     <>
-
-     <div className="table-top-data">
-      <div className="row p-3">
+      <div className="table-top-data">
+        <div className="row p-3">
           <div className="col-sm-12 col-md-6">
             <div className="dataTables_length" id="DataTables_Table_0_length">
             </div>
@@ -57,42 +64,41 @@ const Datatable: React.FC<DatatableProps> = ({ columns, dataSource , Selection }
             </div>
           </div>
         </div>
-     </div>
+      </div>
 
-     {!Selections ?
-      <Table
-      className="table datanew dataTable no-footer"
-     
-      columns={columns}
-      rowHoverable={false}
-      dataSource={filteredDataSource}
-      pagination={{
-        locale: { items_per_page: "" },
-        nextIcon: <i className="ti ti-chevron-right"/>,
-        prevIcon: <i className="ti ti-chevron-left"/>,
-        defaultPageSize: 10,
-        showSizeChanger: true,
-        pageSizeOptions: ["10", "20", "30"],
-      }}
-    /> : 
-    <Table
-        className="table datanew dataTable no-footer"
-        rowSelection={rowSelection}
-        columns={columns}
-        rowHoverable={false}
-        dataSource={filteredDataSource}
-        
-        pagination={{
-          locale: { items_per_page: "" },
-          nextIcon: <i className="ti ti-chevron-right"/>,
-          prevIcon: <i className="ti ti-chevron-left"/>,
-          defaultPageSize: 10,
-          showSizeChanger: true,
-          pageSizeOptions: ["10", "20", "30"],
-          showTotal: (total, range) => `Showing ${range[0]} - ${range[1]} of ${total} entries`,
-        }}
-      />}
-      
+      {!Selections ? (
+        <Table
+          className="table datanew dataTable no-footer"
+          columns={columns}
+          rowHoverable={false}
+          dataSource={filteredDataSource}
+          pagination={{
+            locale: { items_per_page: "" },
+            nextIcon: <i className="ti ti-chevron-right" />,
+            prevIcon: <i className="ti ti-chevron-left" />,
+            defaultPageSize: 10,
+            showSizeChanger: true,
+            pageSizeOptions: ["10", "20", "30"],
+          }}
+        />
+      ) : (
+        <Table
+          className="table datanew dataTable no-footer"
+          rowSelection={rowSelection}
+          columns={columns}
+          rowHoverable={false}
+          dataSource={filteredDataSource}
+          pagination={{
+            locale: { items_per_page: "" },
+            nextIcon: <i className="ti ti-chevron-right" />,
+            prevIcon: <i className="ti ti-chevron-left" />,
+            defaultPageSize: 10,
+            showSizeChanger: true,
+            pageSizeOptions: ["10", "20", "30"],
+            showTotal: (total, range) => `Showing ${range[0]} - ${range[1]} of ${total} entries`,
+          }}
+        />
+      )}
     </>
   );
 };

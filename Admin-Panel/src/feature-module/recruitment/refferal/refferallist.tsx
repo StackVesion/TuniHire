@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { all_routes } from '../../router/all_routes';
 import { Link } from 'react-router-dom';
 import PredefinedDateRanges from '../../../core/common/datePicker';
@@ -7,119 +8,103 @@ import { DatePicker } from "antd";
 import CommonSelect from '../../../core/common/commonSelect';
 import Table from "../../../core/common/dataTable/index";
 import { refferallistDetails } from './refferallistDetails';
-import { render } from 'react-dom';
 import CollapseHeader from '../../../core/common/collapse-header/collapse-header';
 
+interface Message {
+  _id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  createdAt: string;
+  isRegisteredUser?: boolean;
+}
+
+interface TablePaginationConfig {
+  pageSize: number;
+  showSizeChanger: boolean;
+  showTotal: (total: number, range: [number, number]) => string;
+}
 
 const RefferalList = () => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/contact/messages');
+        setMessages(response.data);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+        setLoading(false);
+      }
+    };
+    fetchMessages();
+  }, []);
 
   const data = refferallistDetails;
   const columns = [
     {
-      title: "Refferals ID",
-      dataIndex: "Refferals_ID",
-      sorter: (a: any, b: any) => a.Refferals_ID.length - b.Refferals_ID.length,
+      title: "Date",
+      dataIndex: "createdAt",
+      render: (text: string) => new Date(text).toLocaleDateString(),
+      sorter: (a: Message, b: Message) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateA - dateB;
+      }
     },
     {
-      title: "Referrer Name",
-      dataIndex: "Referrer_Name",
-      render: (text: string, record: any) => (
-        <div className="d-flex align-items-center file-name-icon">
-          <Link to="#" className="avatar avatar-md ">
-            <ImageWithBasePath
-              src={`assets/img/users/${record.Refferals_Image}`}
-              className="img-fluid rounded-circle"
-              alt="img"
-            />
-          </Link>
-          <div className="ms-2">
-            <h6 className="fw-medium">
-              <Link to="#">{record.Referrer_Name}</Link>
-            </h6>
-            <span className="d-block mt-1">{record.Roll}</span>
+      title: "Name",
+      dataIndex: "name",
+      render: (text: string, record: Message) => (
+        <div className="d-flex align-items-center">
+          <div>
+            <h6 className="fw-medium">{record.name}</h6>
+            {record.isRegisteredUser && (
+              <span className="badge bg-success">Registered User</span>
+            )}
           </div>
         </div>
-
       ),
-      sorter: (a: any, b: any) => a.Referrer_Name.length - b.Referrer_Name.length,
+      sorter: (a: Message, b: Message) => a.name.localeCompare(b.name)
     },
     {
-      title: "Job Reffered",
-      dataIndex: "Job_Reffered",
-      render: (text: String, record: any) => (
-        <div className="d-flex align-items-center file-name-icon">
-          <Link to="#" className="avatar avatar-md bg-light rounded">
-            <ImageWithBasePath
-              src={`assets/img/icons/${record.Job_Image}`}
-              className="img-fluid rounded-circle"
-              alt="img"
-            />
-          </Link>
-          <div className="ms-2">
-            <h6 className="fw-medium">
-              <Link to="#">{record.Job_Reffered}</Link>
-            </h6>
-          </div>
-        </div>
-
-      ),
-      sorter: (a: any, b: any) => a.Job_Reffered.length - b.Job_Reffered.length,
+      title: "Email",
+      dataIndex: "email",
+      sorter: (a: Message, b: Message) => a.email.localeCompare(b.email)
     },
     {
-      title: "Referre Name",
-      dataIndex: "Referee_Name",
-      render: (text: String, record: any) => (
-        <div className="d-flex align-items-center file-name-icon">
-          <Link to="#" className="avatar avatar-md ">
-            <ImageWithBasePath
-              src={`assets/img/users/${record.Refferee_Image}`}
-              className="img-fluid rounded-circle"
-              alt="img"
-            />
-          </Link>
-          <div className="ms-2">
-            <h6 className="fw-medium">
-              <Link to="#">{record.Referee_Name}</Link>
-            </h6>
-            <span className="d-block mt-1">{record.Email}</span>
-          </div>
-        </div>
-
-      ),
-      sorter: (a: any, b: any) => a.Referee_Name.length - b.Referee_Name.length,
+      title: "Subject",
+      dataIndex: "subject",
+      sorter: (a: Message, b: Message) => a.subject.localeCompare(b.subject)
     },
     {
-      title: "Refferals Bonus",
-      dataIndex: "Refferals_Bonus",
-      sorter: (a: any, b: any) => a.Refferals_Bonus.length - b.Refferals_Bonus.length,
-    },
-    {
-      title: "",
-      dataIndex: "actions",
-      render: () => (
-        <div className="action-icon d-inline-flex">
-          <Link to="#" className="me-2">
-            <i className="ti ti-edit" />
-          </Link>
-          <Link to="#" data-bs-toggle="modal" data-bs-target="#delete_modal">
-            <i className="ti ti-trash" />
-          </Link>
-        </div>
+      title: "Message",
+      dataIndex: "message",
+      render: (text: string) => (
+        <div style={{ maxWidth: "300px", whiteSpace: "pre-wrap" }}>{text}</div>
+      )
+    }
+  ];
 
-      ),
-    },
-  ]
-
+  const paginationConfig = {
+    pageSize: 10,
+    showSizeChanger: true,
+    showTotal: (total: number, range: [number, number]) => 
+      `${range[0]}-${range[1]} of ${total} items`
+  };
 
   return (
     <>
-      {/* Page Wrapper */}
       <div className="page-wrapper">
         <div className="content">
           {/* Breadcrumb */}
           <div className="d-md-flex d-block align-items-center justify-content-between page-breadcrumb mb-3">
             <div className="my-auto mb-2">
-              <h2 className="mb-1">Refferals</h2>
+              <h2 className="mb-1">Newsletter</h2>
               <nav>
                 <ol className="breadcrumb mb-0">
                   <li className="breadcrumb-item">
@@ -129,7 +114,7 @@ const RefferalList = () => {
                   </li>
                   <li className="breadcrumb-item">Administration</li>
                   <li className="breadcrumb-item active" aria-current="page">
-                    Refferals
+                    Newsletter
                   </li>
                 </ol>
               </nav>
@@ -168,105 +153,30 @@ const RefferalList = () => {
                 </div>
               </div>
               <div className="head-icons ms-2">
-              <CollapseHeader />
+                <CollapseHeader />
               </div>
             </div>
           </div>
           {/* /Breadcrumb */}
           <div className="card">
-            <div className="card-header d-flex align-items-center justify-content-between flex-wrap row-gap-3">
-              <h5>Refferals List</h5>
-              <div className="d-flex my-xl-auto right-content align-items-center flex-wrap row-gap-3">
-                <div className="dropdown me-3">
-                  <Link
-                    to="#"
-                    className="dropdown-toggle btn btn-white d-inline-flex align-items-center"
-                    data-bs-toggle="dropdown"
-                  >
-                    Role
-                  </Link>
-                  <ul className="dropdown-menu  dropdown-menu-end p-3">
-                    <li>
-                      <Link
-                        to="#"
-                        className="dropdown-item rounded-1"
-                      >
-                        Senior IOS Developer
-                      </Link>
-                    </li>
-                    <li>
-                      <Link
-                        to="#"
-                        className="dropdown-item rounded-1"
-                      >
-                        Junior PHP Developer
-                      </Link>
-                    </li>
-                    <li>
-                      <Link
-                        to="#"
-                        className="dropdown-item rounded-1"
-                      >
-                        Network Engineer
-                      </Link>
-                    </li>
-                  </ul>
-                </div>
-                <div className="dropdown">
-                  <Link
-                    to="#"
-                    className="dropdown-toggle btn btn-white d-inline-flex align-items-center"
-                    data-bs-toggle="dropdown"
-                  >
-                    Sort By : Last 7 Days
-                  </Link>
-                  <ul className="dropdown-menu  dropdown-menu-end p-3">
-                    <li>
-                      <Link
-                        to="#"
-                        className="dropdown-item rounded-1"
-                      >
-                        Recently Added
-                      </Link>
-                    </li>
-                    <li>
-                      <Link
-                        to="#"
-                        className="dropdown-item rounded-1"
-                      >
-                        Ascending
-                      </Link>
-                    </li>
-                    <li>
-                      <Link
-                        to="#"
-                        className="dropdown-item rounded-1"
-                      >
-                        Desending
-                      </Link>
-                    </li>
-                    <li>
-                      <Link
-                        to="#"
-                        className="dropdown-item rounded-1"
-                      >
-                        Last Month
-                      </Link>
-                    </li>
-                    <li>
-                      <Link
-                        to="#"
-                        className="dropdown-item rounded-1"
-                      >
-                        Last 7 Days
-                      </Link>
-                    </li>
-                  </ul>
-                </div>
-              </div>
+            <div className="card-header">
+              <h5>Contact Messages</h5>
             </div>
             <div className="card-body p-0">
-              <Table dataSource={data} columns={columns} Selection={true} />
+              {loading ? (
+                <div className="text-center p-4">
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                  </div>
+                </div>
+              ) : (
+                <Table 
+                  dataSource={messages} 
+                  columns={columns} 
+                  Selection={false}
+                  pagination={paginationConfig}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -280,12 +190,8 @@ const RefferalList = () => {
           </p>
         </div>
       </div>
-      {/* /Page Wrapper */}
     </>
+  );
+};
 
-
-
-  )
-}
-
-export default RefferalList
+export default RefferalList;
