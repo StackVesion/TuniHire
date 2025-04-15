@@ -68,6 +68,7 @@
     "react-tag-input": "^6.10.3",
     "react-tag-input-component": "^2.0.2",
     "react-time-picker": "^7.0.0",
+    "react-toastify": "^11.0.5",
     "resolve-url-loader": "^5.0.0",
     "sass": "^1.82.0",
     "serialize-javascript": "^6.0.2",

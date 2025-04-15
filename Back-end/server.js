@@ -164,6 +164,24 @@ app.use(passport.session());
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/companies", require("./routes/company"));
 app.use("/api/jobs", require("./routes/jobRoutes"));
+app.use("/api/contact", require("./routes/contactRoutes"));
+
+// Debug route
+app.get('/api/debug/routes', (req, res) => {
+    const routes = [];
+    app._router.stack.forEach(middleware => {
+        if(middleware.route) {
+            routes.push(`${Object.keys(middleware.route.methods)} ${middleware.route.path}`);
+        } else if(middleware.name === 'router') {
+            middleware.handle.stack.forEach(handler => {
+                if(handler.route) {
+                    routes.push(`${Object.keys(handler.route.methods)} ${middleware.regexp} ${handler.route.path}`);
+                }
+            });
+        }
+    });
+    res.json(routes);
+});
 
 // Google auth
 app.get('/auth/google',
