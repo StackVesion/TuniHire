@@ -88,6 +88,8 @@ function ApplyForJobs({ user }) {
 
   const handleApply = (e) => {
     if (e) e.stopPropagation() 
+    // Close job details sidebar before opening application dialog
+    setShowJobDetail(false)
     setShowApplicationDialog(true)
   }
 
@@ -374,16 +376,11 @@ function ApplyForJobs({ user }) {
                           onClick={() => handleShowJobDetail(job)}
                         >
                           <div className="card-grid-2-image-left">
-                            <div className="image-box">
-                              <img 
-                                src={job.companyId?.logo || "/assets/imgs/page/dashboard/company-logo.svg"} 
-                                alt="Company Logo" 
-                              />
-                            </div>
+                            
                             <div className="right-info">
                               <h5 className="truncate-text-1">{job.title}</h5>
                               <span className="location-small">
-                                {job.companyId?.name || "Company"} • {job.location || "Location"}
+                                {job.companyId?.name || "Company"} 
                               </span>
                             </div>
                           </div>

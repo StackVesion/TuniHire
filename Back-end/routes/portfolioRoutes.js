@@ -20,6 +20,29 @@ const router = express.Router();
 
 // Public routes
 router.get('/', getAllPortfolios);
+// Add the user-specific route BEFORE the generic ID route to prevent conflicts
+router.get('/user', verifyToken, async (req, res) => {
+  try {
+    // Get the user ID from the authenticated user
+    const userId = req.user.id;
+
+    // Find the portfolio for this user
+    const portfolio = await Portfolio.findOne({ userId });
+
+    if (!portfolio) {
+      return res.status(404).json({ success: false, message: 'Portfolio not found for this user' });
+    }
+
+    return res.json(portfolio);
+  } catch (error) {
+    console.error('Error fetching user portfolio:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch portfolio', 
+      error: error.message 
+    });
+  }
+});
 router.get('/:id', getPortfolioById);
 router.get('/user/:userId', getPortfolioByUserId);
 
@@ -970,32 +993,6 @@ router.delete('/:id/skills/:skill', verifyToken, async (req, res) => {
   } catch (error) {
     res.status(400).json({ 
       success: false, 
-      error: error.message 
-    });
-  }
-});
-
-// @route   GET /api/portfolios/user
-// @desc    Get current user's portfolio
-// @access  Private
-router.get('/user', verifyToken, async (req, res) => {
-  try {
-    // Get the user ID from the authenticated user
-    const userId = req.user.id;
-
-    // Find the portfolio for this user
-    const portfolio = await Portfolio.findOne({ userId });
-
-    if (!portfolio) {
-      return res.status(404).json({ success: false, message: 'Portfolio not found for this user' });
-    }
-
-    return res.json(portfolio);
-  } catch (error) {
-    console.error('Error fetching user portfolio:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Failed to fetch portfolio', 
       error: error.message 
     });
   }
