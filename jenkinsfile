@@ -321,27 +321,21 @@ pipeline {
     
     post {
         success {
-            node {
-                echo 'Pipeline completed successfully!'
-                sh '''
-                    curl -X POST -H 'Content-Type: application/json' -d '{"text": "🚀 TuniHire deployment successful! Version: ${APP_VERSION}"}' ${SLACK_WEBHOOK_URL}
-                '''
-            }
-        }
+    echo 'Pipeline completed successfully!'
+    sh '''
+        curl -X POST -H 'Content-Type: application/json' -d '{"text": "🚀 TuniHire deployment successful! Version: ${APP_VERSION}"}' ${SLACK_WEBHOOK_URL}
+    '''
+} 
         failure {
-            node {
-                echo 'Pipeline failed!'
-                sh '''
-                    curl -X POST -H 'Content-Type: application/json' -d '{"text": "❌ TuniHire deployment failed! See ${BUILD_URL} for details."}' ${SLACK_WEBHOOK_URL}
-                '''
-            }
-        }
+    echo 'Pipeline failed!'
+    sh '''
+        curl -X POST -H 'Content-Type: application/json' -d '{"text": "❌ TuniHire deployment failed! See ${BUILD_URL} for details."}' ${SLACK_WEBHOOK_URL}
+    '''
+} 
         always {
-            node {
-                echo 'Cleaning up workspace...'
-                cleanWs()
-            }
-        }
+    echo 'Cleaning up workspace...'
+    cleanWs()
+} 
     }
     
     parameters {
