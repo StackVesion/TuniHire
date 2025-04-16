@@ -58,22 +58,27 @@ pipeline {
 stage('Dockerize') {
     steps {
         script {
-            // Build Docker images for each component with legacy builder
+            // Ensure BuildKit and Buildx are enabled
+            sh 'export DOCKER_CLI_EXPERIMENTAL=enabled'
+            sh 'export DOCKER_BUILDKIT=1'
+
+            // Build Docker images using Buildx
             dir('Back-end') {
-                sh 'docker build --builder=default -t tunihire-backend:${BUILD_NUMBER} .'
+                sh 'docker buildx build -t tunihire-backend:${BUILD_NUMBER} .'
             }
             dir('Front-End') {
-                sh 'docker build --builder=default -t tunihire-frontend:${BUILD_NUMBER} .'
+                sh 'docker buildx build -t tunihire-frontend:${BUILD_NUMBER} .'
             }
             dir('Admin-Panel') {
-                sh 'docker build --builder=default -t tunihire-admin:${BUILD_NUMBER} .'
+                sh 'docker buildx build -t tunihire-admin:${BUILD_NUMBER} .'
             }
             dir('Company-Panel') {
-                sh 'docker build --builder=default -t tunihire-company:${BUILD_NUMBER} .'
+                sh 'docker buildx build -t tunihire-company:${BUILD_NUMBER} .'
             }
         }
     }
 }
+
         
         stage('SonarQube Analysis') {
             steps {
