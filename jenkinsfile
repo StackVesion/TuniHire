@@ -43,14 +43,90 @@ pipeline {
                 script {
                     // Check if we need to install Node.js
                     def nodeInstalled = sh(script: 'which node || echo "not found"', returnStdout: true).trim()
-                    if (nodeInstalled == "not found") {
+                    if (nodeInstalled == "not found") {post {
+                        success {
+                            node {  // Added node block
+                                echo 'Pipeline completed successfully!'
+                                sh '...'
+                            }
+                        }
+                        failure {
+                            node {  // Added node block
+                                echo 'Pipeline failed!'
+                                sh '...'
+                            }
+                        }
+                        always {
+                            node {  // Added node block
+                                echo 'Cleaning up workspace...'
+                                cleanWs()
+                            }
+                        }
+                    }
                         echo "Installing Node.js..."
                         sh 'curl -fsSL https://deb.nodesource.com/setup_18.x | bash -'
                         sh 'apt-get install -y nodejs'
                     }
                     
                     // Install SonarScanner for Node.js projects
-                    sh 'npm install -g sonar-scanner'
+                    sh 'npm install -post {
+                        success {
+                            node {  // Added node block
+                                echo 'Pipeline completed successfully!'
+                                sh '...'
+                            }
+                        }
+                        failure {
+                            node {  // Added node block
+                                echo 'Pipeline failed!'
+                                sh '...'
+                            }
+                        }
+                        always {
+                            node {  // Added node block
+                                echo 'Cleaning up workspace...'
+                                cleanWs()
+                            }
+                        }
+                    }post {
+                        success {
+                            node {  // Added node block
+                                echo 'Pipeline completed successfully!'
+                                sh '...'
+                            }
+                        }
+                        failure {
+                            node {  // Added node block
+                                echo 'Pipeline failed!'
+                                sh '...'
+                            }
+                        }
+                        always {
+                            node {  // Added node block
+                                echo 'Cleaning up workspace...'
+                                cleanWs()
+                            }
+                        }
+                    }post {
+                        success {
+                            node {  // Added node block
+                                echo 'Pipeline completed successfully!'
+                                sh '...'
+                            }
+                        }
+                        failure {
+                            node {  // Added node block
+                                echo 'Pipeline failed!'
+                                sh '...'
+                            }
+                        }
+                        always {
+                            node {  // Added node block
+                                echo 'Cleaning up workspace...'
+                                cleanWs()
+                            }
+                        }
+                    }g sonar-scanner'
                     
                     // Display versions for logging
                     sh 'node --version'
@@ -321,20 +397,26 @@ pipeline {
     
     post {
         success {
-            echo 'Pipeline completed successfully!'
-            sh '''
-                curl -X POST -H 'Content-Type: application/json' -d '{"text": "🚀 TuniHire deployment successful! Version: ${APP_VERSION}"}' ${SLACK_WEBHOOK_URL}
-            '''
+            node {
+                echo 'Pipeline completed successfully!'
+                sh '''
+                    curl -X POST -H 'Content-Type: application/json' -d '{"text": "🚀 TuniHire deployment successful! Version: ${APP_VERSION}"}' ${SLACK_WEBHOOK_URL}
+                '''
+            }
         }
         failure {
-            echo 'Pipeline failed!'
-            sh '''
-                curl -X POST -H 'Content-Type: application/json' -d '{"text": "❌ TuniHire deployment failed! See ${BUILD_URL} for details."}' ${SLACK_WEBHOOK_URL}
-            '''
+            node {
+                echo 'Pipeline failed!'
+                sh '''
+                    curl -X POST -H 'Content-Type: application/json' -d '{"text": "❌ TuniHire deployment failed! See ${BUILD_URL} for details."}' ${SLACK_WEBHOOK_URL}
+                '''
+            }
         }
         always {
-            echo 'Cleaning up workspace...'
-            cleanWs()
+            node {
+                echo 'Cleaning up workspace...'
+                cleanWs()
+            }
         }
     }
     
