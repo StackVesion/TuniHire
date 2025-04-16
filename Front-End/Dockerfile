@@ -11,9 +11,11 @@ RUN npm install
 # Copy app source code
 COPY . .
 
-# Handle Next.js build errors by creating empty files for missing modules if needed
+# Handle Next.js case-sensitivity issues by creating symbolic links
+RUN mkdir -p components/layout
+RUN ln -s /app/components/Layout /app/components/layout || true
 RUN mkdir -p components/layout/admin
-RUN touch components/layout/admin/AdminLayout.js
+RUN touch components/layout/AdminLayout.js
 
 # Build the application with increased memory limit
 RUN NODE_OPTIONS="--max_old_space_size=4096" npm run build || true
