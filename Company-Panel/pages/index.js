@@ -5,17 +5,54 @@ import { Menu } from '@headlessui/react'
 import Link from "next/link"
 import withAuth from "@/utils/withAuth"
 import { useEffect, useState } from "react"
+import { getToken, createAuthAxios } from '../utils/authUtils'
 
 function Home({ user }) {
     const [roleDisplay, setRoleDisplay] = useState('');
+    const [company, setCompany] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const authAxios = createAuthAxios();
     
     useEffect(() => {
         // Set role display text based on user role
         if (user) {
             const role = user.role.toString().toUpperCase();
             setRoleDisplay(role === 'HR' ? 'HR Dashboard' : 'Candidate Dashboard');
+            
+            // Fetch company data if user is HR
+            if (role === 'HR') {
+                fetchCompanyData();
+            }
         }
     }, [user]);
+    
+    // Function to fetch company data
+    const fetchCompanyData = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            
+            console.log('Fetching company data...');
+            // Use authAxios to ensure proper token handling
+            const response = await authAxios.get('/api/companies/user/my-company');
+            
+            console.log('Company data fetched:', response.data);
+            setCompany(response.data.company);
+        } catch (err) {
+            console.error('Error fetching company data:', err);
+            
+            if (err.response && err.response.status === 404) {
+                // User doesn't have a company yet
+                setError("You don't have a company yet. Please create one.");
+            } else {
+                setError("Failed to load company data. " + (err.response?.data?.message || err.message));
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+    
     return (
         <>
             <Layout breadcrumbTitle="Dashboard" breadcrumbActive="Dashboard">
@@ -23,6 +60,125 @@ function Home({ user }) {
                     <h5>Welcome to your {roleDisplay}</h5>
                     <p>You are logged in as {user?.firstName} {user?.lastName} ({user?.role})</p>
                 </div>
+
+                {/* Company Information Section - Only for HR users */}
+                {user && user.role.toString().toUpperCase() === 'HR' && (
+                    <div className="section-box mb-30">
+                        <div className="container">
+                            <div className="panel-white pt-30 pb-30 pl-30 pr-30">
+                                <h5 className="mb-20">My Company</h5>
+                                
+                                {loading && (
+                                    <div className="text-center">
+                                        <div className="spinner-border text-primary" role="status">
+                                            <span className="visually-hidden">Loading...</span>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {error && (
+                                    <div className="alert alert-warning mb-20">
+                                        <p>{error}</p>
+                                        <div className="mt-15">
+                                            <Link href="/apply-company" className="btn btn-primary">
+                                                Create Company Profile
+                                            </Link>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {company && (
+                                    <div className="company-info">
+                                        <div className="row align-items-center mb-20">
+                                            <div className="col-md-2">
+                                                <img 
+                                                    src={company.logo || "assets/imgs/page/dashboard/building.svg"} 
+                                                    alt={company.name}
+                                                    className="img-fluid"
+                                                    style={{ maxWidth: '120px', maxHeight: '120px', objectFit: 'contain' }}
+                                                />
+                                            </div>
+                                            <div className="col-md-10">
+                                                <h3 className="mt-0 mb-10">{company.name}</h3>
+                                                <div className="mb-10">
+                                                    <strong>Status:</strong> 
+                                                    <span className={`badge ms-2 ${
+                                                        company.status === 'Approved' ? 'bg-success' : 
+                                                        company.status === 'Pending' ? 'bg-warning' : 'bg-danger'
+                                                    }`}>
+                                                        {company.status}
+                                                    </span>
+                                                </div>
+                                                <p className="mb-5"><i className="fi-rr-marker mr-5"></i> {company.location || 'No location specified'}</p>
+                                                <p className="mb-5"><i className="fi-rr-envelope mr-5"></i> {company.email}</p>
+                                                {company.website && (
+                                                    <p className="mb-5"><i className="fi-rr-globe mr-5"></i> <a href={company.website} target="_blank" rel="noopener noreferrer">{company.website}</a></p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="row mb-20">
+                                            <div className="col-12">
+                                                <h6 className="mb-10">About the Company</h6>
+                                                <p>{company.description || 'No description available'}</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="row">
+                                            <div className="col-md-4 mb-15">
+                                                <div className="card-style-1 hover-up h-100">
+                                                    <div className="card-image"> <img src="assets/imgs/page/dashboard/industry.svg" alt="Industry" /></div>
+                                                    <div className="card-info">
+                                                        <div className="card-title">
+                                                            <p className="font-sm">Industry</p>
+                                                        </div>
+                                                        <p className="color-text-paragraph-2">{company.category || 'Not specified'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="col-md-4 mb-15">
+                                                <div className="card-style-1 hover-up h-100">
+                                                    <div className="card-image"> <img src="assets/imgs/page/dashboard/users.svg" alt="Employees" /></div>
+                                                    <div className="card-info">
+                                                        <div className="card-title">
+                                                            <p className="font-sm">Employees</p>
+                                                        </div>
+                                                        <p className="color-text-paragraph-2">{company.numberOfEmployees || 'Not specified'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="col-md-4 mb-15">
+                                                <div className="card-style-1 hover-up h-100">
+                                                    <div className="card-image"> <img src="assets/imgs/page/dashboard/calendar.svg" alt="Established" /></div>
+                                                    <div className="card-info">
+                                                        <div className="card-title">
+                                                            <p className="font-sm">Established</p>
+                                                        </div>
+                                                        <p className="color-text-paragraph-2">
+                                                            {company.foundedYear || new Date(company.createdAt).getFullYear() || 'Not specified'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="mt-20 text-center">
+                                            <Link href={`/update-company/${company._id}`} className="btn btn-outline btn-sm me-3">
+                                                <i className="fi-rr-edit mr-5"></i> Edit Company
+                                            </Link>
+                                            <Link href="/post-job" className="btn btn-default btn-sm">
+                                                <i className="fi-rr-briefcase mr-5"></i> Post New Job
+                                            </Link>
+                                            <Link href="/my-job-grid" className="btn btn-outline btn-sm ms-3">
+                                                <i className="fi-rr-list mr-5"></i> View My Jobs
+                                            </Link>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <div className="col-xxl-8 col-xl-7 col-lg-7">
                     <div className="section-box">

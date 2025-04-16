@@ -98,17 +98,64 @@ exports.getCompanyById = async (req, res) => {
 // Get company by user ID (my company)
 exports.getMyCompany = async (req, res) => {
   try {
-    const userId = req.user.id;
+    // Log request details for debugging
+    console.log('-------- getMyCompany API Call --------');
+    console.log('req.user:', req.user);
+    console.log('req.userId:', req.userId);
+    
+    // Get the user ID from the request in a flexible way
+    let userId;
+    
+    if (req.user && (req.user.id || req.user._id)) {
+      // If req.user exists, prefer id or _id from it
+      userId = req.user.id || req.user._id;
+      console.log('Using ID from req.user:', userId);
+    } else if (req.userId) {
+      // Fall back to req.userId if set directly
+      userId = req.userId;
+      console.log('Using req.userId:', userId);
+    } else {
+      console.error('Authentication error: No valid user ID available');
+      return res.status(400).json({ 
+        success: false,
+        message: "Invalid user information. Please login again." 
+      });
+    }
+    
+    console.log('Looking for company with createdBy:', userId);
+    
+    // Find company where the authenticated user is the creator
     const company = await Company.findOne({ createdBy: userId })
       .populate('createdBy', 'firstName lastName email');
     
     if (!company) {
-      return res.status(404).json({ message: "You don't have a company yet" });
+      console.log(`No company found for user ID: ${userId}`);
+      return res.status(404).json({ 
+        success: false,
+        message: "You don't have a company yet" 
+      });
     }
     
-    res.status(200).json({ company });
+    console.log(`Company found for user ID ${userId}:`, company.name);
+    console.log('Company details:', {
+      id: company._id,
+      name: company.name,
+      email: company.email,
+      status: company.status
+    });
+    
+    // Return success with the company data
+    res.status(200).json({ 
+      success: true,
+      company 
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error in getMyCompany:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to retrieve company data",
+      error: error.message 
+    });
   }
 };
 

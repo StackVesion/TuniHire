@@ -4,7 +4,7 @@ const User = require('../models/User');
 /**
  * Middleware to verify JWT token and attach user to request
  */
-exports.verifyToken = (req, res, next) => {
+exports.verifyToken = async (req, res, next) => {
   try {
     const bearerHeader = req.headers['authorization'];
     
@@ -29,7 +29,31 @@ exports.verifyToken = (req, res, next) => {
     
     try {
       const verified = jwt.verify(token, process.env.JWT_SECRET);
-      req.userId = verified.userId;
+      
+      // Set basic user info from token
+      req.userId = verified.userId || verified._id || verified.id;
+      
+      console.log('Token verified, userId from token:', req.userId);
+      
+      // Fetch the complete user from the database to ensure up-to-date info
+      const user = await User.findById(req.userId);
+      if (!user) {
+        console.log('User not found with ID:', req.userId);
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      console.log('User found:', user.email, '(ID:', user._id, '- Role:', user.role, ')');
+      
+      // Set the user object in the request
+      req.user = {
+        id: user._id.toString(), // Important: Convert ObjectId to string
+        _id: user._id.toString(), // Include both formats to be safe
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role
+      };
+      
       next();
     } catch (error) {
       console.log('Auth Error: Token verification failed -', error.message);
