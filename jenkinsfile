@@ -48,7 +48,6 @@ pipeline {
                         sh 'curl -fsSL https://deb.nodesource.com/setup_18.x | bash -'
                         sh 'apt-get install -y nodejs'
                     }
-                    }
                     
                     // Install SonarScanner for Node.js projects
                     sh 'npm install -g sonar-scanner'
