@@ -9,20 +9,24 @@ pipeline {
     stages {
 
         
-        stage('SonarQube Analysis') {
-            steps {
-                script {
-                    withCredentials([string(credentialsId: 'scanner', variable: 'SONAR_TOKEN')]) {
-                        dir('Back-end') {
-                            sh "sonar-scanner -Dsonar.projectKey=tunihire-backend -Dsonar.login=${SONAR_TOKEN}"
-                        }
-                        dir('Front-End') {
-                            sh "sonar-scanner -Dsonar.projectKey=tunihire-frontend -Dsonar.login=${SONAR_TOKEN}"
-                        }
-                    }
+stage('SonarQube Analysis') {
+    steps {
+        script {
+            withCredentials([string(credentialsId: 'scanner', variable: 'SONAR_TOKEN')]) {
+                dir('Back-end') {
+                    sh '''
+                        sonar-scanner \
+                        -Dsonar.projectKey=tunihire-backend \
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=http://localhost:9000 \
+                        -Dsonar.login=$SONAR_TOKEN
+                    '''
                 }
             }
         }
+    }
+}
+
         
         stage('Push to Registry') {
             steps {
