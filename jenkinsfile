@@ -32,27 +32,35 @@ stage('SonarQube Analysis') {
 
 
         
-        stage('Push to Registry') {
-            steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: 'docker', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                        sh 'docker login -u $DOCKER_USER -p $DOCKER_PASS'
-                        
-                        sh 'docker tag tunihire-backend:${BUILD_NUMBER} ${DOCKER_REGISTRY}/tunihire-backend:${BUILD_NUMBER}'
-                        sh 'docker push ${DOCKER_REGISTRY}/tunihire-backend:${BUILD_NUMBER}'
-                        
-                        sh 'docker tag tunihire-frontend:${BUILD_NUMBER} ${DOCKER_REGISTRY}/tunihire-frontend:${BUILD_NUMBER}'
-                        sh 'docker push ${DOCKER_REGISTRY}/tunihire-frontend:${BUILD_NUMBER}'
-                        
-                        sh 'docker tag tunihire-admin:${BUILD_NUMBER} ${DOCKER_REGISTRY}/tunihire-admin:${BUILD_NUMBER}'
-                        sh 'docker push ${DOCKER_REGISTRY}/tunihire-admin:${BUILD_NUMBER}'
-                        
-                        sh 'docker tag tunihire-company:${BUILD_NUMBER} ${DOCKER_REGISTRY}/tunihire-company:${BUILD_NUMBER}'
-                        sh 'docker push ${DOCKER_REGISTRY}/tunihire-company:${BUILD_NUMBER}'
-                    }
-                }
+     stage('Push to Registry') {
+    steps {
+        script {
+            withCredentials([usernamePassword(credentialsId: 'docker', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                sh 'docker login -u $DOCKER_USER -p $DOCKER_PASS'
+
+                // Build images before tagging
+                sh 'docker build -t tunihire-backend:${BUILD_NUMBER} Back-end'
+                sh 'docker build -t tunihire-frontend:${BUILD_NUMBER} Front-End'
+                sh 'docker build -t tunihire-admin:${BUILD_NUMBER} Admin'
+                sh 'docker build -t tunihire-company:${BUILD_NUMBER} Company'
+
+                // Tag and push
+                sh 'docker tag tunihire-backend:${BUILD_NUMBER} ${DOCKER_REGISTRY}/tunihire-backend:${BUILD_NUMBER}'
+                sh 'docker push ${DOCKER_REGISTRY}/tunihire-backend:${BUILD_NUMBER}'
+
+                sh 'docker tag tunihire-frontend:${BUILD_NUMBER} ${DOCKER_REGISTRY}/tunihire-frontend:${BUILD_NUMBER}'
+                sh 'docker push ${DOCKER_REGISTRY}/tunihire-frontend:${BUILD_NUMBER}'
+
+                sh 'docker tag tunihire-admin:${BUILD_NUMBER} ${DOCKER_REGISTRY}/tunihire-admin:${BUILD_NUMBER}'
+                sh 'docker push ${DOCKER_REGISTRY}/tunihire-admin:${BUILD_NUMBER}'
+
+                sh 'docker tag tunihire-company:${BUILD_NUMBER} ${DOCKER_REGISTRY}/tunihire-company:${BUILD_NUMBER}'
+                sh 'docker push ${DOCKER_REGISTRY}/tunihire-company:${BUILD_NUMBER}'
             }
         }
+    }
+}
+
         
         stage('Deploy') {
             steps {
