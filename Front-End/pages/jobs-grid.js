@@ -1,15 +1,22 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import Layout from "../components/Layout/Layout";
 import BlogSlider from "./../components/sliders/Blog";
 import axios from 'axios';
 
 export default function JobGrid() {
+    const router = useRouter();
+    const { company: companyId } = router.query;
+
     // États pour stocker les données
     const [jobs, setJobs] = useState([]);
     const [allJobs, setAllJobs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [companyInfo, setCompanyInfo] = useState(null);
+    const [companyLoading, setCompanyLoading] = useState(false);
+    const [jobsLoaded, setJobsLoaded] = useState(false);
     
     // États pour les filtres
     const [searchTerm, setSearchTerm] = useState("");
@@ -20,14 +27,35 @@ export default function JobGrid() {
     const [itemsPerPage, setItemsPerPage] = useState(6);
     const [sortBy, setSortBy] = useState("newest"); // newest, oldest, salary-high, salary-low
     
+    console.log("Router query:", router.query);
+    console.log("Company ID from query:", companyId);
+    
     // Récupérer les emplois depuis l'API
     useEffect(() => {
         const fetchJobs = async () => {
+            if (!router.isReady) return;
+            
             try {
                 setLoading(true);
-                console.log("Fetching jobs...");
+                setJobsLoaded(false);
+                console.log("Fetching jobs with router ready. Company ID:", companyId);
                 
-                const response = await axios.get('http://localhost:5000/api/jobs');
+                let url = 'http://localhost:5000/api/jobs';
+                
+                // If companyId is provided, fetch jobs only for that company
+                if (companyId) {
+                    console.log("Filtering jobs by company ID:", companyId);
+                    url = `http://localhost:5000/api/jobs/company/${companyId}`;
+                    // Fetch company info separately to ensure it's available
+                    fetchCompanyInfo(companyId);
+                } else {
+                    // Reset company info if not filtering by company
+                    setCompanyInfo(null);
+                    setCompanyLoading(false);
+                }
+                
+                console.log("Making API request to:", url);
+                const response = await axios.get(url);
                 console.log("API response:", response);
                 
                 if (response.data && Array.isArray(response.data)) {
@@ -38,41 +66,86 @@ export default function JobGrid() {
                     setAllJobs([]);
                 }
                 
+                setJobsLoaded(true);
                 setLoading(false);
             } catch (error) {
                 console.error("Error fetching jobs:", error);
-                setError("Impossible de charger les emplois. Veuillez réessayer plus tard.");
+                setError(`Failed to load jobs: ${error.message}`);
                 setLoading(false);
+                setJobsLoaded(true);
             }
         };
         
         fetchJobs();
+    }, [companyId, router.isReady]);
+    
+    // Cleanup effect
+    useEffect(() => {
+        // Ensure we reset relevant state on component unmount
+        return () => {
+            setCompanyInfo(null);
+            setCompanyLoading(false);
+            setError(null);
+        };
     }, []);
+
+    // Fetch company information if companyId is provided
+    const fetchCompanyInfo = async (id) => {
+        if (!id) return;
+        
+        try {
+            setCompanyLoading(true);
+            console.log("Fetching company info for ID:", id);
+            const response = await axios.get(`http://localhost:5000/api/companies/${id}`);
+            console.log("Company API response:", response);
+            
+            if (response.data) {
+                console.log("Received company data:", response.data);
+                setCompanyInfo(response.data);
+            } else {
+                // Handle empty response
+                console.warn("Empty company data received");
+                setCompanyInfo({ name: "Unknown Company" });
+            }
+        } catch (error) {
+            console.error("Error fetching company info:", error);
+            // Set a fallback name to prevent undefined errors
+            setCompanyInfo({ name: "Unknown Company" });
+        } finally {
+            setCompanyLoading(false);
+        }
+    };
+    
+    // Clear company filter
+    const clearCompanyFilter = () => {
+        router.push('/jobs-grid');
+    };
     
     // Effectuer le filtrage, le tri et la pagination
     const filteredAndSortedJobs = useMemo(() => {
         // 1. Filtrage
         let result = [...allJobs];
         
+        console.log("Filtering jobs. Total jobs:", result.length);
+        console.log("Search term:", searchTerm);
+        console.log("Location filter:", locationFilter);
+        
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
             result = result.filter(job => 
-                job.title.toLowerCase().includes(term) || 
-                job.description.toLowerCase().includes(term)
+                (job.title && job.title.toLowerCase().includes(term)) || 
+                (job.description && job.description.toLowerCase().includes(term))
             );
         }
         
         if (locationFilter) {
             result = result.filter(job => 
-                job.location.toLowerCase().includes(locationFilter.toLowerCase())
+                job.location && job.location.toLowerCase().includes(locationFilter.toLowerCase())
             );
         }
         
         if (industryFilter && industryFilter !== "0") {
-            // Logique de filtre pour l'industrie 
-            // (vous devrez adapter selon la structure de vos données)
-            // Par exemple, si vous avez une propriété industry:
-            // result = result.filter(job => job.industry === industryFilter);
+            // Not implemented yet
         }
         
         if (workplaceType) {
@@ -88,8 +161,6 @@ export default function JobGrid() {
                 result.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
                 break;
             case "salary-high":
-                // Vous devrez adapter cette partie selon la structure de vos données
-                // Si salaryRange est au format "35-45K", vous devrez extraire la partie numérique
                 result.sort((a, b) => {
                     const aMax = parseInt(a.salaryRange?.split('-')[1]) || 0;
                     const bMax = parseInt(b.salaryRange?.split('-')[1]) || 0;
@@ -103,26 +174,25 @@ export default function JobGrid() {
                     return aMin - bMin;
                 });
                 break;
-            default:
-                break;
         }
         
+        console.log("After filtering and sorting, job count:", result.length);
         return result;
-    }, [allJobs, searchTerm, locationFilter, industryFilter, workplaceType, sortBy]);
+    }, [allJobs, searchTerm, locationFilter, workplaceType, sortBy, industryFilter]);
     
     // Pagination
     const totalJobs = filteredAndSortedJobs.length;
     const totalPages = Math.ceil(totalJobs / itemsPerPage);
-    const currentJobs = useMemo(() => {
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-        return filteredAndSortedJobs.slice(startIndex, endIndex);
-    }, [filteredAndSortedJobs, currentPage, itemsPerPage]);
+    const indexOfLastJob = currentPage * itemsPerPage;
+    const indexOfFirstJob = indexOfLastJob - itemsPerPage;
     
-    // Mise à jour des emplois affichés après chaque changement
+    // Update jobs when filteredAndSortedJobs changes or pagination changes
     useEffect(() => {
+        const currentJobs = filteredAndSortedJobs.slice(indexOfFirstJob, indexOfLastJob);
+        console.log("Setting current jobs for display:", currentJobs.length);
+        
         setJobs(currentJobs);
-    }, [currentJobs]);
+    }, [filteredAndSortedJobs, currentPage, itemsPerPage]);
     
     // Gérer la recherche
     const handleSearch = (e) => {
@@ -184,10 +254,48 @@ export default function JobGrid() {
                             <div className="banner-hero banner-single banner-single-bg">
                                 <div className="block-banner text-center">
                                     <h3 className="wow animate__animated animate__fadeInUp">
-                                        <span className="color-brand-2">{totalJobs} Jobs</span> Available Now
+                                        {(() => {
+                                            if (loading) {
+                                                return "Loading...";
+                                            }
+                                            
+                                            if (companyId) {
+                                                if (companyLoading) {
+                                                    return "Loading Company Jobs...";
+                                                }
+                                                
+                                                return companyInfo ? `Jobs at ${companyInfo.name}` : "Company Jobs";
+                                            }
+                                            
+                                            return "Browse Jobs";
+                                        })()}
                                     </h3>
                                     <div className="font-sm color-text-paragraph-2 mt-10 wow animate__animated animate__fadeInUp" data-wow-delay=".1s">
-                                        Trouvez l'emploi qui correspond à vos compétences et ambitions
+                                        {loading ? (
+                                            <div className="spinner-border text-primary" role="status">
+                                                <span className="visually-hidden">Loading jobs...</span>
+                                            </div>
+                                        ) : companyId && companyLoading ? (
+                                            <div className="text-center">
+                                                <div className="spinner-border spinner-border-sm text-primary" role="status">
+                                                    <span className="visually-hidden">Loading...</span>
+                                                </div>
+                                                <span className="ml-2">Loading company information...</span>
+                                            </div>
+                                        ) : companyInfo ? (
+                                            <div>
+                                                <p>{companyInfo.description || `Find all open positions at ${companyInfo.name}`}</p>
+                                                <button 
+                                                    onClick={clearCompanyFilter}
+                                                    className="btn btn-outline-primary mt-10 btn-sm"
+                                                >
+                                                    <i className="fi-rr-rotate-right mr-5"></i> 
+                                                    Show All Jobs
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            'Find the job that fits your life'
+                                        )}
                                     </div>
                                     <div className="form-find text-start mt-40 wow animate__animated animate__fadeInUp" data-wow-delay=".2s">
                                         <form onSubmit={handleSearch}>
@@ -245,8 +353,18 @@ export default function JobGrid() {
                                             <div className="row">
                                                 <div className="col-xl-6 col-lg-5">
                                                     <span className="text-small text-showing">
-                                                        Showing <strong>{(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, totalJobs)} </strong>
-                                                        of <strong>{totalJobs} </strong>jobs
+                                                        {loading ? (
+                                                            "Loading jobs..."
+                                                        ) : allJobs.length > 0 ? (
+                                                            <>
+                                                                Showing <strong>{indexOfFirstJob + 1}-{Math.min(indexOfLastJob, totalJobs)}</strong> of <strong>{totalJobs}</strong> jobs
+                                                                {companyInfo ? ` for ${companyInfo.name}` : ''}
+                                                            </>
+                                                        ) : (
+                                                            companyInfo ? 
+                                                                `No jobs available for ${companyInfo.name}` : 
+                                                                'No jobs available'
+                                                        )}
                                                     </span>
                                                 </div>
                                                 <div className="col-xl-6 col-lg-7 text-lg-end mt-sm-15">
@@ -321,11 +439,40 @@ export default function JobGrid() {
                                                 {jobs.length === 0 ? (
                                                     <div className="col-12 text-center py-5">
                                                         <div className="alert alert-info" role="alert">
-                                                            Aucun emploi trouvé avec vos critères de recherche. Essayez de modifier vos filtres.
+                                                            {(() => {
+                                                                // Using an IIFE for more complex conditional logic
+                                                                if (loading) {
+                                                                    return "Loading jobs...";
+                                                                }
+                                                                
+                                                                if (companyId) {
+                                                                    if (companyLoading) {
+                                                                        return "Loading company jobs...";
+                                                                    }
+                                                                    
+                                                                    if (!companyInfo) {
+                                                                        return "No company information found";
+                                                                    }
+                                                                    
+                                                                    if (allJobs.length === 0) {
+                                                                        return `No jobs found for ${companyInfo.name}`;
+                                                                    }
+                                                                    
+                                                                    if (filteredAndSortedJobs.length === 0) {
+                                                                        return `No jobs match your filters for ${companyInfo.name}`;
+                                                                    }
+                                                                }
+                                                                
+                                                                if (allJobs.length === 0) {
+                                                                    return 'No jobs found in the system';
+                                                                }
+                                                                
+                                                                return 'No jobs found matching your criteria';
+                                                            })()}
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    jobs.map((job) => (
+                                                    jobs.map((job, index) => (
                                                         <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12" key={job._id}>
                                                             <div className="card-grid-2 hover-up">
                                                                 <div className="card-grid-2-image-left">
@@ -335,8 +482,8 @@ export default function JobGrid() {
                                                                     </div>
                                                                     <div className="right-info">
                                                                         {job.companyId ? (
-                                                                            <Link legacyBehavior href={`/company-details?id=${job.companyId}`}>
-                                                                                <a className="name-job">{job.companyId.name || "Company Name"}</a>
+                                                                            <Link href={`/company-details?id=${job.companyId}`} className="name-job">
+                                                                                {job.companyId.name || "Company Name"}
                                                                             </Link>
                                                                         ) : (
                                                                             <span className="name-job">Company Name</span>
@@ -346,8 +493,8 @@ export default function JobGrid() {
                                                                 </div>
                                                                 <div className="card-block-info">
                                                                     <h6>
-                                                                        <Link legacyBehavior href={`/job-details?id=${job._id}`}>
-                                                                            <a>{job.title}</a>
+                                                                        <Link href={`/job-details?id=${job._id}`} className="card-job-name">
+                                                                            {job.title}
                                                                         </Link>
                                                                     </h6>
                                                                     <div className="mt-5">
@@ -372,8 +519,8 @@ export default function JobGrid() {
                                                                                 <span className="card-text-price">{job.salaryRange || 'Not specified'}</span>
                                                                             </div>
                                                                             <div className="col-lg-5 col-5 text-end">
-                                                                                <Link legacyBehavior href={`/job-details?id=${job._id}`}>
-                                                                                    <a className="btn btn-apply-now">Apply now</a>
+                                                                                <Link href={`/job-details?id=${job._id}`} className="btn btn-apply-now">
+                                                                                    Apply now
                                                                                 </Link>
                                                                             </div>
                                                                         </div>

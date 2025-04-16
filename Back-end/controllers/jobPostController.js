@@ -6,44 +6,12 @@ exports.getAllJobPosts = async (req, res) => {
   try {
     console.log("Starting getAllJobPosts");
     
-    let jobPosts = await JobPost.find().lean();
+    // Use populate to include company information
+    let jobPosts = await JobPost.find()
+      .populate('companyId', 'name email website category numberOfEmployees status')
+      .lean();
+    
     console.log(`Found ${jobPosts?.length || 0} jobs initially`);
-
-    // Si aucun emploi trouvé, ajoutez des exemples
-    if (!jobPosts || jobPosts.length === 0) {
-      console.log("No jobs found, adding sample data");
-      
-      const sampleJobs = [
-        {
-          title: "Développeur Full Stack",
-          description: "Nous recherchons un développeur Full Stack expérimenté pour rejoindre notre équipe en pleine croissance. Vous travaillerez sur des projets passionnants en utilisant les dernières technologies.",
-          requirements: ["React", "Node.js", "MongoDB", "3+ ans d'expérience"],
-          salaryRange: "45-65K",
-          location: "Paris, France",
-          workplaceType: "Hybrid"
-        },
-        {
-          title: "UX Designer",
-          description: "Rejoignez notre équipe de design en tant que UX Designer pour créer des interfaces intuitives pour nos produits. Vous travaillerez en étroite collaboration avec nos équipes de développement et de produit.",
-          requirements: ["Figma", "Adobe XD", "Recherche utilisateur", "Prototypage"],
-          salaryRange: "40-55K",
-          location: "Lyon, France",
-          workplaceType: "Remote"
-        },
-        {
-          title: "Ingénieur DevOps",
-          description: "Nous cherchons un ingénieur DevOps pour améliorer notre infrastructure et nos processus de déploiement. Vous serez responsable de la mise en place et de la maintenance de notre pipeline CI/CD.",
-          requirements: ["Docker", "Kubernetes", "AWS", "Jenkins"],
-          salaryRange: "50-70K",
-          location: "Marseille, France",
-          workplaceType: "Office"
-        }
-      ];
-
-      // Insérer les exemples
-      jobPosts = await JobPost.insertMany(sampleJobs);
-      console.log(`Added ${jobPosts.length} sample jobs`);
-    }
 
     // Renvoyer les emplois
     console.log(`Returning ${jobPosts.length} jobs`);
@@ -62,7 +30,9 @@ exports.getJobPostById = async (req, res) => {
       return res.status(400).json({ message: 'Invalid job ID format' });
     }
     
-    const jobPost = await JobPost.findById(req.params.id);
+    // Use populate to include company information
+    const jobPost = await JobPost.findById(req.params.id)
+      .populate('companyId', 'name email website category numberOfEmployees projects status createdAt');
     
     if (!jobPost) {
       return res.status(404).json({ message: 'Job post not found' });
@@ -143,21 +113,88 @@ exports.deleteJobPost = async (req, res) => {
 // Get job posts by company
 exports.getJobPostsByCompany = async (req, res) => {
   try {
-    console.log(`Getting jobs for company ID: ${req.params.companyId}`);
+    const { companyId } = req.params;
+    console.log(`Getting jobs for company ID: ${companyId}`);
     
-    if (!mongoose.Types.ObjectId.isValid(req.params.companyId)) {
-      return res.status(400).json({ message: 'Invalid company ID format' });
+    if (!companyId || companyId === 'undefined') {
+      console.error("Invalid company ID received:", companyId);
+      return res.status(400).json({ 
+        message: 'Invalid company ID format',
+        receivedId: companyId
+      });
     }
     
-    const jobPosts = await JobPost.find({ 
-      companyId: req.params.companyId,
-      status: 'active'
-    }).sort({ createdAt: -1 });
+    if (!mongoose.Types.ObjectId.isValid(companyId)) {
+      console.error("Non-MongoDB ObjectID format received:", companyId);
+      return res.status(400).json({ 
+        message: 'Invalid company ID format',
+        receivedId: companyId
+      });
+    }
     
-    console.log(`Found ${jobPosts.length} jobs for company`);
-    res.status(200).json(jobPosts);
+    // First verify if the company exists
+    const Company = require('../models/Company');
+    const companyExists = await Company.findById(companyId);
+    
+    if (!companyExists) {
+      console.error(`Company with ID ${companyId} not found in database`);
+      return res.status(404).json({ 
+        message: 'Company not found',
+        requestedId: companyId 
+      });
+    }
+    
+    console.log(`Found company: ${companyExists.name}, proceeding to find jobs`);
+    
+    // Use populate to include company information
+    const jobPosts = await JobPost.find({ 
+      companyId: companyId
+    })
+    .populate('companyId', 'name email website category numberOfEmployees status')
+    .sort({ createdAt: -1 });
+    
+    console.log(`Found ${jobPosts.length} jobs for company ${companyExists.name}`);
+    
+    // Return the jobs with company info in response
+    return res.status(200).json(jobPosts);
   } catch (error) {
     console.error(`Error getting jobs by company: ${error.message}`);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// Get company information by job post ID
+exports.getCompanyByJobPost = async (req, res) => {
+  try {
+    console.log(`Getting company for job post ID: ${req.params.jobId}`);
+    
+    if (!mongoose.Types.ObjectId.isValid(req.params.jobId)) {
+      return res.status(400).json({ message: 'Invalid job ID format' });
+    }
+    
+    // First, find the job post to get its companyId
+    const jobPost = await JobPost.findById(req.params.jobId);
+    
+    if (!jobPost) {
+      return res.status(404).json({ message: 'Job post not found' });
+    }
+    
+    if (!jobPost.companyId) {
+      return res.status(404).json({ message: 'No company associated with this job post' });
+    }
+    
+    // Now fetch the company information using the companyId from the job post
+    const Company = require('../models/Company');
+    const company = await Company.findById(jobPost.companyId);
+    
+    if (!company) {
+      return res.status(404).json({ message: 'Company not found' });
+    }
+    
+    console.log(`Found company: ${company.name} for job: ${jobPost.title}`);
+    res.status(200).json(company);
+  } catch (error) {
+    console.error(`Error getting company by job post: ${error.message}`);
     res.status(500).json({ error: error.message });
   }
 };

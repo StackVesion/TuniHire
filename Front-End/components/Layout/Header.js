@@ -212,7 +212,15 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                         <Link legacyBehavior href="/"><a>Home</a></Link>
                                 </li>
                                 <li>
-                                        <Link legacyBehavior href="/jobs-grid"><a>Find a Job</a></Link>
+                                        <Link 
+                                            legacyBehavior 
+                                            href={{
+                                                pathname: '/jobs-grid',
+                                                query: {}
+                                            }}
+                                        >
+                                            <a>Find a Job</a>
+                                        </Link>
                                 </li>
                                 <li>
                                         <Link legacyBehavior href="/companies-grid"><a>Recruiters</a></Link>
@@ -418,7 +426,15 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                             <Link legacyBehavior href="/"><a>Home</a></Link>
                                         </li>
                                         <li>
-                                            <Link legacyBehavior href="/jobs-grid"><a>Find a Job</a></Link>
+                                            <Link 
+                                                legacyBehavior 
+                                                href={{
+                                                    pathname: '/jobs-grid',
+                                                    query: {}
+                                                }}
+                                            >
+                                                <a>Find a Job</a>
+                                            </Link>
                                         </li>
                                         <li>
                                             <Link legacyBehavior href="/companies-grid"><a>Recruiters</a></Link>
@@ -494,7 +510,15 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                     <li>
                                             <Link legacyBehavior href="/"><a>Home</a></Link>
                                         </li><li>
-                                            <Link legacyBehavior href="/jobs-grid"><a>Find a Job</a></Link>
+                                            <Link 
+                                                legacyBehavior 
+                                                href={{
+                                                    pathname: '/jobs-grid',
+                                                    query: {}
+                                                }}
+                                            >
+                                                <a>Find a Job</a>
+                                            </Link>
                                         </li><li>
                                             <Link legacyBehavior href="/companies-grid"><a>Recruiters</a></Link>
                                         </li><li>

@@ -13,10 +13,10 @@ const User = require('./models/User');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 require('./config/githubAuth');
+const upload = require('./utils/fileUpload');
 
 // Express app
 const app = express();
-
 // Update CORS configuration
 app.use(cors({
   origin: ['http://localhost:3000','http://localhost:3001','http://localhost:3002'],
@@ -29,12 +29,23 @@ app.use(cors({
 // Add preflight OPTIONS handler
 app.options('*', cors());
 
-// Security and logging middlewares
-app.use(helmet());
+// Security and logging middlewares - configure helmet to allow cross-origin images
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Serve uploaded files with CORS headers
+app.use('/uploads', express.static('uploads', {
+  setHeaders: (res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
 
 // Connect to MongoDB
 connectDB();
@@ -86,7 +97,7 @@ const testEmailConfigs = async () => {
 };
 
 testEmailConfigs();
-
+    
 // Sessions
 app.use(
   session({
@@ -291,7 +302,6 @@ app.get('/auth/logout', (req, res) => {
     });
   });
 });
-
 // Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);

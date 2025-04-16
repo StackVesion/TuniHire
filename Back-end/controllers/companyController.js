@@ -1,16 +1,80 @@
 const Company = require("../models/Company");
 const User = require("../models/User");
+const fs = require('fs');
+const path = require('path');
 
 // Get all companies
 exports.getAllCompanies = async (req, res) => {
   try {
-    const companies = await Company.find()
-      .populate('createdBy', 'firstName lastName email')
-      .sort({ createdAt: -1 });
+    // Only get approved companies for the public-facing listing
+    let query = { status: { $in: ["Approved", "Pending"] } };
     
-    res.status(200).json({ companies });
+    // Admin can see all companies if requested
+    if (req.query.all === 'true') {
+      query = {};
+    }
+    
+    // Apply filters from query parameters
+    if (req.query.location) {
+      query.location = { $regex: req.query.location, $options: 'i' }; // Case-insensitive search
+    }
+    
+    if (req.query.category) {
+      query.category = { $regex: req.query.category, $options: 'i' };
+    }
+    
+    if (req.query.keyword) {
+      // Search in company name or description
+      const keywordRegex = { $regex: req.query.keyword, $options: 'i' };
+      query.$or = [
+        { name: keywordRegex },
+        { description: keywordRegex }
+      ];
+    }
+    
+    // Determine sort order
+    let sortOptions = { createdAt: -1 }; // Default: newest first
+    
+    if (req.query.sort) {
+      switch (req.query.sort) {
+        case 'oldest':
+          sortOptions = { createdAt: 1 };
+          break;
+        case 'rating':
+          sortOptions = { rating: -1 };
+          break;
+        // Default is already set (newest)
+      }
+    }
+    
+    const companies = await Company.find(query)
+      .populate('createdBy', 'firstName lastName email')
+      .sort(sortOptions);
+    
+    // For each company, get job count
+    const companiesWithJobCount = await Promise.all(companies.map(async (company) => {
+      // We'll need a Job model to count jobs, assuming it exists
+      // const jobCount = await Job.countDocuments({ company: company._id });
+      
+      // For now, return a placeholder
+      const companyObj = company.toObject();
+      companyObj.jobCount = 0; // Replace with actual job count when Job model is implemented
+      
+      return companyObj;
+    }));
+    
+    res.status(200).json({ 
+      success: true,
+      count: companiesWithJobCount.length, 
+      companies: companiesWithJobCount 
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error in getAllCompanies:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Error fetching companies", 
+      error: error.message 
+    });
   }
 };
 
@@ -55,14 +119,33 @@ exports.createCompany = async (req, res) => {
     // Check if user already has a company
     const existingCompany = await Company.findOne({ createdBy: userId });
     if (existingCompany) {
+      // If there's a file uploaded but we're rejecting the request, delete it
+      if (req.file) {
+        fs.unlinkSync(req.file.path);
+      }
       return res.status(400).json({ 
         message: "You already have a company registered. Its status is " + existingCompany.status 
       });
     }
     
     // Create new company
-    const { name, email, website, category, numberOfEmployees, projects } = req.body;
+    const { name, email, website, category, numberOfEmployees } = req.body;
     
+    // Handle projects which come as JSON string from FormData
+    let projects = [];
+    if (req.body.projects) {
+      try {
+        projects = JSON.parse(req.body.projects);
+      } catch (e) {
+        console.error('Error parsing projects:', e);
+        // If parsing fails, try to handle as comma-separated string
+        if (typeof req.body.projects === 'string') {
+          projects = req.body.projects.split(',').map(p => p.trim()).filter(Boolean);
+        }
+      }
+    }
+
+    // Create the company object
     const company = new Company({
       name,
       email,
@@ -74,6 +157,15 @@ exports.createCompany = async (req, res) => {
       status: "Pending"
     });
     
+    // Handle logo file if uploaded
+    if (req.file) {
+      // Generate URL for the uploaded file
+      // In a production environment, you'd use your actual domain
+      const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+      const relativePath = req.file.path.replace(/\\/g, '/').split('/uploads/')[1];
+      company.logo = `${baseUrl}/uploads/${relativePath}`;
+    }
+    
     await company.save();
     
     res.status(201).json({ 
@@ -81,6 +173,11 @@ exports.createCompany = async (req, res) => {
       company 
     });
   } catch (error) {
+    // Delete uploaded file if there was an error
+    if (req.file) {
+      fs.unlinkSync(req.file.path);
+    }
+    console.error('Error creating company:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -88,39 +185,87 @@ exports.createCompany = async (req, res) => {
 // Update company
 exports.updateCompany = async (req, res) => {
   try {
-    const userId = req.user.id;
     const companyId = req.params.id;
+    const userId = req.user.id;
     
     // Find the company
     const company = await Company.findById(companyId);
     
+    // Check if company exists
     if (!company) {
+      // Delete uploaded file if there was an error
+      if (req.file) {
+        fs.unlinkSync(req.file.path);
+      }
       return res.status(404).json({ message: "Company not found" });
     }
     
-    // Check if user is the owner or admin
-    if (company.createdBy.toString() !== userId && req.user.role !== 'admin') {
-      return res.status(403).json({ message: "Not authorized to update this company" });
+    // Check if user is the company owner
+    if (company.createdBy.toString() !== userId && req.user.role !== "admin") {
+      // Delete uploaded file if there was an error
+      if (req.file) {
+        fs.unlinkSync(req.file.path);
+      }
+      return res.status(403).json({ message: "You are not authorized to update this company" });
+    }
+
+    // Get update data
+    const { name, email, website, category, numberOfEmployees } = req.body;
+    
+    // Handle projects which come as JSON string from FormData
+    let projects = company.projects; // Keep existing projects by default
+    if (req.body.projects) {
+      try {
+        projects = JSON.parse(req.body.projects);
+      } catch (e) {
+        console.error('Error parsing projects:', e);
+        // If parsing fails, try to handle as comma-separated string
+        if (typeof req.body.projects === 'string') {
+          projects = req.body.projects.split(',').map(p => p.trim()).filter(Boolean);
+        }
+      }
     }
     
-    // Update company
-    const { name, email, website, category, numberOfEmployees, projects } = req.body;
-    
+    // Update company fields
     company.name = name || company.name;
     company.email = email || company.email;
     company.website = website || company.website;
     company.category = category || company.category;
     company.numberOfEmployees = numberOfEmployees || company.numberOfEmployees;
-    company.projects = projects || company.projects;
+    company.projects = projects;
     company.updatedAt = Date.now();
+    
+    // Handle logo file if uploaded
+    if (req.file) {
+      // Delete old logo file if exists
+      if (company.logo) {
+        const oldLogoPath = company.logo.split('/uploads/')[1];
+        if (oldLogoPath) {
+          const fullPath = path.join(__dirname, '../uploads', oldLogoPath);
+          if (fs.existsSync(fullPath)) {
+            fs.unlinkSync(fullPath);
+          }
+        }
+      }
+      
+      // Generate URL for the new uploaded file
+      const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+      const relativePath = req.file.path.replace(/\\/g, '/').split('/uploads/')[1];
+      company.logo = `${baseUrl}/uploads/${relativePath}`;
+    }
     
     await company.save();
     
-    res.status(200).json({ 
-      message: "Company updated successfully", 
-      company 
+    res.json({
+      message: "Company updated successfully",
+      company
     });
   } catch (error) {
+    // Delete uploaded file if there was an error
+    if (req.file) {
+      fs.unlinkSync(req.file.path);
+    }
+    console.error('Error updating company:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -236,5 +381,3 @@ exports.rejectCompany = async (req, res) => {
     });
   }
 };
-
-

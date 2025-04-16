@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Layout from '../components/layout/Layout';
@@ -20,6 +20,9 @@ function ApplyCompany({ user }) {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [existingCompany, setExistingCompany] = useState(null);
+    const [logoFile, setLogoFile] = useState(null);
+    const [logoPreview, setLogoPreview] = useState('');
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         // User is already provided by withAuth HOC
@@ -47,6 +50,9 @@ function ApplyCompany({ user }) {
                 
                 if (response.data && response.data.company) {
                     setExistingCompany(response.data.company);
+                    if (response.data.company.logo) {
+                        setLogoPreview(response.data.company.logo);
+                    }
                 }
             } catch (error) {
                 console.log('API Error:', error.message);
@@ -75,6 +81,39 @@ function ApplyCompany({ user }) {
         }));
     };
 
+    const handleLogoChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) {
+                setError('Logo file size must be less than 2MB');
+                return;
+            }
+
+            if (!file.type.match('image.*')) {
+                setError('Please select an image file (PNG, JPG, JPEG)');
+                return;
+            }
+
+            setLogoFile(file);
+            setError('');
+
+            // Create preview URL
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setLogoPreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleRemoveLogo = () => {
+        setLogoFile(null);
+        setLogoPreview('');
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -91,18 +130,33 @@ function ApplyCompany({ user }) {
             
             console.log('Submitting company application with token:', token.substring(0, 15) + '...');
 
-            // Format projects as an array
-            const formattedData = {
-                ...companyData,
-                projects: companyData.projects.split(',').map(project => project.trim()).filter(Boolean)
-            };
+            // Create FormData object for file upload
+            const formData = new FormData();
             
-            console.log('Submitting company data:', formattedData);
+            // Add all company data to FormData
+            Object.keys(companyData).forEach(key => {
+                if (key === 'projects') {
+                    // Don't add projects here, we'll handle it separately
+                } else {
+                    formData.append(key, companyData[key]);
+                }
+            });
+            
+            // Format projects as an array and add to FormData
+            const projectsArray = companyData.projects.split(',').map(project => project.trim()).filter(Boolean);
+            formData.append('projects', JSON.stringify(projectsArray));
+            
+            // Add logo file if exists
+            if (logoFile) {
+                formData.append('logo', logoFile);
+            }
+            
+            console.log('Submitting company data with logo:', !!logoFile);
 
-            const response = await axios.post('http://localhost:5000/api/companies', formattedData, {
+            const response = await axios.post('http://localhost:5000/api/companies', formData, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'multipart/form-data'
                 }
             });
 
@@ -184,6 +238,40 @@ function ApplyCompany({ user }) {
                                                 )}
                                                 <form onSubmit={handleSubmit}>
                                                     <div className="row">
+                                                        <div className="col-lg-12 col-md-12 mb-30">
+                                                            <div className="form-group">
+                                                                <label className="font-sm color-text-mutted mb-10">Company Logo</label>
+                                                                <div className="upload-logo-area">
+                                                                    {logoPreview ? (
+                                                                        <div className="img-upload-preview">
+                                                                            <img src={logoPreview} alt="Company Logo Preview" style={{ maxHeight: '150px', maxWidth: '100%' }} />
+                                                                            <button 
+                                                                                type="button" 
+                                                                                className="btn btn-sm btn-danger position-absolute top-0 end-0 m-2"
+                                                                                onClick={handleRemoveLogo}
+                                                                            >
+                                                                                <i className="fi-rr-cross-small"></i>
+                                                                            </button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="upload-placeholder" style={{ border: '2px dashed #ddd', padding: '30px', textAlign: 'center', borderRadius: '8px' }}>
+                                                                            <i className="fi-rr-picture" style={{ fontSize: '48px', color: '#ddd' }}></i>
+                                                                            <p className="mt-2">Upload company logo (PNG, JPG, max 2MB)</p>
+                                                                        </div>
+                                                                    )}
+                                                                    <input 
+                                                                        type="file" 
+                                                                        className="form-control mt-2" 
+                                                                        accept="image/png, image/jpeg, image/jpg"
+                                                                        onChange={handleLogoChange}
+                                                                        ref={fileInputRef}
+                                                                    />
+                                                                    <div className="font-xs text-muted mt-1">
+                                                                        Recommended size: 200x200 pixels
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                         <div className="col-lg-6 col-md-6">
                                                             <div className="form-group mb-30">
                                                                 <label className="font-sm color-text-mutted mb-10">Company Name *</label>

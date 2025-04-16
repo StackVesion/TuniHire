@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/router"
 import axios from "axios"
 import Swal from "sweetalert2"
+import { getToken, getCurrentUser } from "../utils/authUtils"
 
 export default function Home() {
     const [loading, setLoading] = useState(false)
@@ -15,6 +16,14 @@ export default function Home() {
         tags: ''
     })
     const router = useRouter()
+
+    // Check authentication on page load
+    useEffect(() => {
+        const token = getToken()
+        if (!token) {
+            router.replace('/login')
+        }
+    }, [router])
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -36,22 +45,27 @@ export default function Home() {
         setLoading(true)
 
         try {
-            // Get token and user data from localStorage
-            const token = localStorage.getItem('token')
+            // Get token using the utility function instead of direct localStorage access
+            const token = getToken()
             if (!token) {
-                router.push('/page-signin')
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Authentication Error',
+                    text: 'Your session has expired. Please sign in again.',
+                })
+                router.push('/login')
                 return
             }
 
-            // Get company ID from userData
-            const userData = JSON.parse(localStorage.getItem('userData'))
+            // Get user data using utility function
+            const userData = getCurrentUser()
             if (!userData) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Authentication Error',
                     text: 'Please sign in again to continue',
                 })
-                router.push('/page-signin')
+                router.push('/login')
                 return
             }
 
@@ -116,11 +130,21 @@ export default function Home() {
             router.push('/my-job-grid')
         } catch (error) {
             console.error('Error posting job:', error)
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: error.response?.data?.error || 'Failed to post job. Please try again.',
-            })
+            // Check for specific authentication errors
+            if (error.response?.status === 401) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Authentication Error',
+                    text: 'Your session has expired. Please sign in again.',
+                })
+                router.push('/login')
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.response?.data?.error || 'Failed to post job. Please try again.',
+                })
+            }
         } finally {
             setLoading(false)
         }
@@ -180,7 +204,10 @@ export default function Home() {
                                         <input
                                             className="form-control"
                                             type="text"
-                                            placeholder='e.g. "New York City" or "San Francisco”'
+                                            name="location"
+                                            value={formData.location}
+                                            onChange={handleChange}
+                                            placeholder='e.g. "New York City" or "San Francisco"'
                                         />
                                         </div>
                                     </div>
@@ -234,7 +261,6 @@ export default function Home() {
                                             value={formData.tags}
                                             onChange={handleChange}
                                             placeholder="Figma, UI/UX, Sketch..."
-                                            required
                                         />
                                         </div>
                                     </div>

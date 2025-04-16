@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const CompanySchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
+  logo: { type: String }, // URL to the company logo image
   website: { type: String },
   category: { type: String },
   numberOfEmployees: { type: Number },
