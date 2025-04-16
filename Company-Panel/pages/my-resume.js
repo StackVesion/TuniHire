@@ -11,6 +11,7 @@ import Link from "next/link";
 import withAuth from "@/utils/withAuth";
 import { getToken, createAuthAxios } from "@/utils/authUtils";
 import { FaTimes, FaLock } from "react-icons/fa";
+import CVPreviewModal from '../components/portfolio/CVPreviewModal';
 
 // Import form components
 import EducationForm from '../components/portfolio/EducationForm';
@@ -77,6 +78,7 @@ function Portfolio({ user }) {
     // Modal states
     const [showEducationModal, setShowEducationModal] = useState(false);
     const [showExperienceModal, setShowExperienceModal] = useState(false);
+    const [showCVPreview, setShowCVPreview] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentItemId, setCurrentItemId] = useState(null);
     
@@ -99,7 +101,6 @@ function Portfolio({ user }) {
         skills: '',
         certificateUrl: ''
     });
-    const [showCertificateModal, setShowCertificateModal] = useState(false);
     const [editingCertificateIndex, setEditingCertificateIndex] = useState(null);
     
     // State variables for step-by-step guide
@@ -292,7 +293,7 @@ function Portfolio({ user }) {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: 'Failed to add skill.'
+                text: 'Failed to add skill. ' + (error.response?.data?.message || 'Please try again.') 
             });
         }
     };
@@ -722,7 +723,7 @@ function Portfolio({ user }) {
         }
     };
 
-    const handleRemoveSkill = async (index) => {
+    const handleRemoveSkill = async (skill) => {
         try {
             const authAxios = createAuthAxios();
             
@@ -732,7 +733,7 @@ function Portfolio({ user }) {
                 return;
             }
             
-            const response = await authAxios.delete(`http://localhost:5000/api/portfolios/${portfolio._id}/skills/${index}`);
+            const response = await authAxios.delete(`http://localhost:5000/api/portfolios/${portfolio._id}/skills/${encodeURIComponent(skill)}`);
             
             if (response.data.success) {
                 // Update the portfolio state with the returned portfolio object
@@ -1939,7 +1940,7 @@ function Portfolio({ user }) {
                                                         type="button" 
                                                         className="btn-close ms-2" 
                                                         style={{fontSize: '0.5rem'}} 
-                                                        onClick={() => handleRemoveSkill(index)}
+                                                        onClick={() => handleRemoveSkill(skill)}
                                                     ></button>
                                                 </span>
                                             ))}
@@ -3054,6 +3055,7 @@ function Portfolio({ user }) {
                                             <h5 className="mb-3">Tell us about yourself</h5>
                                             <form onSubmit={(e) => {
                                                 e.preventDefault();
+                                                
                                                 if (about.trim()) {
                                                     submitPortfolio();
                                                     handleStepComplete('education');

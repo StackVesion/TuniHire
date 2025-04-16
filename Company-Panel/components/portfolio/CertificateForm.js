@@ -84,9 +84,15 @@ const CertificateForm = ({ portfolioId, certificate = null, onSuccess, onCancel 
             const authAxios = createAuthAxios();
             let response;
             
+            // Format payload to match exactly what the backend expects
             const payload = {
-                ...formData
+                title: formData.title.trim(),
+                description: formData.description.trim(),
+                skills: formData.skills,
+                certificateUrl: formData.certificateUrl.trim()
             };
+            
+            console.log('Sending certificate payload:', payload);
             
             if (certificate) {
                 // Edit existing certificate
@@ -127,10 +133,10 @@ const CertificateForm = ({ portfolioId, certificate = null, onSuccess, onCancel 
                         name="title"
                         value={formData.title}
                         onChange={handleChange}
-                        list="title-suggestions"
                         placeholder="e.g., AWS Certified Solutions Architect"
+                        list="certificate-titles"
                     />
-                    <datalist id="title-suggestions">
+                    <datalist id="certificate-titles">
                         {titleSuggestions.map((title, index) => (
                             <option key={index} value={title} />
                         ))}
@@ -146,8 +152,9 @@ const CertificateForm = ({ portfolioId, certificate = null, onSuccess, onCancel 
                         name="certificateUrl"
                         value={formData.certificateUrl}
                         onChange={handleChange}
-                        placeholder="https://example.com/verify/certificate"
+                        placeholder="https://example.com/certificate"
                     />
+                    <div className="form-text">URL to your certificate if available online</div>
                 </div>
                 
                 <div className="mb-3">
@@ -158,17 +165,17 @@ const CertificateForm = ({ portfolioId, certificate = null, onSuccess, onCancel 
                         value={formData.description}
                         onChange={handleChange}
                         rows="3"
-                        placeholder="Describe what this certificate represents and skills it certifies..."
+                        placeholder="Brief description of what the certificate covers..."
                     ></textarea>
                 </div>
                 
                 <div className="mb-4">
-                    <label className="form-label">Skills</label>
+                    <label className="form-label">Skills Covered</label>
                     <div className="input-group mb-2">
                         <input 
                             type="text"
                             className="form-control"
-                            placeholder="Add skills related to this certificate"
+                            placeholder="Add skills covered by this certificate"
                             value={newSkill}
                             onChange={handleSkillChange}
                             onKeyPress={(e) => {

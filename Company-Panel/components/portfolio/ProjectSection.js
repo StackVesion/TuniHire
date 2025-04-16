@@ -73,18 +73,25 @@ const ProjectSection = ({ portfolio, userId, onUpdate, onRemove }) => {
         return (
             <div key={localIndex} className="project-card-container animate__animated animate__fadeIn">
                 <div className="card h-100 portfolio-item project-card">
+                    <div className="card-header d-flex justify-content-between align-items-center py-2">
+                        <h5 className="card-title mb-0">{project.title}</h5>
+                        <div className="project-badge">
+                            <i className="fi-rr-apps project-icon"></i>
+                        </div>
+                    </div>
                     {project.image && (
-                        <img 
-                            src={project.image} 
-                            className="card-img-top" 
-                            alt={project.title}
-                            onError={(e) => {
-                                e.target.src = 'https://via.placeholder.com/300x150?text=Project+Image';
-                            }}
-                        />
+                        <div className="project-image-container">
+                            <img 
+                                src={project.image} 
+                                className="project-img" 
+                                alt={project.title}
+                                onError={(e) => {
+                                    e.target.src = 'https://via.placeholder.com/300x150?text=Project+Image';
+                                }}
+                            />
+                        </div>
                     )}
                     <div className="card-body">
-                        <h5 className="card-title">{project.title}</h5>
                         {project.description && (
                             <p className="card-text text-muted">
                                 {project.description}
@@ -154,13 +161,15 @@ const ProjectSection = ({ portfolio, userId, onUpdate, onRemove }) => {
             
             {/* Display Project Grid with Pagination */}
             {portfolio.projects && portfolio.projects.length > 0 ? (
-                <ItemPagination
-                    items={portfolio.projects}
-                    renderItem={renderProjectItem}
-                    itemsPerPage={1}
-                    autoScroll={true}
-                    autoScrollInterval={3000}
-                />
+                <div className="project-display-container">
+                    <ItemPagination
+                        items={portfolio.projects}
+                        renderItem={renderProjectItem}
+                        itemsPerPage={2}
+                        autoScroll={true}
+                        autoScrollInterval={3000}
+                    />
+                </div>
             ) : (
                 <div className="text-center py-4 border rounded">
                     <p className="mb-0 text-muted">No projects added yet. Click "Add Project" to get started.</p>
@@ -168,18 +177,38 @@ const ProjectSection = ({ portfolio, userId, onUpdate, onRemove }) => {
             )}
 
             <style jsx>{`
+                .project-display-container {
+                    margin: 0 auto;
+                    max-width: 900px;
+                }
                 .project-card {
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                     overflow: hidden;
                     height: 100%;
+                    width: 100%;
+                    margin: 0 auto;
+                    border-radius: 10px;
                 }
                 .project-card:hover {
                     transform: translateY(-5px);
                     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
                 }
-                .project-card .card-img-top {
-                    height: 200px;
-                    object-fit: cover;
+                .project-image-container {
+                    height: 160px;
+                    overflow: hidden;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background-color: #f8f9fa;
+                    border-bottom: 1px solid #eee;
+                }
+                .project-image-container img {
+                    width: auto;
+                    max-width: 100%;
+                    height: auto;
+                    max-height: 160px;
+                    object-fit: contain;
+                    object-position: center;
                 }
                 .section-block {
                     position: relative;
@@ -218,6 +247,25 @@ const ProjectSection = ({ portfolio, userId, onUpdate, onRemove }) => {
                 }
                 .project-card-container {
                     min-height: 450px;
+                }
+                .project-badge {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50%;
+                    background-color: #007bff;
+                    color: white;
+                }
+                .project-icon {
+                    font-size: 16px;
+                }
+                .project-img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                    object-position: center;
                 }
             `}</style>
         </div>

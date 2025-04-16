@@ -59,7 +59,13 @@ const ItemPagination = ({ items, renderItem, itemsPerPage = 1, autoScroll = true
             onMouseLeave={handleMouseLeave}
         >
             <div className="pagination-items animate__animated animate__fadeIn">
-                {getCurrentItems().map((item, index) => renderItem(item, index))}
+                <div className="row row-cols-1 row-cols-md-2 g-3">
+                    {getCurrentItems().map((item, index) => (
+                        <div key={index} className="col">
+                            {renderItem(item, index)}
+                        </div>
+                    ))}
+                </div>
             </div>
             
             {totalPages > 1 && (

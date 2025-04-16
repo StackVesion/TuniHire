@@ -11,6 +11,7 @@ const {
 } = require('../controllers/portfolioController');
 const { verifyToken } = require('../middleware/auth');
 const Portfolio = require('../models/Portfolio');
+const { generateCV, uploadCVToCloudinary } = require('../controllers/cvController');
 
 const router = express.Router();
 
@@ -1016,5 +1017,9 @@ router.delete('/:id/skills/:skill', verifyToken, async (req, res) => {
     });
   }
 });
+
+// CV generation and upload routes
+router.post('/generate-cv', verifyToken, generateCV);
+router.post('/:portfolioId/upload-cv', verifyToken, uploadCVToCloudinary);
 
 module.exports = router;

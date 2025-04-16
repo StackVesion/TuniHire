@@ -76,9 +76,8 @@ const CertificateSection = ({ portfolio, userId, onUpdate, onRemove }) => {
                     <div className="card-body">
                         <div className="d-flex justify-content-between align-items-start">
                             <div>
-                                <h5 className="card-title">{certificate.name}</h5>
+                                <h5 className="card-title">{certificate.title}</h5>
                                 <h6 className="card-subtitle mb-2 text-muted">
-                                    {certificate.issuer}
                                     {certificate.date && (
                                         <span className="ms-2">
                                             ({new Date(certificate.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })})
@@ -110,6 +109,18 @@ const CertificateSection = ({ portfolio, userId, onUpdate, onRemove }) => {
                             <div className="mt-3">
                                 <a 
                                     href={certificate.credentialURL} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="btn btn-sm btn-outline-primary"
+                                >
+                                    <i className="fi-rr-link me-1"></i> View Certificate
+                                </a>
+                            </div>
+                        )}
+                        {certificate.certificateUrl && !certificate.credentialURL && (
+                            <div className="mt-3">
+                                <a 
+                                    href={certificate.certificateUrl} 
                                     target="_blank" 
                                     rel="noopener noreferrer"
                                     className="btn btn-sm btn-outline-primary"
@@ -159,13 +170,15 @@ const CertificateSection = ({ portfolio, userId, onUpdate, onRemove }) => {
             )}
 
             {portfolio.certificates && portfolio.certificates.length > 0 ? (
-                <ItemPagination
-                    items={portfolio.certificates}
-                    renderItem={renderCertificateItem}
-                    itemsPerPage={1}
-                    autoScroll={true}
-                    autoScrollInterval={3000}
-                />
+                <div className="certificate-display-container">
+                    <ItemPagination
+                        items={portfolio.certificates}
+                        renderItem={renderCertificateItem}
+                        itemsPerPage={2}
+                        autoScroll={true}
+                        autoScrollInterval={3000}
+                    />
+                </div>
             ) : (
                 <div className="text-center py-4 border rounded">
                     <p className="mb-0 text-muted">No certifications added yet. Click "Add Certificate" to get started.</p>
@@ -177,6 +190,8 @@ const CertificateSection = ({ portfolio, userId, onUpdate, onRemove }) => {
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                     border-radius: 8px;
                     overflow: hidden;
+                    width: 100%;
+                    margin: 0 auto;
                 }
                 .certificate-card:hover {
                     transform: translateY(-5px);
@@ -216,6 +231,10 @@ const CertificateSection = ({ portfolio, userId, onUpdate, onRemove }) => {
                 }
                 .certificate-card-container {
                     min-height: 300px;
+                }
+                .certificate-display-container {
+                    margin: 0 auto;
+                    max-width: 900px;
                 }
             `}</style>
         </div>
