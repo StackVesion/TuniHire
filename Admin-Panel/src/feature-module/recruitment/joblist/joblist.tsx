@@ -162,7 +162,7 @@ const JobList = () => {
           {/* Breadcrumb */}
           <div className="d-md-flex d-block align-items-center justify-content-between page-breadcrumb mb-3">
             <div className="my-auto mb-2">
-              <h2 className="mb-1">Jobs</h2>
+              <h2 className="mb-1">Applications List</h2>
               <nav>
                 <ol className="breadcrumb mb-0">
                   <li className="breadcrumb-item">
@@ -172,7 +172,7 @@ const JobList = () => {
                   </li>
                   <li className="breadcrumb-item">Administration</li>
                   <li className="breadcrumb-item active" aria-current="page">
-                    Jobs
+                    Applications List
                   </li>
                 </ol>
               </nav>

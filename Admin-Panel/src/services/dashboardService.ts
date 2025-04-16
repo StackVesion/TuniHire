@@ -72,12 +72,12 @@ const getMockDashboardStats = (): DashboardStats => {
         view: "All"
       },
       {
-        title: "Active Jobs",
+        title: "Active Applications List",
         value: "92/99",
         change: 2.1,
         icon: "briefcase",
         color: "secondary",
-        link: "/jobs",
+        link: "/Applications List",
         view: "All"
       },
       {

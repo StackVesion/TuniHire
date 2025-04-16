@@ -88,7 +88,7 @@ const JobGrid = () => {
                     {/* Breadcrumb */}
                     <div className="d-md-flex d-block align-items-center justify-content-between page-breadcrumb mb-3">
                         <div className="my-auto mb-2">
-                            <h2 className="mb-1">Jobs</h2>
+                            <h2 className="mb-1">Applications List</h2>
                             <nav>
                                 <ol className="breadcrumb mb-0">
                                     <li className="breadcrumb-item">
@@ -98,7 +98,7 @@ const JobGrid = () => {
                                     </li>
                                     <li className="breadcrumb-item">Administration</li>
                                     <li className="breadcrumb-item active" aria-current="page">
-                                        Jobs
+                                        Applications List
                                     </li>
                                 </ol>
                             </nav>
@@ -169,7 +169,7 @@ const JobGrid = () => {
                     <div className="card">
                         <div className="card-body p-3">
                             <div className="d-flex align-items-center justify-content-between">
-                                <h5>Job Grid</h5>
+                                <h5>Applications List</h5>
                                 <div className="d-flex my-xl-auto right-content align-items-center flex-wrap row-gap-3">
                                     <div className="me-3">
                                         <div className="input-icon-end position-relative">

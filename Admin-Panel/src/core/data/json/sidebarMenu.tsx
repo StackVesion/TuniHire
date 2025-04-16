@@ -139,12 +139,12 @@ export const SidebarDataTest = [
     separateRoute: false,
     submenuItems: [
       {
-        label: 'Jobs',
+        label: 'Applications List',
         link: routes.jobgrid,
         submenu: false,
         showSubRoute: false,
         icon: 'timeline',
-        base: 'jobs',
+        base: 'Applications List',
         materialicons: 'confirmation_number',
         submenuItems: [],
       },
