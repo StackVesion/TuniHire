@@ -3,7 +3,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/router"
 import axios from "axios"
 import Swal from "sweetalert2"
-import { getToken, getCurrentUser } from "../utils/authUtils"
+import { getToken, getCurrentUser, createAuthAxios } from "../utils/authUtils"
 
 export default function Home() {
     const [loading, setLoading] = useState(false)
@@ -16,6 +16,7 @@ export default function Home() {
         tags: ''
     })
     const router = useRouter()
+    const authAxios = createAuthAxios()
 
     // Check authentication on page load
     useEffect(() => {
@@ -72,13 +73,11 @@ export default function Home() {
             // Directly get the company where the user is HR (createdBy field)
             let companyId;
             try {
-                // Get the company directly from my-company endpoint
-                const companyResponse = await axios.get('http://localhost:5000/api/companies/user/my-company', {
-                    headers: { Authorization: `Bearer ${token}` }
-                })
+                // Get the company directly from my-company endpoint using authAxios
+                const companyResponse = await authAxios.get('/api/companies/user/my-company')
                 
                 // The API returns the company inside a 'company' property
-                const companyData = companyResponse.data.company || companyResponse.data
+                const companyData = companyResponse.data.company
                 
                 if (!companyData || !companyData._id) {
                     console.error('Company data structure:', companyResponse.data)
@@ -87,7 +86,18 @@ export default function Home() {
                         title: 'Company Required',
                         text: 'No company found associated with your account',
                     })
-                    router.push('/my-job-grid')
+                    router.push('/apply-company')
+                    return
+                }
+                
+                // Check if company is approved
+                if (companyData.status !== 'Approved') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Company Not Approved',
+                        text: `Your company is currently ${companyData.status}. You can only post jobs after approval.`,
+                    })
+                    router.push('/')
                     return
                 }
                 
@@ -95,11 +105,33 @@ export default function Home() {
                 companyId = companyData._id;
             } catch (error) {
                 console.error('Error fetching company:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Failed to retrieve company information. Please try again.',
-                })
+                
+                if (error.response && error.response.status === 404) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'No Company Found',
+                        text: 'You need to create a company before posting jobs.',
+                        confirmButtonText: 'Create Company'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            router.push('/apply-company')
+                        }
+                    })
+                } else if (error.response && error.response.status === 400) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Authentication Error',
+                        text: 'Your session has expired. Please login again.',
+                    })
+                    router.push('/login')
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to retrieve company information: ' + (error.response?.data?.message || error.message),
+                    })
+                }
+                
                 setLoading(false);
                 return;
             }
@@ -115,10 +147,8 @@ export default function Home() {
                 companyId: companyId
             }
 
-            // Submit job data to API
-            const response = await axios.post('http://localhost:5000/api/jobs', jobData, {
-                headers: { Authorization: `Bearer ${token}` }
-            })
+            // Submit job data to API using authAxios
+            const response = await authAxios.post('/api/jobs', jobData)
 
             Swal.fire({
                 icon: 'success',
@@ -159,7 +189,7 @@ export default function Home() {
                         <div className="container">
                             <div className="panel-white mb-30">
                             <div className="box-padding bg-postjob">
-                                <h5 className="icon-edu">Tell us about your role</h5>
+                                <h5 className="icon-edu">Describe Job Post</h5>
                                 <div className="row mt-30">
                                 <div className="col-lg-9">
                                     <form onSubmit={handleSubmit}>

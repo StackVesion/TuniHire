@@ -3,7 +3,7 @@ import Link from "next/link"
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import axios from 'axios'
-import { getCurrentUser, clearUserData, getToken } from '../../utils/authUtils'
+import { getCurrentUser, clearUserData, getToken, createAuthAxios } from '../../utils/authUtils'
 
 // Logo style for responsive design with adaptive sizing
 const getLogoStyle = (windowWidth) => {
@@ -45,6 +45,7 @@ export default function Header() {
     const [companyStatus, setCompanyStatus] = useState(null);
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
     const router = useRouter();
+    const authAxios = createAuthAxios();
     
     useEffect(() => {
         // Handle scroll for sticky header
@@ -103,15 +104,9 @@ export default function Header() {
     // Function to fetch company status for the current user
     const fetchCompanyStatus = async (userId) => {
         try {
-            const token = getToken();
-            if (!token) {
-                console.error('No token found');
-                return;
-            }
+            console.log('Fetching company status for userId:', userId);
             
-            const response = await axios.get('http://localhost:5000/api/companies/user/my-company', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const response = await authAxios.get('/api/companies/user/my-company');
             
             console.log('Company status:', response.data);
             setCompanyStatus(response.data);
@@ -163,37 +158,30 @@ export default function Header() {
                         
                         <div className="header-right">
                             <div className="block-signin">
-                                {/* HR ROLE: Different buttons based on company status */}
-                                {user && user.role && user.role.toString().toUpperCase() === 'HR' && (
+                                {/* Show different buttons based on user role */}
+                                {user && (
                                     <>
-                                        {/* HR with approved company: Post Job button */}
-                                        {companyStatus && companyStatus.company && companyStatus.company.status === 'Approved' && (
-                                            <Link className="btn btn-default btn-md hover-up mr-15" href="/post-job" style={{ minWidth: '120px' }}>
-                                                <i className="fi-rr-briefcase mr-5"></i> Post Job
+                                        {/* HR ROLE: Show Post New Job button if user is HR */}
+                                        {user.role && user.role.toString().toUpperCase() === 'HR' && (
+                                            <Link className="btn btn-default btn-md hover-up mr-15" href="/post-job" style={{ minWidth: '160px' }}>
+                                                <i className="fi-rr-briefcase mr-5"></i> Post New Job
                                             </Link>
                                         )}
                                         
-                                        {/* HR with pending company: Disabled button */}
-                                        {companyStatus && companyStatus.company && companyStatus.company.status === 'Pending' && (
-                                            <button className="btn btn-grey btn-md mr-15" disabled style={{ minWidth: '200px', cursor: 'not-allowed' }}>
-                                                <i className="fi-rr-time-forward mr-5"></i> Application Pending
-                                            </button>
+                                        {/* ADMIN ROLE: Show admin dashboard if user is admin */}
+                                        {user.role && user.role.toString().toUpperCase() === 'ADMIN' && (
+                                            <Link className="btn btn-default btn-md hover-up mr-15" href="/dashboard" style={{ minWidth: '160px' }}>
+                                                <i className="fi-rr-chart-histogram mr-5"></i> Admin Dashboard
+                                            </Link>
                                         )}
                                         
-                                        {/* HR with no company: Apply For Company button */}
-                                        {(!companyStatus || !companyStatus.company) && (
+                                        {/* CANDIDATE ROLE: Show Apply For Company button */}
+                                        {user.role && user.role.toString().toUpperCase() === 'CANDIDATE' && (
                                             <Link className="btn btn-default btn-md hover-up mr-15" href="/apply-company" style={{ minWidth: '160px' }}>
-                                                <i className="fi-rr-building mr-5"></i> Create Company
+                                                <i className="fi-rr-building mr-5"></i> Apply For Company
                                             </Link>
                                         )}
                                     </>
-                                )}
-                                
-                                {/* CANDIDATE ROLE: Show Apply for Company button if user is a candidate */}
-                                {user && user.role && user.role.toString().toUpperCase() === 'CANDIDATE' && (
-                                    <Link className="btn btn-default btn-md hover-up mr-15" href="/apply-company" style={{ minWidth: '160px' }}>
-                                        <i className="fi-rr-building mr-5"></i> Apply For Company
-                                    </Link>
                                 )}
                                 <Menu as="div" className="dropdown d-inline-block">
                                     <Menu.Button as="a" className="btn btn-notify" />

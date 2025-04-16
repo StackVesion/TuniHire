@@ -205,6 +205,7 @@ app.use("/api/contact", require("./routes/contactRoutes"));
 app.use("/api/applications", require("./routes/applicationRoutes"));
 app.use("/api/portfolios", require("./routes/portfolioRoutes"));
 app.use("/api/dashboard", require("./routes/dashboard"));
+app.use("/api/ai", require("./routes/aiRoutes"));
 app.use("/health", require("./routes/health"));
 
 // API route list

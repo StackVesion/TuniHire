@@ -6,6 +6,7 @@ const path = require("path");
 const crypto = require("crypto");
 const jwt = require('jsonwebtoken'); // Add this line to import jwt
 const { sendVerificationEmail } = require('../config/emailService');
+const { verifyToken } = require("../middleware/auth"); // Import verifyToken middleware
 const { getUsers, createUser, signIn, signInn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, updateUser, deleteUser, validateToken, generateNewVerificationToken, updateUserRole } = require("../controllers/userController");
 
 const router = express.Router();
@@ -179,6 +180,51 @@ router.get("/me", authMiddleware, async (req, res) => {
     } catch (error) {
         console.error("Error validating token:", error);
         return res.status(500).json({ message: "Server error during token validation" });
+    }
+});
+
+// Get user by ID - needed for HR to view candidate profiles
+router.get("/user-details/:id", verifyToken, async (req, res) => {
+    try {
+        const userId = req.params.id;
+        
+        if (!userId) {
+            return res.status(400).json({ 
+                success: false,
+                message: "User ID is required" 
+            });
+        }
+        
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ 
+                success: false,
+                message: "User not found" 
+            });
+        }
+        
+        // Return user data without sensitive information
+        const userData = {
+            _id: user._id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+            phone: user.phone,
+            location: user.location,
+            profilePicture: user.profilePicture || "",
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt
+        };
+        
+        return res.status(200).json(userData);
+    } catch (error) {
+        console.error("Error fetching user by ID:", error);
+        return res.status(500).json({ 
+            success: false,
+            message: "Server error while fetching user data",
+            error: error.message
+        });
     }
 });
 

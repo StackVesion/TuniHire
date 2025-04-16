@@ -25,9 +25,6 @@ function ApplyCompany({ user }) {
     const fileInputRef = useRef(null);
 
     useEffect(() => {
-        // User is already provided by withAuth HOC
-        // No need to set state as user is passed as prop
-
         // Check if the user already has a company
         const checkExistingCompany = async () => {
             try {

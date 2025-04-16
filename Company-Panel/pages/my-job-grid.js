@@ -8,6 +8,7 @@ import { useEffect, useState } from "react"
 import axios from "axios"
 import { useRouter } from "next/router"
 import Swal from "sweetalert2"
+import { getToken, createAuthAxios } from "../utils/authUtils"
 
 export default function JobGrid() {
     const [sortType, setSortType] = useState('title')
@@ -23,37 +24,30 @@ export default function JobGrid() {
     let [pages, setPages] = useState(1)
     
     const router = useRouter()
+    const authAxios = createAuthAxios()
 
     // Fetch jobs from the backend
     const fetchJobs = async () => {
         try {
             setLoading(true)
-            // Get token from localStorage
-            const token = localStorage.getItem('token')
+            // Get token using authUtils for consistency
+            const token = getToken()
             
             if (!token) {
-                router.push('/page-signin')
+                router.push('/login')
                 return
             }
 
-            // Directly get company by looking up the company where the user is the HR
             try {
-                // Get the current user details
-                const userResponse = await axios.get('http://localhost:5000/api/users/me', {
-                    headers: { Authorization: `Bearer ${token}` }
-                })
-                
-                // Get the user's company directly
-                const companyResponse = await axios.get('http://localhost:5000/api/companies/user/my-company', {
-                    headers: { Authorization: `Bearer ${token}` }
-                })
+                // Get the user's company directly - with better error handling and auth handling
+                const companyResponse = await authAxios.get('/api/companies/user/my-company')
                 
                 // The API returns the company inside a 'company' property
-                const companyData = companyResponse.data.company || companyResponse.data
+                const companyData = companyResponse.data.company
                 
                 if (!companyData || !companyData._id) {
                     console.error('Company data structure:', companyResponse.data)
-                    setError('No company found for your account. Please contact an administrator.')
+                    setError('No company found for your account. Please create a company first.')
                     setLoading(false)
                     return
                 }
@@ -62,15 +56,22 @@ export default function JobGrid() {
                 const companyId = companyData._id
                 
                 // Get all jobs for this company
-                const response = await axios.get(`http://localhost:5000/api/jobs/company/${companyId}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                })
+                const response = await authAxios.get(`/api/jobs/company/${companyId}`)
                 
                 console.log('Found jobs:', response.data.length)
                 processJobData(response.data)
             } catch (err) {
-                console.error('Error fetching user or company data:', err)
-                setError('Failed to load company data. Please try again.')
+                console.error('Error fetching company data:', err)
+                
+                if (err.response && err.response.status === 404) {
+                    setError('You don\'t have a company yet. Please create one first.')
+                } else if (err.response && err.response.status === 400) {
+                    setError('Authentication error. Please login again.')
+                    router.push('/login')
+                } else {
+                    setError('Failed to load company data: ' + (err.response?.data?.message || err.message))
+                }
+                
                 setLoading(false)
             }
         } catch (err) {
@@ -153,15 +154,13 @@ export default function JobGrid() {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    const token = localStorage.getItem('token')
+                    const token = getToken()
                     if (!token) {
-                        router.push('/page-signin')
+                        router.push('/login')
                         return
                     }
                     
-                    await axios.delete(`http://localhost:5000/api/jobs/${jobId}`, {
-                        headers: { Authorization: `Bearer ${token}` }
-                    })
+                    await authAxios.delete(`/api/jobs/${jobId}`)
                     
                     Swal.fire(
                         'Deleted!',
