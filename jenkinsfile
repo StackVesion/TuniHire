@@ -3,7 +3,7 @@ pipeline {
     
     environment {
         // Environment variables
-        NODE_VERSION = 'node:16'
+        NODE_VERSION = 'node:18'
         MONGODB_CONNECTION = credentials('mongodb://127.0.0.1:27017/TuniHireDB')
         JWT_SECRET = credentials('129a49a5-dda6-49f9-8b5f-86a39c5cd7d9')
         FRONTEND_URL = 'http://localhost:3000'
@@ -32,7 +32,7 @@ pipeline {
     
     tools {
         nodejs 'NodeJS'
-        jdk 'JDK11'
+        jdk 'JDK17'
     }
     
     stages {
