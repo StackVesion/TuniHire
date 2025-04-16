@@ -12,6 +12,12 @@ function Home({ user }) {
     const [company, setCompany] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [stats, setStats] = useState({
+        totalJobs: 0,
+        activeJobs: 0,
+        totalApplications: 0,
+        newApplications: 0
+    });
     const authAxios = createAuthAxios();
     
     useEffect(() => {
@@ -23,6 +29,7 @@ function Home({ user }) {
             // Fetch company data if user is HR
             if (role === 'HR') {
                 fetchCompanyData();
+                fetchCompanyStats();
             }
         }
     }, [user]);
@@ -53,6 +60,66 @@ function Home({ user }) {
         }
     };
     
+    // Fetch company statistics
+    const fetchCompanyStats = async () => {
+        try {
+            // Get company first
+            const companyResponse = await authAxios.get('/api/companies/user/my-company');
+            
+            if (!companyResponse.data.success || !companyResponse.data.company) {
+                return;
+            }
+            
+            const companyId = companyResponse.data.company._id;
+            
+            // Get job stats
+            const jobsResponse = await authAxios.get(`/api/jobs/company/${companyId}`);
+            const totalJobs = jobsResponse.data?.length || 0;
+            const activeJobs = jobsResponse.data?.filter(job => job.isActive)?.length || 0;
+            
+            // Get application stats - this will require multiple calls
+            let totalApplications = 0;
+            let newApplications = 0;
+            
+            if (jobsResponse.data && jobsResponse.data.length > 0) {
+                // For each job, get the applications
+                const jobIds = jobsResponse.data.map(job => job._id);
+                
+                const applicationPromises = jobIds.map(jobId => 
+                    authAxios.get(`/api/applications/job/${jobId}`)
+                );
+                
+                const applicationResponses = await Promise.all(applicationPromises);
+                
+                applicationResponses.forEach(response => {
+                    if (response.data) {
+                        totalApplications += response.data.length;
+                        
+                        // Count applications from the last 7 days
+                        const oneWeekAgo = new Date();
+                        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                        
+                        const recentApps = response.data.filter(app => 
+                            new Date(app.createdAt) >= oneWeekAgo
+                        );
+                        
+                        newApplications += recentApps.length;
+                    }
+                });
+            }
+            
+            setStats({
+                totalJobs,
+                activeJobs,
+                totalApplications,
+                newApplications
+            });
+            
+        } catch (error) {
+            console.error("Error fetching company stats:", error);
+        }
+    };
+    
     return (
         <>
             <Layout breadcrumbTitle="Dashboard" breadcrumbActive="Dashboard">
@@ -66,114 +133,215 @@ function Home({ user }) {
                     <div className="section-box mb-30">
                         <div className="container">
                             <div className="panel-white pt-30 pb-30 pl-30 pr-30">
-                                <h5 className="mb-20">My Company</h5>
+                                <div className="d-flex justify-content-between align-items-center mb-30">
+                                    <h5 className="mb-0">Company Dashboard</h5>
+                                    {company && (
+                                        <Link href="/settings" className="btn btn-outline-primary btn-sm">
+                                            <i className="fi-rr-settings me-2"></i>Manage Company
+                                        </Link>
+                                    )}
+                                </div>
                                 
                                 {loading && (
-                                    <div className="text-center">
+                                    <div className="text-center py-5">
                                         <div className="spinner-border text-primary" role="status">
                                             <span className="visually-hidden">Loading...</span>
                                         </div>
+                                        <p className="mt-2">Loading company information...</p>
                                     </div>
                                 )}
                                 
                                 {error && (
                                     <div className="alert alert-warning mb-20">
-                                        <p>{error}</p>
-                                        <div className="mt-15">
-                                            <Link href="/apply-company" className="btn btn-primary">
-                                                Create Company Profile
-                                            </Link>
+                                        <div className="d-flex">
+                                            <div className="me-3">
+                                                <i className="fi-rr-exclamation text-warning" style={{ fontSize: '2rem' }}></i>
+                                            </div>
+                                            <div>
+                                                <h5 className="alert-heading">Company Profile Required</h5>
+                                                <p>{error}</p>
+                                                <div className="mt-15">
+                                                    <Link href="/apply-company" className="btn btn-primary">
+                                                        <i className="fi-rr-briefcase me-2"></i>Create Company Profile
+                                                    </Link>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
                                 
                                 {company && (
-                                    <div className="company-info">
-                                        <div className="row align-items-center mb-20">
-                                            <div className="col-md-2">
-                                                <img 
-                                                    src={company.logo || "assets/imgs/page/dashboard/building.svg"} 
-                                                    alt={company.name}
-                                                    className="img-fluid"
-                                                    style={{ maxWidth: '120px', maxHeight: '120px', objectFit: 'contain' }}
-                                                />
-                                            </div>
-                                            <div className="col-md-10">
-                                                <h3 className="mt-0 mb-10">{company.name}</h3>
-                                                <div className="mb-10">
-                                                    <strong>Status:</strong> 
-                                                    <span className={`badge ms-2 ${
-                                                        company.status === 'Approved' ? 'bg-success' : 
-                                                        company.status === 'Pending' ? 'bg-warning' : 'bg-danger'
-                                                    }`}>
-                                                        {company.status}
-                                                    </span>
-                                                </div>
-                                                <p className="mb-5"><i className="fi-rr-marker mr-5"></i> {company.location || 'No location specified'}</p>
-                                                <p className="mb-5"><i className="fi-rr-envelope mr-5"></i> {company.email}</p>
-                                                {company.website && (
-                                                    <p className="mb-5"><i className="fi-rr-globe mr-5"></i> <a href={company.website} target="_blank" rel="noopener noreferrer">{company.website}</a></p>
-                                                )}
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="row mb-20">
-                                            <div className="col-12">
-                                                <h6 className="mb-10">About the Company</h6>
-                                                <p>{company.description || 'No description available'}</p>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="row">
-                                            <div className="col-md-4 mb-15">
-                                                <div className="card-style-1 hover-up h-100">
-                                                    <div className="card-image"> <img src="assets/imgs/page/dashboard/industry.svg" alt="Industry" /></div>
-                                                    <div className="card-info">
-                                                        <div className="card-title">
-                                                            <p className="font-sm">Industry</p>
+                                    <>
+                                        {/* Company Summary Card */}
+                                        <div className="company-card mb-30">
+                                            <div className="card border-0 shadow-sm">
+                                                <div className="card-body p-4">
+                                                    <div className="row align-items-center">
+                                                        <div className="col-lg-2 col-md-3 text-center mb-3 mb-md-0">
+                                                            <div className="company-logo-wrapper rounded-circle bg-light d-inline-flex align-items-center justify-content-center p-3 mb-2" style={{ width: '120px', height: '120px' }}>
+                                                                <img 
+                                                                    src={company.logo || "assets/imgs/page/dashboard/building.svg"} 
+                                                                    alt={company.name}
+                                                                    className="img-fluid"
+                                                                    style={{ maxWidth: '80px', maxHeight: '80px', objectFit: 'contain' }}
+                                                                />
+                                                            </div>
                                                         </div>
-                                                        <p className="color-text-paragraph-2">{company.category || 'Not specified'}</p>
+                                                        <div className="col-lg-6 col-md-9">
+                                                            <h3 className="mt-0 mb-2">{company.name}</h3>
+                                                            <div className="d-flex align-items-center mb-3 flex-wrap">
+                                                                <span className={`badge me-3 ${
+                                                                    company.status === 'Approved' ? 'bg-success' : 
+                                                                    company.status === 'Pending' ? 'bg-warning' : 'bg-danger'
+                                                                }`}>
+                                                                    {company.status}
+                                                                </span>
+                                                                {company.category && (
+                                                                    <span className="badge bg-light text-dark me-3">
+                                                                        <i className="fi-rr-briefcase me-1"></i> {company.category}
+                                                                    </span>
+                                                                )}
+                                                                {company.foundedYear && (
+                                                                    <span className="badge bg-light text-dark">
+                                                                        <i className="fi-rr-calendar me-1"></i> Est. {company.foundedYear}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="company-details">
+                                                                <p className="mb-2">
+                                                                    <i className="fi-rr-marker me-2 text-primary"></i> 
+                                                                    {company.location || 'No location specified'}
+                                                                </p>
+                                                                <p className="mb-2">
+                                                                    <i className="fi-rr-envelope me-2 text-primary"></i> 
+                                                                    {company.email}
+                                                                </p>
+                                                                {company.website && (
+                                                                    <p className="mb-2">
+                                                                        <i className="fi-rr-globe me-2 text-primary"></i> 
+                                                                        <a href={company.website} target="_blank" rel="noopener noreferrer">{company.website}</a>
+                                                                    </p>
+                                                                )}
+                                                                {company.phone && (
+                                                                    <p className="mb-0">
+                                                                        <i className="fi-rr-phone-call me-2 text-primary"></i> 
+                                                                        {company.phone}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="col-lg-4 mt-4 mt-lg-0">
+                                                            <div className="company-actions d-flex flex-column">
+                                                                <Link href="/post-job" className="btn btn-primary mb-2">
+                                                                    <i className="fi-rr-briefcase me-2"></i> Post New Job
+                                                                </Link>
+                                                                <Link href="/my-job-grid" className="btn btn-outline-primary mb-2">
+                                                                    <i className="fi-rr-document-signed me-2"></i> Manage Jobs
+                                                                </Link>
+                                                                <Link href="/CampanyApplications" className="btn btn-outline-primary">
+                                                                    <i className="fi-rr-users me-2"></i> View Applications
+                                                                </Link>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="col-md-4 mb-15">
-                                                <div className="card-style-1 hover-up h-100">
-                                                    <div className="card-image"> <img src="assets/imgs/page/dashboard/users.svg" alt="Employees" /></div>
+                                        </div>
+                                        
+                                        {/* Stats Cards */}
+                                        <div className="row mb-30">
+                                            <div className="col-xl-3 col-lg-6 col-md-6 mb-3">
+                                                <div className="card-style-1 hover-up h-100 shadow-sm">
+                                                    <div className="card-image bg-primary d-flex align-items-center justify-content-center" style={{ width: '60px', height: '60px', borderRadius: '15px' }}> 
+                                                        <img src="assets/imgs/page/dashboard/jobs-white.svg" alt="Total Jobs" width="30" />
+                                                    </div>
                                                     <div className="card-info">
                                                         <div className="card-title">
-                                                            <p className="font-sm">Employees</p>
+                                                            <h4 className="mb-0 font-bold">{stats.totalJobs}</h4>
+                                                            <p className="font-sm mb-0">Total Jobs</p>
                                                         </div>
-                                                        <p className="color-text-paragraph-2">{company.numberOfEmployees || 'Not specified'}</p>
+                                                        <div className="text-end">
+                                                            <Link href="/my-job-grid" className="btn btn-link text-primary p-0">
+                                                                View All
+                                                            </Link>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="col-md-4 mb-15">
-                                                <div className="card-style-1 hover-up h-100">
-                                                    <div className="card-image"> <img src="assets/imgs/page/dashboard/calendar.svg" alt="Established" /></div>
+                                            <div className="col-xl-3 col-lg-6 col-md-6 mb-3">
+                                                <div className="card-style-1 hover-up h-100 shadow-sm">
+                                                    <div className="card-image bg-success d-flex align-items-center justify-content-center" style={{ width: '60px', height: '60px', borderRadius: '15px' }}> 
+                                                        <img src="assets/imgs/page/dashboard/check-white.svg" alt="Active Jobs" width="30" />
+                                                    </div>
                                                     <div className="card-info">
                                                         <div className="card-title">
-                                                            <p className="font-sm">Established</p>
+                                                            <h4 className="mb-0 font-bold">{stats.activeJobs}</h4>
+                                                            <p className="font-sm mb-0">Active Jobs</p>
                                                         </div>
-                                                        <p className="color-text-paragraph-2">
-                                                            {company.foundedYear || new Date(company.createdAt).getFullYear() || 'Not specified'}
-                                                        </p>
+                                                        <div className="text-end">
+                                                            <span className="badge bg-light text-success">
+                                                                {stats.totalJobs > 0 ? Math.round((stats.activeJobs / stats.totalJobs) * 100) : 0}% Active
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="col-xl-3 col-lg-6 col-md-6 mb-3">
+                                                <div className="card-style-1 hover-up h-100 shadow-sm">
+                                                    <div className="card-image bg-warning d-flex align-items-center justify-content-center" style={{ width: '60px', height: '60px', borderRadius: '15px' }}> 
+                                                        <img src="assets/imgs/page/dashboard/users-white.svg" alt="Applications" width="30" />
+                                                    </div>
+                                                    <div className="card-info">
+                                                        <div className="card-title">
+                                                            <h4 className="mb-0 font-bold">{stats.totalApplications}</h4>
+                                                            <p className="font-sm mb-0">Total Applications</p>
+                                                        </div>
+                                                        <div className="text-end">
+                                                            <Link href="/CampanyApplications" className="btn btn-link text-warning p-0">
+                                                                Manage
+                                                            </Link>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="col-xl-3 col-lg-6 col-md-6 mb-3">
+                                                <div className="card-style-1 hover-up h-100 shadow-sm">
+                                                    <div className="card-image bg-info d-flex align-items-center justify-content-center" style={{ width: '60px', height: '60px', borderRadius: '15px' }}> 
+                                                        <img src="assets/imgs/page/dashboard/bell-white.svg" alt="New Applications" width="30" />
+                                                    </div>
+                                                    <div className="card-info">
+                                                        <div className="card-title">
+                                                            <h4 className="mb-0 font-bold">{stats.newApplications}</h4>
+                                                            <p className="font-sm mb-0">New Applications (7d)</p>
+                                                        </div>
+                                                        {stats.newApplications > 0 && (
+                                                            <div className="text-end">
+                                                                <span className="badge bg-light text-info">
+                                                                    New
+                                                                </span>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                                         
-                                        <div className="mt-20 text-center">
-                                            <Link href={`/update-company/${company._id}`} className="btn btn-outline btn-sm me-3">
-                                                <i className="fi-rr-edit mr-5"></i> Edit Company
-                                            </Link>
-                                            <Link href="/post-job" className="btn btn-default btn-sm">
-                                                <i className="fi-rr-briefcase mr-5"></i> Post New Job
-                                            </Link>
-                                            <Link href="/my-job-grid" className="btn btn-outline btn-sm ms-3">
-                                                <i className="fi-rr-list mr-5"></i> View My Jobs
-                                            </Link>
-                                        </div>
-                                    </div>
+                                        {/* Company About Section */}
+                                        {company.description && (
+                                            <div className="row mb-30">
+                                                <div className="col-12">
+                                                    <div className="card shadow-sm">
+                                                        <div className="card-header bg-light">
+                                                            <h6 className="mb-0">About {company.name}</h6>
+                                                        </div>
+                                                        <div className="card-body">
+                                                            <p className="mb-0" style={{ whiteSpace: 'pre-line' }}>{company.description}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>
