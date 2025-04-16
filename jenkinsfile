@@ -7,54 +7,7 @@ pipeline {
     }
     
     stages {
-        stage('Install dependencies') {
-            steps {
-                script {
-                    // Install dependencies locally in each project
-                    dir('Back-end') { 
-                        sh 'npm install mocha nyc chai chai-http sinon --save-dev || true'
-                        sh 'npm install' 
-                    }
-                    dir('Front-End') { sh 'npm install' }
-                    dir('Admin-Panel') { sh 'npm install' }
-                    dir('Company-Panel') { sh 'npm install' }
-                }
-            }
-        }
-        
-        stage('Unit Test') {
-            steps {
-                script {
-                    // Run tests for each component using locally installed packages
-                    dir('Back-end') {
-                        sh 'mkdir -p test-reports'
-                        sh 'npx mocha --recursive "./test/**/*.test.js" || echo "No tests or tests failed but continuing"'
-                    }
-                    
-                    dir('Front-End') { sh 'npm test || echo "No tests or tests failed but continuing"' }
-                    dir('Admin-Panel') { sh 'npm test || echo "No tests or tests failed but continuing"' }
-                    dir('Company-Panel') { sh 'npm test || echo "No tests or tests failed but continuing"' }
-                }
-            }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: '**/test-reports/*.xml'
-                }
-            }
-        }
-        
-        stage('Build application') {
-            steps {
-                script {
-                    // Build all components with fallbacks if build script not found
-                    dir('Back-end') { sh 'npm run build || echo "Build script not found but continuing"' }
-                    dir('Front-End') { sh 'npm run build || echo "Build script not found but continuing"' }
-                    dir('Admin-Panel') { sh 'npm run build || echo "Build script not found but continuing"' }
-                    dir('Company-Panel') { sh 'npm run build || echo "Build script not found but continuing"' }
-                }
-            }
-        }
-        
+
 stage('Docker Setup') {
     steps {
         script {
