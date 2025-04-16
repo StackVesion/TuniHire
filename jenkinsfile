@@ -8,36 +8,6 @@ pipeline {
     
     stages {
 
-stage('Docker Setup') {
-    steps {
-        script {
-            // Disable BuildKit and remove problematic buildx plugin
-            sh 'export DOCKER_BUILDKIT=0'
-        }
-    }
-}
-
-stage('Dockerize') {
-    steps {
-        script {
-            // Build Docker images using the simple docker build command
-            dir('Back-end') {
-                sh 'docker build -t tunihire-backend:${BUILD_NUMBER} .'
-            }
-            dir('Front-End') {
-                sh 'docker build -t tunihire-frontend:${BUILD_NUMBER} .'
-            }
-            dir('Admin-Panel') {
-                sh 'docker build -t tunihire-admin:${BUILD_NUMBER} .'
-            }
-            dir('Company-Panel') {
-                sh 'docker build -t tunihire-company:${BUILD_NUMBER} .'
-            }
-        }
-    }
-}
-
-
         
         stage('SonarQube Analysis') {
             steps {
