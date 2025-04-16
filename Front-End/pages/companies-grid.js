@@ -1,9 +1,122 @@
 /* eslint-disable @next/next/no-img-element */
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Layout from "../components/Layout/Layout";
 import BlogSlider from "./../components/sliders/Blog";
+import { getCompanies } from "../lib/api";
 
 export default function CompaniesGrid() {
+    // Pagination state
+    const [companies, setCompanies] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalCompanies, setTotalCompanies] = useState(0);
+    const [itemsPerPage, setItemsPerPage] = useState(9); // Number of companies per page
+    
+    // Filter state
+    const [filters, setFilters] = useState({
+        location: "",
+        industry: "all",
+        keyword: "",
+        sortBy: "newest", // newest, oldest, rating
+    });
+    
+    // Load companies based on current filters
+    useEffect(() => {
+        fetchCompanies();
+    }, [filters, currentPage, itemsPerPage]);
+    
+    const fetchCompanies = async () => {
+        try {
+            setLoading(true);
+            
+            // In a real implementation, you would pass these filters to your API
+            // For now, we'll fetch all and filter on the client side
+            const result = await getCompanies();
+            let filteredCompanies = result.companies || [];
+            
+            // Apply client-side filters
+            if (filters.location && filters.location !== "all") {
+                filteredCompanies = filteredCompanies.filter(company => 
+                    company.location && company.location.toLowerCase().includes(filters.location.toLowerCase())
+                );
+            }
+            
+            if (filters.industry && filters.industry !== "all") {
+                filteredCompanies = filteredCompanies.filter(company => 
+                    company.category && company.category.toLowerCase() === filters.industry.toLowerCase()
+                );
+            }
+            
+            if (filters.keyword) {
+                filteredCompanies = filteredCompanies.filter(company => 
+                    company.name.toLowerCase().includes(filters.keyword.toLowerCase()) ||
+                    (company.description && company.description.toLowerCase().includes(filters.keyword.toLowerCase()))
+                );
+            }
+            
+            // Apply sorting
+            if (filters.sortBy === "newest") {
+                filteredCompanies.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            } else if (filters.sortBy === "oldest") {
+                filteredCompanies.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            } else if (filters.sortBy === "rating") {
+                // Assuming companies have a rating property
+                filteredCompanies.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+            }
+            
+            setCompanies(filteredCompanies);
+            setTotalCompanies(filteredCompanies.length);
+            
+        } catch (err) {
+            console.error("Error fetching companies:", err);
+            setError("Failed to load companies. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    // Handler for filter changes
+    const handleFilterChange = (filterName, value) => {
+        setFilters(prevFilters => ({
+            ...prevFilters,
+            [filterName]: value
+        }));
+        setCurrentPage(1); // Reset to first page when filters change
+    };
+    
+    // Reset all filters
+    const resetFilters = (e) => {
+        e.preventDefault();
+        setFilters({
+            location: "",
+            industry: "all",
+            keyword: "",
+            sortBy: "newest",
+        });
+        setCurrentPage(1);
+    };
+    
+    // Handle per page change
+    const handleItemsPerPageChange = (number) => {
+        setItemsPerPage(number);
+        setCurrentPage(1); // Reset to first page
+    };
+    
+    // Handle sort change
+    const handleSortChange = (sortOption) => {
+        handleFilterChange('sortBy', sortOption);
+    };
+    
+    // Get current companies for pagination
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentCompanies = companies.slice(indexOfFirstItem, indexOfLastItem);
+    
+    // Change page
+    const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
     return (
         <>
             <Layout>
@@ -14,140 +127,87 @@ export default function CompaniesGrid() {
                                 <div className="block-banner text-center">
                                     <h3 className="wow animate__animated animate__fadeInUp">Browse Companies</h3>
                                     <div className="font-sm color-text-paragraph-2 mt-10 wow animate__animated animate__fadeInUp" data-wow-delay=".1s">
-                                        Lorem ipsum dolor sit amet consectetur adipisicing elit. Vero repellendus magni, <br className="d-none d-xl-block" />
-                                        atque delectus molestias quis?
+                                        Discover top companies that are hiring and find your next career opportunity
                                     </div>
                                     <div className="box-list-character">
                                         <ul>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a className="active">A</a>
-                                                </Link>
+                                                <Link href="#" className="active">A</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>B</a>
-                                                </Link>
+                                                <Link href="#" className="">B</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>C</a>
-                                                </Link>
+                                                <Link href="#" className="">C</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>D</a>
-                                                </Link>
+                                                <Link href="#" className="">D</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>E</a>
-                                                </Link>
+                                                <Link href="#" className="">E</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>F</a>
-                                                </Link>
+                                                <Link href="#" className="">F</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>G</a>
-                                                </Link>
+                                                <Link href="#" className="">G</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>H</a>
-                                                </Link>
+                                                <Link href="#" className="">H</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>I</a>
-                                                </Link>
+                                                <Link href="#" className="">I</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>J</a>
-                                                </Link>
+                                                <Link href="#" className="">J</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>K</a>
-                                                </Link>
+                                                <Link href="#" className="">K</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>L</a>
-                                                </Link>
+                                                <Link href="#" className="">L</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>M</a>
-                                                </Link>
+                                                <Link href="#" className="">M</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>N</a>
-                                                </Link>
+                                                <Link href="#" className="">N</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>O</a>
-                                                </Link>
+                                                <Link href="#" className="">O</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>P</a>
-                                                </Link>
+                                                <Link href="#" className="">P</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>Q</a>
-                                                </Link>
+                                                <Link href="#" className="">Q</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>R</a>
-                                                </Link>
+                                                <Link href="#" className="">R</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>S</a>
-                                                </Link>
+                                                <Link href="#" className="">S</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>T</a>
-                                                </Link>
+                                                <Link href="#" className="">T</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>U</a>
-                                                </Link>
+                                                <Link href="#" className="">U</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>V</a>
-                                                </Link>
+                                                <Link href="#" className="">V</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>W</a>
-                                                </Link>
+                                                <Link href="#" className="">W</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>X</a>
-                                                </Link>
+                                                <Link href="#" className="">X</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>Y</a>
-                                                </Link>
+                                                <Link href="#" className="">Y</Link>
                                             </li>
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a>Z</a>
-                                                </Link>
+                                                <Link href="#" className="">Z</Link>
                                             </li>
                                         </ul>
                                     </div>
@@ -164,7 +224,8 @@ export default function CompaniesGrid() {
                                             <div className="row">
                                                 <div className="col-xl-6 col-lg-5">
                                                     <span className="text-small text-showing">
-                                                        Showing <strong>41-60 </strong>of <strong>944 </strong>jobs
+                                                        Showing <strong>{indexOfFirstItem + 1}-{Math.min(indexOfLastItem, totalCompanies)} </strong>
+                                                        of <strong>{totalCompanies} </strong>companies
                                                     </span>
                                                 </div>
                                                 <div className="col-xl-6 col-lg-7 text-lg-end mt-sm-15">
@@ -173,24 +234,18 @@ export default function CompaniesGrid() {
                                                             <span className="text-sortby">Show:</span>
                                                             <div className="dropdown dropdown-sort">
                                                                 <button className="btn dropdown-toggle" id="dropdownSort" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-display="static">
-                                                                    <span>12</span>
+                                                                    <span>{itemsPerPage}</span>
                                                                     <i className="fi-rr-angle-small-down" />
                                                                 </button>
                                                                 <ul className="dropdown-menu dropdown-menu-light" aria-labelledby="dropdownSort">
-                                                                    <li>
-                                                                        <Link legacyBehavior href="#">
-                                                                            <a className="dropdown-item active">10</a>
-                                                                        </Link>
+                                                                    <li onClick={() => handleItemsPerPageChange(9)}>
+                                                                        <Link href="#" className={`dropdown-item ${itemsPerPage === 9 ? 'active' : ''}`}>9</Link>
                                                                     </li>
-                                                                    <li>
-                                                                        <Link legacyBehavior href="#">
-                                                                            <a className="dropdown-item">12</a>
-                                                                        </Link>
+                                                                    <li onClick={() => handleItemsPerPageChange(12)}>
+                                                                        <Link href="#" className={`dropdown-item ${itemsPerPage === 12 ? 'active' : ''}`}>12</Link>
                                                                     </li>
-                                                                    <li>
-                                                                        <Link legacyBehavior href="#">
-                                                                            <a className="dropdown-item">20</a>
-                                                                        </Link>
+                                                                    <li onClick={() => handleItemsPerPageChange(20)}>
+                                                                        <Link href="#" className={`dropdown-item ${itemsPerPage === 20 ? 'active' : ''}`}>20</Link>
                                                                     </li>
                                                                 </ul>
                                                             </div>
@@ -199,39 +254,33 @@ export default function CompaniesGrid() {
                                                             <span className="text-sortby">Sort by:</span>
                                                             <div className="dropdown dropdown-sort">
                                                                 <button className="btn dropdown-toggle" id="dropdownSort2" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-display="static">
-                                                                    <span>Newest Post</span>
+                                                                    <span>
+                                                                        {filters.sortBy === "newest" && "Newest Post"}
+                                                                        {filters.sortBy === "oldest" && "Oldest Post"}
+                                                                        {filters.sortBy === "rating" && "Rating Post"}
+                                                                    </span>
                                                                     <i className="fi-rr-angle-small-down" />
                                                                 </button>
                                                                 <ul className="dropdown-menu dropdown-menu-light" aria-labelledby="dropdownSort2">
-                                                                    <li>
-                                                                        <Link legacyBehavior href="#">
-                                                                            <a className="dropdown-item active">Newest Post</a>
-                                                                        </Link>
+                                                                    <li onClick={() => handleSortChange('newest')}>
+                                                                        <Link href="#" className={`dropdown-item ${filters.sortBy === 'newest' ? 'active' : ''}`}>Newest Post</Link>
                                                                     </li>
-                                                                    <li>
-                                                                        <Link legacyBehavior href="#">
-                                                                            <a className="dropdown-item">Oldest Post</a>
-                                                                        </Link>
+                                                                    <li onClick={() => handleSortChange('oldest')}>
+                                                                        <Link href="#" className={`dropdown-item ${filters.sortBy === 'oldest' ? 'active' : ''}`}>Oldest Post</Link>
                                                                     </li>
-                                                                    <li>
-                                                                        <Link legacyBehavior href="#">
-                                                                            <a className="dropdown-item">Rating Post</a>
-                                                                        </Link>
+                                                                    <li onClick={() => handleSortChange('rating')}>
+                                                                        <Link href="#" className={`dropdown-item ${filters.sortBy === 'rating' ? 'active' : ''}`}>Rating Post</Link>
                                                                     </li>
                                                                 </ul>
                                                             </div>
                                                         </div>
                                                         <div className="box-view-type">
-                                                            <Link legacyBehavior href="/jobs-list">
-                                                                <a className="view-type">
-                                                                    <img src="assets/imgs/template/icons/icon-list.svg" alt="jobBox" />
-                                                                </a>
+                                                            <Link href="/jobs-list" className="view-type">
+                                                                <img src="assets/imgs/template/icons/icon-list.svg" alt="jobBox" />
                                                             </Link>
 
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="view-type">
-                                                                    <img src="assets/imgs/template/icons/icon-grid-hover.svg" alt="jobBox" />
-                                                                </a>
+                                                            <Link href="/jobs-grid" className="view-type">
+                                                                <img src="assets/imgs/template/icons/icon-grid-hover.svg" alt="jobBox" />
                                                             </Link>
                                                         </div>
                                                     </div>
@@ -239,869 +288,92 @@ export default function CompaniesGrid() {
                                             </div>
                                         </div>
                                         <div className="row">
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-1.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Car Toys</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>66</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">New York, US</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>12</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
+                                            {loading ? (
+                                                <div className="col-12 text-center">
+                                                    <div className="spinner-border text-primary" role="status">
+                                                        <span className="visually-hidden">Loading...</span>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-2.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Carols Daughter</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>18</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">London, UK</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>25</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
+                                            ) : error ? (
+                                                <div className="col-12 text-center">
+                                                    <div className="alert alert-danger">{error}</div>
                                                 </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-3.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Amazon</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>52</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">Tokyo,Japan</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>54</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
+                                            ) : currentCompanies.length === 0 ? (
+                                                <div className="col-12 text-center">
+                                                    <div className="alert alert-info">No companies found.</div>
                                                 </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-4.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Baseball Savings</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>85</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">Chicago, US</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>6</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-5.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Ashford</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>25</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">Toronto, Italia</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>67</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
+                                            ) : (
+                                                currentCompanies.map((company, index) => (
+                                                    <div key={company._id} className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
+                                                        <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
+                                                            <div className="image-box">
+                                                                <Link href={`/company-details?id=${company._id}`}>
+                                                                    <img 
+                                                                        src={company.logo || "assets/imgs/brands/brand-1.png"} 
+                                                                        alt={company.name} 
+                                                                        style={{ 
+                                                                            maxWidth: '100%', 
+                                                                            maxHeight: '80px', 
+                                                                            objectFit: 'contain' 
+                                                                        }} 
+                                                                    />
+                                                                </Link>
+                                                            </div>
+                                                            <div className="info-text mt-10">
+                                                                <h5 className="font-bold">
+                                                                    <Link href={`/company-details?id=${company._id}`}>
+                                                                        {company.name}
+                                                                    </Link>
+                                                                </h5>
+                                                                <div className="mt-5">
+                                                                    <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
+                                                                    <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
+                                                                    <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
+                                                                    <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
+                                                                    <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
+                                                                </div>
+                                                                <span className="card-location">{company.location || "Location not specified"}</span>
+                                                                <div className="mt-30">
+                                                                    <Link
+                                                                        href={`/jobs-grid?company=${company._id}`}
+                                                                        className="btn btn-grey-big"
+                                                                    >
+                                                                        <span>{company.jobCount || 0}</span>
+                                                                        <span> Jobs Open</span>
+                                                                    </Link>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-6.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Callaway Golf</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>34</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">San Francisco, US</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>45</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-7.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Percepta</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>97</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">Chinatown, Singpore</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>64</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-8.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Exela Movers</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>67</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">New York, US</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>87</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-9.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Ibotta, Inc</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>45</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">New York, US</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>23</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-1.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Wanderu </a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>08</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">New York, US</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>45</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-2.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Aceable, Inc.</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>54</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">New York, US</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>67</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-3.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Intrepid Travel</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>123</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">New York, US</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>53</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-4.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Defendify </a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>64</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">New York, US</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>56</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-5.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Twisters </a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>34</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">New York, US</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>66</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-6.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Fireworks</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>12</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">New York, US</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>12</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-1.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Car Toys</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>66</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">New York, US</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>12</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-2.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Carols Daughter</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>18</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">London, UK</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>25</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-3.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Amazon</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>52</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">Tokyo,Japan</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>54</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-4.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Baseball Savings</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>85</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">Chicago, US</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>6</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-5.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Ashford</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>25</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">Toronto, Italia</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>67</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                    <div className="image-box">
-                                                        <Link legacyBehavior href="/company-details">
-                                                            <a>
-                                                                <img src="assets/imgs/brands/brand-6.png" alt="jobBox" />
-                                                            </a>
-                                                        </Link>
-                                                    </div>
-                                                    <div className="info-text mt-10">
-                                                        <h5 className="font-bold">
-                                                            <Link legacyBehavior href="/company-details">
-                                                                <a>Callaway Golf</a>
-                                                            </Link>
-                                                        </h5>
-                                                        <div className="mt-5">
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                            <span className="font-xs color-text-mutted ml-10">
-                                                                <span>(</span>
-                                                                <span>34</span>
-                                                                <span>)</span>
-                                                            </span>
-                                                        </div>
-                                                        <span className="card-location">San Francisco, US</span>
-                                                        <div className="mt-30">
-                                                            <Link legacyBehavior href="/jobs-grid">
-                                                                <a className="btn btn-grey-big">
-                                                                    <span>45</span>
-                                                                    <span> Jobs Open</span>
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                                ))
+                                            )}
                                         </div>
                                     </div>
                                     <div className="paginations">
                                         <ul className="pager">
                                             <li>
-                                                <a className="pager-prev" href="#" />
+                                                <Link href="#" className="pager-prev" onClick={(e) => {
+                                                    e.preventDefault();
+                                                    if (currentPage > 1) paginate(currentPage - 1);
+                                                }} />
                                             </li>
+                                            {Array.from({ length: Math.ceil(totalCompanies / itemsPerPage) }).map((_, index) => (
+                                                <li key={index}>
+                                                    <Link href="#" className={`pager-number ${currentPage === index + 1 ? 'active' : ''}`} onClick={(e) => {
+                                                        e.preventDefault();
+                                                        paginate(index + 1);
+                                                    }}>
+                                                        {index + 1}
+                                                    </Link>
+                                                </li>
+                                            ))}
                                             <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a className="pager-number">1</a>
-                                                </Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a className="pager-number">2</a>
-                                                </Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a className="pager-number">3</a>
-                                                </Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a className="pager-number">4</a>
-                                                </Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a className="pager-number">5</a>
-                                                </Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a className="pager-number active">6</a>
-                                                </Link>
-                                            </li>
-                                            <li>
-                                                <Link legacyBehavior href="#">
-                                                    <a className="pager-number">7</a>
-                                                </Link>
-                                            </li>
-                                            <li>
-                                                <a className="pager-next" href="#" />
+                                                <Link href="#" className="pager-next" onClick={(e) => {
+                                                    e.preventDefault();
+                                                    if (currentPage < Math.ceil(totalCompanies / itemsPerPage)) {
+                                                        paginate(currentPage + 1);
+                                                    }
+                                                }} />
                                             </li>
                                         </ul>
                                     </div>
@@ -1112,18 +384,21 @@ export default function CompaniesGrid() {
                                             <div className="filter-block head-border mb-30">
                                                 <h5>
                                                     Advance Filter
-                                                    <Link legacyBehavior href="#">
-                                                        <a className="link-reset">Reset</a>
-                                                    </Link>
+                                                    <Link href="#" className="link-reset" onClick={resetFilters}>Reset</Link>
                                                 </h5>
                                             </div>
                                             <div className="filter-block mb-30">
                                                 <div className="form-group select-style select-style-icon">
-                                                    <select className="form-control form-icons select-active">
-                                                        <option>New York, US</option>
-                                                        <option>London</option>
-                                                        <option>Paris</option>
-                                                        <option>Berlin</option>
+                                                    <select 
+                                                        className="form-control form-icons select-active"
+                                                        value={filters.location}
+                                                        onChange={(e) => handleFilterChange('location', e.target.value)}
+                                                    >
+                                                        <option value="">All Locations</option>
+                                                        <option value="New York, US">New York, US</option>
+                                                        <option value="London">London</option>
+                                                        <option value="Paris">Paris</option>
+                                                        <option value="Berlin">Berlin</option>
                                                     </select>
                                                     <i className="fi-rr-marker" />
                                                 </div>
@@ -1134,7 +409,11 @@ export default function CompaniesGrid() {
                                                     <ul className="list-checkbox">
                                                         <li>
                                                             <label className="cb-container">
-                                                                <input type="checkbox" defaultChecked="checked" />
+                                                                <input 
+                                                                    type="checkbox" 
+                                                                    checked={filters.industry === "all"} 
+                                                                    onChange={() => handleFilterChange('industry', 'all')}
+                                                                />
                                                                 <span className="text-small">All</span>
                                                                 <span className="checkmark" />
                                                             </label>
@@ -1142,7 +421,11 @@ export default function CompaniesGrid() {
                                                         </li>
                                                         <li>
                                                             <label className="cb-container">
-                                                                <input type="checkbox" />
+                                                                <input 
+                                                                    type="checkbox" 
+                                                                    checked={filters.industry === "software"} 
+                                                                    onChange={() => handleFilterChange('industry', 'software')}
+                                                                />
                                                                 <span className="text-small">Software</span>
                                                                 <span className="checkmark" />
                                                             </label>
@@ -1150,7 +433,11 @@ export default function CompaniesGrid() {
                                                         </li>
                                                         <li>
                                                             <label className="cb-container">
-                                                                <input type="checkbox" />
+                                                                <input 
+                                                                    type="checkbox"
+                                                                    checked={filters.industry === "finance"} 
+                                                                    onChange={() => handleFilterChange('industry', 'finance')}
+                                                                />
                                                                 <span className="text-small">Finance</span>
                                                                 <span className="checkmark" />
                                                             </label>
@@ -1158,15 +445,23 @@ export default function CompaniesGrid() {
                                                         </li>
                                                         <li>
                                                             <label className="cb-container">
-                                                                <input type="checkbox" />
-                                                                <span className="text-small">Recruting</span>
+                                                                <input 
+                                                                    type="checkbox"
+                                                                    checked={filters.industry === "recruiting"} 
+                                                                    onChange={() => handleFilterChange('industry', 'recruiting')}
+                                                                />
+                                                                <span className="text-small">Recruiting</span>
                                                                 <span className="checkmark" />
                                                             </label>
                                                             <span className="number-item">43</span>
                                                         </li>
                                                         <li>
                                                             <label className="cb-container">
-                                                                <input type="checkbox" />
+                                                                <input 
+                                                                    type="checkbox"
+                                                                    checked={filters.industry === "management"} 
+                                                                    onChange={() => handleFilterChange('industry', 'management')}
+                                                                />
                                                                 <span className="text-small">Management</span>
                                                                 <span className="checkmark" />
                                                             </label>
@@ -1174,7 +469,11 @@ export default function CompaniesGrid() {
                                                         </li>
                                                         <li>
                                                             <label className="cb-container">
-                                                                <input type="checkbox" />
+                                                                <input 
+                                                                    type="checkbox"
+                                                                    checked={filters.industry === "advertising"} 
+                                                                    onChange={() => handleFilterChange('industry', 'advertising')}
+                                                                />
                                                                 <span className="text-small">Advertising</span>
                                                                 <span className="checkmark" />
                                                             </label>
@@ -1183,97 +482,18 @@ export default function CompaniesGrid() {
                                                     </ul>
                                                 </div>
                                             </div>
-                                            <div className="filter-block mb-20">
-                                                <h5 className="medium-heading mb-25">Salary Range</h5>
-                                                <div className="list-checkbox pb-20">
-                                                    <div className="row position-relative mt-10 mb-20">
-                                                        <div className="col-sm-12 box-slider-range">
-                                                            <div id="slider-range" />
-                                                        </div>
-                                                        <div className="box-input-money">
-                                                            <input className="input-disabled form-control min-value-money" type="text" name="min-value-money" disabled="disabled" defaultValue />
-                                                            <input className="form-control min-value" type="hidden" name="min-value" defaultValue />
-                                                        </div>
-                                                    </div>
-                                                    <div className="box-number-money">
-                                                        <div className="row mt-30">
-                                                            <div className="col-sm-6 col-6">
-                                                                <span className="font-sm color-brand-1">$0</span>
-                                                            </div>
-                                                            <div className="col-sm-6 col-6 text-end">
-                                                                <span className="font-sm color-brand-1">$500</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="form-group mb-20">
-                                                    <ul className="list-checkbox">
-                                                        <li>
-                                                            <label className="cb-container">
-                                                                <input type="checkbox" defaultChecked="checked" />
-                                                                <span className="text-small">All</span>
-                                                                <span className="checkmark" />
-                                                            </label>
-                                                            <span className="number-item">145</span>
-                                                        </li>
-                                                        <li>
-                                                            <label className="cb-container">
-                                                                <input type="checkbox" />
-                                                                <span className="text-small">$0k - $20k</span>
-                                                                <span className="checkmark" />
-                                                            </label>
-                                                            <span className="number-item">56</span>
-                                                        </li>
-                                                        <li>
-                                                            <label className="cb-container">
-                                                                <input type="checkbox" />
-                                                                <span className="text-small">$20k - $40k</span>
-                                                                <span className="checkmark" />
-                                                            </label>
-                                                            <span className="number-item">37</span>
-                                                        </li>
-                                                        <li>
-                                                            <label className="cb-container">
-                                                                <input type="checkbox" />
-                                                                <span className="text-small">$40k - $60k</span>
-                                                                <span className="checkmark" />
-                                                            </label>
-                                                            <span className="number-item">75</span>
-                                                        </li>
-                                                        <li>
-                                                            <label className="cb-container">
-                                                                <input type="checkbox" />
-                                                                <span className="text-small">$60k - $80k</span>
-                                                                <span className="checkmark" />
-                                                            </label>
-                                                            <span className="number-item">98</span>
-                                                        </li>
-                                                        <li>
-                                                            <label className="cb-container">
-                                                                <input type="checkbox" />
-                                                                <span className="text-small">$80k - $100k</span>
-                                                                <span className="checkmark" />
-                                                            </label>
-                                                            <span className="number-item">14</span>
-                                                        </li>
-                                                        <li>
-                                                            <label className="cb-container">
-                                                                <input type="checkbox" />
-                                                                <span className="text-small">$100k - $200k</span>
-                                                                <span className="checkmark" />
-                                                            </label>
-                                                            <span className="number-item">25</span>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </div>
+                                            
                                             <div className="filter-block mb-30">
                                                 <h5 className="medium-heading mb-10">Popular Keyword</h5>
                                                 <div className="form-group">
                                                     <ul className="list-checkbox">
                                                         <li>
                                                             <label className="cb-container">
-                                                                <input type="checkbox" defaultChecked="checked" />
+                                                                <input 
+                                                                    type="checkbox" 
+                                                                    checked={filters.keyword === "software"}
+                                                                    onChange={() => handleFilterChange('keyword', filters.keyword === "software" ? "" : "software")}
+                                                                />
                                                                 <span className="text-small">Software</span>
                                                                 <span className="checkmark" />
                                                             </label>
@@ -1281,7 +501,11 @@ export default function CompaniesGrid() {
                                                         </li>
                                                         <li>
                                                             <label className="cb-container">
-                                                                <input type="checkbox" />
+                                                                <input 
+                                                                    type="checkbox"
+                                                                    checked={filters.keyword === "developer"} 
+                                                                    onChange={() => handleFilterChange('keyword', filters.keyword === "developer" ? "" : "developer")}
+                                                                />
                                                                 <span className="text-small">Developer</span>
                                                                 <span className="checkmark" />
                                                             </label>
@@ -1289,7 +513,11 @@ export default function CompaniesGrid() {
                                                         </li>
                                                         <li>
                                                             <label className="cb-container">
-                                                                <input type="checkbox" />
+                                                                <input 
+                                                                    type="checkbox"
+                                                                    checked={filters.keyword === "web"} 
+                                                                    onChange={() => handleFilterChange('keyword', filters.keyword === "web" ? "" : "web")}
+                                                                />
                                                                 <span className="text-small">Web</span>
                                                                 <span className="checkmark" />
                                                             </label>
@@ -1298,6 +526,7 @@ export default function CompaniesGrid() {
                                                     </ul>
                                                 </div>
                                             </div>
+                                            
                                             <div className="filter-block mb-30">
                                                 <h5 className="medium-heading mb-10">Position</h5>
                                                 <div className="form-group">
@@ -1329,6 +558,7 @@ export default function CompaniesGrid() {
                                                     </ul>
                                                 </div>
                                             </div>
+                                            
                                             <div className="filter-block mb-30">
                                                 <h5 className="medium-heading mb-10">Experience Level</h5>
                                                 <div className="form-group">
@@ -1384,6 +614,7 @@ export default function CompaniesGrid() {
                                                     </ul>
                                                 </div>
                                             </div>
+                                            
                                             <div className="filter-block mb-30">
                                                 <h5 className="medium-heading mb-10">Onsite/Remote</h5>
                                                 <div className="form-group">
@@ -1415,6 +646,7 @@ export default function CompaniesGrid() {
                                                     </ul>
                                                 </div>
                                             </div>
+                                            
                                             <div className="filter-block mb-30">
                                                 <h5 className="medium-heading mb-10">Job Posted</h5>
                                                 <div className="form-group">
@@ -1454,6 +686,7 @@ export default function CompaniesGrid() {
                                                     </ul>
                                                 </div>
                                             </div>
+                                            
                                             <div className="filter-block mb-20">
                                                 <h5 className="medium-heading mb-15">Job type</h5>
                                                 <div className="form-group">
@@ -1493,6 +726,7 @@ export default function CompaniesGrid() {
                                                     </ul>
                                                 </div>
                                             </div>
+                                            
                                         </div>
                                     </div>
                                 </div>
@@ -1512,9 +746,7 @@ export default function CompaniesGrid() {
                                     <BlogSlider />
                                 </div>
                                 <div className="text-center">
-                                    <Link legacyBehavior href="blog-grid">
-                                        <a className="btn btn-brand-1 btn-icon-load mt--30 hover-up">Load More Posts</a>
-                                    </Link>
+                                    <Link href="blog-grid" className="btn btn-brand-1 btn-icon-load mt--30 hover-up">Load More Posts</Link>
                                 </div>
                             </div>
                         </div>

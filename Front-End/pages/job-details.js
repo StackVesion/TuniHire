@@ -1,9 +1,123 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import Layout from "../components/Layout/Layout";
 import FeaturedSlider from "./../components/sliders/Featured";
+import axios from 'axios';
+import Swal from "sweetalert2";
 
 export default function JobDetails() {
+    const router = useRouter();
+    const { id } = router.query;
+    
+    const [job, setJob] = useState(null);
+    const [company, setCompany] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    
+    useEffect(() => {
+        const fetchJobDetails = async () => {
+            if (!id) return; // Wait until we have the ID
+            
+            setLoading(true);
+            setError(null);
+            
+            try {
+                // 1. Fetch job post details first
+                const jobResponse = await axios.get(`http://localhost:5000/api/jobs/${id}`);
+                const jobData = jobResponse.data;
+                setJob(jobData);
+                
+                // 2. Fetch company details using our new endpoint
+                try {
+                    const companyResponse = await axios.get(`http://localhost:5000/api/jobs/job/${id}/company`);
+                    setCompany(companyResponse.data);
+                } catch (companyError) {
+                    console.error("Error fetching company:", companyError);
+                    // We don't set the main error state here to allow the page to still render with job data
+                }
+            } catch (err) {
+                console.error("Error fetching job details:", err);
+                setError("Failed to load job details. Please try again later.");
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        fetchJobDetails();
+    }, [id]);
+    
+    // Format date for display
+    const formatDate = (dateString) => {
+        if (!dateString) return "N/A";
+        return new Date(dateString).toLocaleDateString();
+    };
+    
+    // Format time ago
+    const formatTimeAgo = (dateString) => {
+        if (!dateString) return "N/A";
+        
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+        
+        if (diffInMinutes < 60) {
+            return `${diffInMinutes} minutes ago`;
+        } else if (diffInMinutes < 24 * 60) {
+            return `${Math.floor(diffInMinutes / 60)} hours ago`;
+        } else {
+            return `${Math.floor(diffInMinutes / (60 * 24))} days ago`;
+        }
+    };
+    
+    if (loading) {
+        return (
+            <Layout>
+                <div className="container text-center py-5">
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p className="mt-3">Loading job details...</p>
+                </div>
+            </Layout>
+        );
+    }
+
+    if (error) {
+        return (
+            <Layout>
+                <div className="container text-center py-5">
+                    <div className="alert alert-danger" role="alert">
+                        {error}
+                    </div>
+                    <button 
+                        className="btn btn-outline-primary mt-3" 
+                        onClick={() => router.back()}
+                    >
+                        Go Back
+                    </button>
+                </div>
+            </Layout>
+        );
+    }
+
+    if (!job) {
+        return (
+            <Layout>
+                <div className="container text-center py-5">
+                    <p>No job details found.</p>
+                    <button 
+                        className="btn btn-outline-primary mt-3" 
+                        onClick={() => router.push('/jobs-grid')}
+                    >
+                        Browse Jobs
+                    </button>
+                </div>
+            </Layout>
+        );
+    }
+    
     return (
         <>
             <Layout>
@@ -15,16 +129,19 @@ export default function JobDetails() {
                             </div>
                             <div className="row mt-10">
                                 <div className="col-lg-8 col-md-12">
-                                    <h3>Senior Full Stack Engineer, Creator Success Full Time</h3>
+                                    <h3>{job.title}</h3>
                                     <div className="mt-0 mb-15">
-                                        <span className="card-briefcase">Fulltime</span>
-                                        <span className="card-time">3 mins ago</span>
+                                        <Link href={`/company-details?id=${job.companyId}`} className="name-job">
+                                            {company?.name || job.companyName || "Company Name"}
+                                        </Link>
+                                        <span className="card-briefcase ml-15">{job.workplaceType}</span>
+                                        <span className="card-time">{formatTimeAgo(job.createdAt)}</span>
                                     </div>
                                 </div>
                                 <div className="col-lg-4 col-md-12 text-lg-end">
-                                    <div className="btn btn-apply-icon btn-apply btn-apply-big hover-up" data-bs-toggle="modal" data-bs-target="#ModalApplyJobForm">
+                                    <Link href="/candidate-profile?activeTab=2" className="btn btn-apply-icon btn-apply btn-apply-big hover-up">
                                         Apply now
-                                    </div>
+                                    </Link>
                                 </div>
                             </div>
                             <div className="border-bottom pt-10 pb-10" />
@@ -43,7 +160,7 @@ export default function JobDetails() {
                                                 </div>
                                                 <div className="sidebar-text-info ml-10">
                                                     <span className="text-description industry-icon mb-10">Industry</span>
-                                                    <strong className="small-heading"> Mechanical / Auto / Automotive, Civil / Construction</strong>
+                                                    <strong className="small-heading">{job.industry || "Not specified"}</strong>
                                                 </div>
                                             </div>
                                             <div className="col-md-6 d-flex mt-sm-15">
@@ -52,7 +169,7 @@ export default function JobDetails() {
                                                 </div>
                                                 <div className="sidebar-text-info ml-10">
                                                     <span className="text-description joblevel-icon mb-10">Job level</span>
-                                                    <strong className="small-heading">Experienced (Non - Manager)</strong>
+                                                    <strong className="small-heading">{job.level || "Not specified"}</strong>
                                                 </div>
                                             </div>
                                         </div>
@@ -63,7 +180,7 @@ export default function JobDetails() {
                                                 </div>
                                                 <div className="sidebar-text-info ml-10">
                                                     <span className="text-description salary-icon mb-10">Salary</span>
-                                                    <strong className="small-heading">$800 - $1000</strong>
+                                                    <strong className="small-heading">{job.salaryRange || "Not specified"}</strong>
                                                 </div>
                                             </div>
                                             <div className="col-md-6 d-flex">
@@ -72,7 +189,7 @@ export default function JobDetails() {
                                                 </div>
                                                 <div className="sidebar-text-info ml-10">
                                                     <span className="text-description experience-icon mb-10">Experience</span>
-                                                    <strong className="small-heading">1 - 2 years</strong>
+                                                    <strong className="small-heading">{job.experience || "Not specified"}</strong>
                                                 </div>
                                             </div>
                                         </div>
@@ -83,7 +200,7 @@ export default function JobDetails() {
                                                 </div>
                                                 <div className="sidebar-text-info ml-10">
                                                     <span className="text-description jobtype-icon mb-10">Job type</span>
-                                                    <strong className="small-heading">Permanent</strong>
+                                                    <strong className="small-heading">{job.jobType || job.workplaceType || "Not specified"}</strong>
                                                 </div>
                                             </div>
                                             <div className="col-md-6 d-flex mt-sm-15">
@@ -92,7 +209,7 @@ export default function JobDetails() {
                                                 </div>
                                                 <div className="sidebar-text-info ml-10">
                                                     <span className="text-description mb-10">Deadline</span>
-                                                    <strong className="small-heading">10/08/2022</strong>
+                                                    <strong className="small-heading">{job.deadline ? formatDate(job.deadline) : "Not specified"}</strong>
                                                 </div>
                                             </div>
                                         </div>
@@ -103,7 +220,7 @@ export default function JobDetails() {
                                                 </div>
                                                 <div className="sidebar-text-info ml-10">
                                                     <span className="text-description jobtype-icon mb-10">Updated</span>
-                                                    <strong className="small-heading">10/07/2022</strong>
+                                                    <strong className="small-heading">{job.updatedAt ? formatDate(job.updatedAt) : formatDate(job.createdAt)}</strong>
                                                 </div>
                                             </div>
                                             <div className="col-md-6 d-flex mt-sm-15">
@@ -112,85 +229,78 @@ export default function JobDetails() {
                                                 </div>
                                                 <div className="sidebar-text-info ml-10">
                                                     <span className="text-description mb-10">Location</span>
-                                                    <strong className="small-heading">Dallas, Texas Remote Friendly</strong>
+                                                    <strong className="small-heading">{job.location || "Not specified"}</strong>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                     <div className="content-single">
-                                        <h4>Welcome to AliStudio Team</h4>
-                                        <p>The AliStudio Design team has a vision to establish a trusted platform that enables productive and healthy enterprises in a world of digital and remote everything, constantly changing work patterns and norms, and the need for organizational resiliency.</p>
-                                        <p>The ideal candidate will have strong creative skills and a portfolio of work which demonstrates their passion for illustrative design and typography. This candidate will have experiences in working with numerous different design platforms such as digital and print forms.</p>
-                                        <h4>Essential Knowledge, Skills, and Experience</h4>
-                                        <ul>
-                                            <li>A portfolio demonstrating well thought through and polished end to end customer journeys</li>
-                                            <li>5+ years of industry experience in interactive design and / or visual design</li>
-                                            <li>Excellent interpersonal skills</li>
-                                            <li>Aware of trends inmobile, communications, and collaboration</li>
-                                            <li>Ability to create highly polished design prototypes, mockups, and other communication artifacts</li>
-                                            <li>The ability to scope and estimate efforts accurately and prioritize tasks and goals independently</li>
-                                            <li>History of impacting shipping products with your work</li>
-                                            <li>A Bachelor's Degree in Design (or related field) or equivalent professional experience</li>
-                                            <li>Proficiency in a variety of design tools such as Figma, Photoshop, Illustrator, and Sketch</li>
-                                        </ul>
-                                        <h4>Preferred Experience</h4>
-                                        <ul>
-                                            <li>Designing user experiences for enterprise software / services</li>
-                                            <li>Creating and applying established design principles and interaction patterns</li>
-                                            <li>Aligning or influencing design thinking with teams working in other geographies</li>
-                                        </ul>
-                                        <h4>Product Designer</h4>
-                                        <p>
-                                            <strong>Product knowledge:</strong> Deeply understand the technology and features of the product area to which you are assigned.
-                                        </p>
-                                        <p>
-                                            <strong>Research:</strong> Provide human and business impact and insights for products.
-                                        </p>
-                                        <p>
-                                            <strong>Deliverables:</strong> Create deliverables for your product area (for example competitive analyses, user flows, low fidelity wireframes, high fidelity mockups, prototypes, etc.) that solve real user problems through the user experience.
-                                        </p>
-                                        <p>
-                                            <strong>Communication:</strong> Communicate the results of UX activities within your product area to the design team department, cross-functional partners within your product area, and other interested Superformula team members using clear language that simplifies complexity.
-                                        </p>
+                                        <h4>Job Description</h4>
+                                        <p dangerouslySetInnerHTML={{ __html: job.description }}></p>
+                                        
+                                        {job.requirements && job.requirements.length > 0 && (
+                                            <>
+                                                <h4>Requirements</h4>
+                                                <ul>
+                                                    {job.requirements.map((req, index) => (
+                                                        <li key={index}>{req}</li>
+                                                    ))}
+                                                </ul>
+                                            </>
+                                        )}
+                                        
+                                        {job.responsibilities && job.responsibilities.length > 0 && (
+                                            <>
+                                                <h4>Responsibilities</h4>
+                                                <ul>
+                                                    {job.responsibilities.map((resp, index) => (
+                                                        <li key={index}>{resp}</li>
+                                                    ))}
+                                                </ul>
+                                            </>
+                                        )}
+                                        
+                                        {job.benefits && job.benefits.length > 0 && (
+                                            <>
+                                                <h4>Benefits</h4>
+                                                <ul>
+                                                    {job.benefits.map((benefit, index) => (
+                                                        <li key={index}>{benefit}</li>
+                                                    ))}
+                                                </ul>
+                                            </>
+                                        )}
                                     </div>
                                     <div className="author-single">
-                                        <span>AliThemes</span>
+                                        <span>{job.companyName || "Company"}</span>
                                     </div>
                                     <div className="single-apply-jobs">
                                         <div className="row align-items-center">
                                             <div className="col-md-5">
-                                                <Link legacyBehavior href="#">
-                                                    <a className="btn btn-default mr-15">Apply now</a>
+                                                <Link href="/candidate-profile?activeTab=2" className="btn btn-default mr-15">
+                                                    Apply now
                                                 </Link>
 
-                                                <Link legacyBehavior href="#">
-                                                    <a className="btn btn-border">Save job</a>
+                                                <Link href="#" className="btn btn-border">
+                                                    Save job
                                                 </Link>
                                             </div>
                                             <div className="col-md-7 text-lg-end social-share">
                                                 <h6 className="color-text-paragraph-2 d-inline-block d-baseline mr-10">Share this</h6>
-                                                <Link legacyBehavior href="#">
-                                                    <a className="mr-5 d-inline-block d-middle">
-                                                        <img alt="jobBox" src="assets/imgs/template/icons/share-fb.svg" />
-                                                    </a>
+                                                <Link href="#" className="mr-5 d-inline-block d-middle">
+                                                    <img alt="jobBox" src="assets/imgs/template/icons/share-fb.svg" />
                                                 </Link>
 
-                                                <Link legacyBehavior href="#">
-                                                    <a className="mr-5 d-inline-block d-middle">
-                                                        <img alt="jobBox" src="assets/imgs/template/icons/share-tw.svg" />
-                                                    </a>
+                                                <Link href="#" className="mr-5 d-inline-block d-middle">
+                                                    <img alt="jobBox" src="assets/imgs/template/icons/share-tw.svg" />
                                                 </Link>
 
-                                                <Link legacyBehavior href="#">
-                                                    <a className="mr-5 d-inline-block d-middle">
-                                                        <img alt="jobBox" src="assets/imgs/template/icons/share-red.svg" />
-                                                    </a>
+                                                <Link href="#" className="mr-5 d-inline-block d-middle">
+                                                    <img alt="jobBox" src="assets/imgs/template/icons/share-red.svg" />
                                                 </Link>
 
-                                                <Link legacyBehavior href="#">
-                                                    <a className="d-inline-block d-middle">
-                                                        <img alt="jobBox" src="assets/imgs/template/icons/share-whatsapp.svg" />
-                                                    </a>
+                                                <Link href="#" className="d-inline-block d-middle">
+                                                    <img alt="jobBox" src="assets/imgs/template/icons/share-whatsapp.svg" />
                                                 </Link>
                                             </div>
                                         </div>
@@ -201,376 +311,146 @@ export default function JobDetails() {
                                         <div className="sidebar-heading">
                                             <div className="avatar-sidebar">
                                                 <figure>
-                                                    <img alt="jobBox" src="assets/imgs/page/job-single/avatar.png" />
+                                                    {company?.logo ? (
+                                                        <img alt={company.name} src={company.logo} />
+                                                    ) : (
+                                                        <img alt="company" src="assets/imgs/page/job-single/avatar.png" />
+                                                    )}
                                                 </figure>
                                                 <div className="sidebar-info">
-                                                    <span className="sidebar-company">AliThemes</span>
-                                                    <span className="card-location">New York, US</span>
-                                                    <Link legacyBehavior href="#">
-                                                        <a className="link-underline mt-15">02 Open Jobs</a>
-                                                    </Link>
+                                                    <span className="sidebar-company">{company?.name || "Company"}</span>
+                                                    <span className="card-location">{company?.location || job.location}</span>
+                                                    {company?._id && (
+                                                        <Link 
+                                                            href={`/company-details?id=${company._id}`}
+                                                            className="link-underline mt-15"
+                                                        >
+                                                            View Company Profile
+                                                        </Link>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="sidebar-list-job">
-                                            <div className="box-map">
-                                                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2970.3150609575905!2d-87.6235655!3d41.886080899999996!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x880e2ca8b34afe61%3A0x6caeb5f721ca846!2s205%20N%20Michigan%20Ave%20Suit%20810%2C%20Chicago%2C%20IL%2060601%2C%20Hoa%20K%E1%BB%B3!5e0!3m2!1svi!2s!4v1658551322537!5m2!1svi!2s" allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" />
-                                            </div>
-                                            <ul className="ul-disc">
-                                                <li>205 North Michigan Avenue, Suite 810 Chicago, 60601, USA</li>
-                                                <li>Phone: (123) 456-7890</li>
-                                                <li>Email: contact@Evara.com</li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                    <div className="sidebar-border">
-                                        <h6 className="f-18">Similar jobs</h6>
-                                        <div className="sidebar-list-job">
                                             <ul>
                                                 <li>
-                                                    <div className="card-list-4 wow animate__animated animate__fadeIn hover-up">
-                                                        <div className="image">
-                                                            <Link legacyBehavior href="/job-details">
-                                                                <a>
-                                                                    <img src="assets/imgs/brands/brand-1.png" alt="jobBox" />
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                        <div className="info-text">
-                                                            <h5 className="font-md font-bold color-brand-1">
-                                                                <Link legacyBehavior href="/job-details">
-                                                                    <a>UI / UX Designer fulltime</a>
-                                                                </Link>
-                                                            </h5>
-                                                            <div className="mt-0">
-                                                                <span className="card-briefcase">Fulltime</span>
-                                                                <span className="card-time">
-                                                                    <span>3</span>
-                                                                    <span> mins ago</span>
-                                                                </span>
-                                                            </div>
-                                                            <div className="mt-5">
-                                                                <div className="row">
-                                                                    <div className="col-6">
-                                                                        <h6 className="card-price">
-                                                                            $250<span>/Hour</span>
-                                                                        </h6>
-                                                                    </div>
-                                                                    <div className="col-6 text-end">
-                                                                        <span className="card-briefcase">New York, US</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                                    <div className="sidebar-icon-item">
+                                                        <i className="fi-rr-marker" />
+                                                    </div>
+                                                    <div className="sidebar-text-info">
+                                                        <span className="text-description">Location</span>
+                                                        <strong className="small-heading">{company?.location || job.location || "Not specified"}</strong>
                                                     </div>
                                                 </li>
                                                 <li>
-                                                    <div className="card-list-4 wow animate__animated animate__fadeIn hover-up">
-                                                        <div className="image">
-                                                            <Link legacyBehavior href="/job-details">
-                                                                <a>
-                                                                    <img src="assets/imgs/brands/brand-2.png" alt="jobBox" />
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                        <div className="info-text">
-                                                            <h5 className="font-md font-bold color-brand-1">
-                                                                <Link legacyBehavior href="/job-details">
-                                                                    <a>Java Software Engineer</a>
-                                                                </Link>
-                                                            </h5>
-                                                            <div className="mt-0">
-                                                                <span className="card-briefcase">Fulltime</span>
-                                                                <span className="card-time">
-                                                                    <span>5</span>
-                                                                    <span> mins ago</span>
-                                                                </span>
-                                                            </div>
-                                                            <div className="mt-5">
-                                                                <div className="row">
-                                                                    <div className="col-6">
-                                                                        <h6 className="card-price">
-                                                                            $500<span>/Hour</span>
-                                                                        </h6>
-                                                                    </div>
-                                                                    <div className="col-6 text-end">
-                                                                        <span className="card-briefcase">Tokyo, Japan</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                                    <div className="sidebar-icon-item">
+                                                        <i className="fi-rr-briefcase" />
+                                                    </div>
+                                                    <div className="sidebar-text-info">
+                                                        <span className="text-description">Job type</span>
+                                                        <strong className="small-heading">{job.jobType || job.workplaceType || "Not specified"}</strong>
                                                     </div>
                                                 </li>
                                                 <li>
-                                                    <div className="card-list-4 wow animate__animated animate__fadeIn hover-up">
-                                                        <div className="image">
-                                                            <Link legacyBehavior href="/job-details">
-                                                                <a>
-                                                                    <img src="assets/imgs/brands/brand-3.png" alt="jobBox" />
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                        <div className="info-text">
-                                                            <h5 className="font-md font-bold color-brand-1">
-                                                                <Link legacyBehavior href="/job-details">
-                                                                    <a>Frontend Developer</a>
-                                                                </Link>
-                                                            </h5>
-                                                            <div className="mt-0">
-                                                                <span className="card-briefcase">Fulltime</span>
-                                                                <span className="card-time">
-                                                                    <span>8</span>
-                                                                    <span> mins ago</span>
-                                                                </span>
-                                                            </div>
-                                                            <div className="mt-5">
-                                                                <div className="row">
-                                                                    <div className="col-6">
-                                                                        <h6 className="card-price">
-                                                                            $650<span>/Hour</span>
-                                                                        </h6>
-                                                                    </div>
-                                                                    <div className="col-6 text-end">
-                                                                        <span className="card-briefcase">Hanoi, Vietnam</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                                    <div className="sidebar-icon-item">
+                                                        <i className="fi-rr-dollar" />
+                                                    </div>
+                                                    <div className="sidebar-text-info">
+                                                        <span className="text-description">Salary</span>
+                                                        <strong className="small-heading">{job.salaryRange || "Not specified"}</strong>
                                                     </div>
                                                 </li>
-                                                <li>
-                                                    <div className="card-list-4 wow animate__animated animate__fadeIn hover-up">
-                                                        <div className="image">
-                                                            <Link legacyBehavior href="/job-details">
-                                                                <a>
-                                                                    <img src="assets/imgs/brands/brand-4.png" alt="jobBox" />
-                                                                </a>
-                                                            </Link>
+                                                {company?.numberOfEmployees && (
+                                                    <li>
+                                                        <div className="sidebar-icon-item">
+                                                            <i className="fi-rr-users" />
                                                         </div>
-                                                        <div className="info-text">
-                                                            <h5 className="font-md font-bold color-brand-1">
-                                                                <Link legacyBehavior href="/job-details">
-                                                                    <a>Cloud Engineer</a>
-                                                                </Link>
-                                                            </h5>
-                                                            <div className="mt-0">
-                                                                <span className="card-briefcase">Fulltime</span>
-                                                                <span className="card-time">
-                                                                    <span>12</span>
-                                                                    <span> mins ago</span>
-                                                                </span>
-                                                            </div>
-                                                            <div className="mt-5">
-                                                                <div className="row">
-                                                                    <div className="col-6">
-                                                                        <h6 className="card-price">
-                                                                            $380<span>/Hour</span>
-                                                                        </h6>
-                                                                    </div>
-                                                                    <div className="col-6 text-end">
-                                                                        <span className="card-briefcase">Losangl, Au</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
+                                                        <div className="sidebar-text-info">
+                                                            <span className="text-description">Company Size</span>
+                                                            <strong className="small-heading">{company.numberOfEmployees}</strong>
                                                         </div>
-                                                    </div>
-                                                </li>
-                                                <li>
-                                                    <div className="card-list-4 wow animate__animated animate__fadeIn hover-up">
-                                                        <div className="image">
-                                                            <Link legacyBehavior href="/job-details">
-                                                                <a>
-                                                                    <img src="assets/imgs/brands/brand-5.png" alt="jobBox" />
-                                                                </a>
-                                                            </Link>
+                                                    </li>
+                                                )}
+                                                {company?.category && (
+                                                    <li>
+                                                        <div className="sidebar-icon-item">
+                                                            <i className="fi-rr-building" />
                                                         </div>
-                                                        <div className="info-text">
-                                                            <h5 className="font-md font-bold color-brand-1">
-                                                                <Link legacyBehavior href="/job-details">
-                                                                    <a>DevOps Engineer</a>
-                                                                </Link>
-                                                            </h5>
-                                                            <div className="mt-0">
-                                                                <span className="card-briefcase">Fulltime</span>
-                                                                <span className="card-time">
-                                                                    <span>34</span>
-                                                                    <span> mins ago</span>
-                                                                </span>
-                                                            </div>
-                                                            <div className="mt-5">
-                                                                <div className="row">
-                                                                    <div className="col-6">
-                                                                        <h6 className="card-price">
-                                                                            $140<span>/Hour</span>
-                                                                        </h6>
-                                                                    </div>
-                                                                    <div className="col-6 text-end">
-                                                                        <span className="card-briefcase">Paris, France</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
+                                                        <div className="sidebar-text-info">
+                                                            <span className="text-description">Industry</span>
+                                                            <strong className="small-heading">{company.category}</strong>
                                                         </div>
-                                                    </div>
-                                                </li>
-                                                <li>
-                                                    <div className="card-list-4 wow animate__animated animate__fadeIn hover-up">
-                                                        <div className="image">
-                                                            <Link legacyBehavior href="/job-details">
-                                                                <a>
-                                                                    <img src="assets/imgs/brands/brand-6.png" alt="jobBox" />
-                                                                </a>
-                                                            </Link>
+                                                    </li>
+                                                )}
+                                                {company?.createdAt && (
+                                                    <li>
+                                                        <div className="sidebar-icon-item">
+                                                            <i className="fi-rr-time-fast" />
                                                         </div>
-                                                        <div className="info-text">
-                                                            <h5 className="font-md font-bold color-brand-1">
-                                                                <Link legacyBehavior href="/job-details">
-                                                                    <a>Figma design UI/UX</a>
-                                                                </Link>
-                                                            </h5>
-                                                            <div className="mt-0">
-                                                                <span className="card-briefcase">Fulltime</span>
-                                                                <span className="card-time">
-                                                                    <span>45</span>
-                                                                    <span> mins ago</span>
-                                                                </span>
-                                                            </div>
-                                                            <div className="mt-5">
-                                                                <div className="row">
-                                                                    <div className="col-6">
-                                                                        <h6 className="card-price">
-                                                                            $290<span>/Hour</span>
-                                                                        </h6>
-                                                                    </div>
-                                                                    <div className="col-6 text-end">
-                                                                        <span className="card-briefcase">New York, US</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
+                                                        <div className="sidebar-text-info">
+                                                            <span className="text-description">Founded</span>
+                                                            <strong className="small-heading">
+                                                                {new Date(company.createdAt).getFullYear()}
+                                                            </strong>
                                                         </div>
-                                                    </div>
-                                                </li>
-                                                <li>
-                                                    <div className="card-list-4 wow animate__animated animate__fadeIn hover-up">
-                                                        <div className="image">
-                                                            <Link legacyBehavior href="/job-details">
-                                                                <a>
-                                                                    <img src="assets/imgs/brands/brand-7.png" alt="jobBox" />
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                        <div className="info-text">
-                                                            <h5 className="font-md font-bold color-brand-1">
-                                                                <Link legacyBehavior href="/job-details">
-                                                                    <a>Product Manage</a>
-                                                                </Link>
-                                                            </h5>
-                                                            <div className="mt-0">
-                                                                <span className="card-briefcase">Fulltime</span>
-                                                                <span className="card-time">
-                                                                    <span>50</span>
-                                                                    <span> mins ago</span>
-                                                                </span>
-                                                            </div>
-                                                            <div className="mt-5">
-                                                                <div className="row">
-                                                                    <div className="col-6">
-                                                                        <h6 className="card-price">
-                                                                            $650<span>/Hour</span>
-                                                                        </h6>
-                                                                    </div>
-                                                                    <div className="col-6 text-end">
-                                                                        <span className="card-briefcase">New York, US</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </li>
-                                                <li>
-                                                    <div className="card-list-4 wow animate__animated animate__fadeIn hover-up">
-                                                        <div className="image">
-                                                            <Link legacyBehavior href="/job-details">
-                                                                <a>
-                                                                    <img src="assets/imgs/brands/brand-8.png" alt="jobBox" />
-                                                                </a>
-                                                            </Link>
-                                                        </div>
-                                                        <div className="info-text">
-                                                            <h5 className="font-md font-bold color-brand-1">
-                                                                <Link legacyBehavior href="/job-details">
-                                                                    <a>UI / UX Designer</a>
-                                                                </Link>
-                                                            </h5>
-                                                            <div className="mt-0">
-                                                                <span className="card-briefcase">Fulltime</span>
-                                                                <span className="card-time">
-                                                                    <span>58</span>
-                                                                    <span> mins ago</span>
-                                                                </span>
-                                                            </div>
-                                                            <div className="mt-5">
-                                                                <div className="row">
-                                                                    <div className="col-6">
-                                                                        <h6 className="card-price">
-                                                                            $270<span>/Hour</span>
-                                                                        </h6>
-                                                                    </div>
-                                                                    <div className="col-6 text-end">
-                                                                        <span className="card-briefcase">New York, US</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </li>
+                                                    </li>
+                                                )}
                                             </ul>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                    <section className="section-box mt-50 mb-50">
-                        <div className="container">
-                            <div className="text-left">
-                                <h2 className="section-title mb-10 wow animate__animated animate__fadeInUp">Featured Jobs</h2>
-                                <p className="font-lg color-text-paragraph-2 wow animate__animated animate__fadeInUp">Get the latest news, updates and tips</p>
-                            </div>
-                            <div className="mt-50">
-                                <div className="box-swiper style-nav-top">
-                                    <FeaturedSlider />
-                                </div>
-                                <div className="text-center">
-                                    <Link legacyBehavior href="#">
-                                        <a className="btn btn-grey">Load more posts</a>
-                                    </Link>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                    <section className="section-box mt-50 mb-20">
-                        <div className="container">
-                            <div className="box-newsletter">
-                                <div className="row">
-                                    <div className="col-xl-3 col-12 text-center d-none d-xl-block">
-                                        <img src="assets/imgs/template/newsletter-left.png" alt="joxBox" />
-                                    </div>
-                                    <div className="col-lg-12 col-xl-6 col-12">
-                                        <h2 className="text-md-newsletter text-center">
-                                            New Things Will Always
-                                            <br /> Update Regularly
-                                        </h2>
-                                        <div className="box-form-newsletter mt-40">
-                                            <form className="form-newsletter">
-                                                <input className="input-newsletter" type="text" placeholder="Enter your email here" />
-                                                <button className="btn btn-default font-heading icon-send-letter">Subscribe</button>
-                                            </form>
+                                        <div className="sidebar-list-job">
+                                            <ul className="ul-disc">
+                                                {company?.phone && (
+                                                    <li>Phone: {company.phone}</li>
+                                                )}
+                                                {company?.email && (
+                                                    <li>Email: {company.email}</li>
+                                                )}
+                                                {company?.website && (
+                                                    <li>
+                                                        Website: <Link 
+                                                            href={company.website.startsWith('http') ? company.website : `https://${company.website}`} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                        >
+                                                            {company.website}
+                                                        </Link>
+                                                    </li>
+                                                )}
+                                                {company?.projects && company.projects.length > 0 && (
+                                                    <li>
+                                                        <span className="font-sm">Projects: </span>
+                                                        <div className="mt-5">
+                                                            {company.projects.map((project, index) => (
+                                                                <span key={index} className="btn btn-grey-small mr-5 mb-5">{project}</span>
+                                                            ))}
+                                                        </div>
+                                                    </li>
+                                                )}
+                                            </ul>
+                                        </div>
+                                        <div className="mt-30">
+                                            <Link 
+                                                href="/candidate-profile?activeTab=2"
+                                                className="btn btn-send-message"
+                                            >
+                                                Apply now
+                                            </Link>
                                         </div>
                                     </div>
-                                    <div className="col-xl-3 col-12 text-center d-none d-xl-block">
-                                        <img src="assets/imgs/template/newsletter-right.png" alt="joxBox" />
-                                    </div>
                                 </div>
+                            </div>
+                        </div>
+                    </section>
+                    <section className="section-box mt-50">
+                        <div className="container">
+                            <div className="text-center">
+                                <h2 className="section-title mb-10">Similar jobs</h2>
+                                <p className="font-lg color-text-paragraph-2">
+                                    You may be interested in these jobs also
+                                </p>
+                            </div>
+                            <div className="slick-carousel slick-dotted mt-50">
+                                <FeaturedSlider />
                             </div>
                         </div>
                     </section>

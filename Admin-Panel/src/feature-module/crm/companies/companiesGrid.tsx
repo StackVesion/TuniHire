@@ -16,6 +16,7 @@ const CompaniesGrid = () => {
     website?: string;
     category?: string;
     status: string;
+    logo?: string;
     createdBy: {
       _id: string;
       firstName: string;
@@ -255,12 +256,24 @@ const CompaniesGrid = () => {
                           <Link
                             to={`${routes.companiesDetails}/${company._id}`}
                             className="avatar avatar-xl avatar-rounded online border rounded-circle"
+                            style={{ width: '64px', height: '64px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           >
-                            <ImageWithBasePath
-                              src="assets/img/company/company-12.svg"
-                              className="img-fluid h-auto w-auto"
-                              alt="img"
-                            />
+                            {company.logo ? (
+                              <img
+                                src={company.logo}
+                                className="img-fluid"
+                                alt="Company logo"
+                                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'cover' }}
+                              />
+                            ) : (
+                              <ImageWithBasePath
+                                src={'assets/img/company/default-company-logo.png'}
+                                className="img-fluid"
+                                width={60}
+                                height={60}
+                                alt="Default company logo"
+                              />
+                            )}
                           </Link>
                         </div>
                         <div className="dropdown">
@@ -374,7 +387,7 @@ const CompaniesGrid = () => {
           </div>
         </div>
         <div className="footer d-sm-flex align-items-center justify-content-between border-top bg-white p-3">
-          <p className="mb-0">2014 - 2025 © SmartHR.</p>
+          <p className="mb-0">2014 - 2025 &copy; SmartHR.</p>
           <p>
             Designed &amp; Developed By{" "}
             <Link to="#" className="text-primary">

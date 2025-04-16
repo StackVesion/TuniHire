@@ -28,6 +28,8 @@ export default function CandidateProfile() {
         newPassword: "",
         confirmPassword: ""
     });
+    const [appliedJobs, setAppliedJobs] = useState([]);
+    const [loadingJobs, setLoadingJobs] = useState(false);
     const router = useRouter();
 
     // Ajouter une fonction pour récupérer les données complètes du profil
@@ -137,6 +139,14 @@ export default function CandidateProfile() {
                 return null;
             }
         };
+
+        // Check for activeTab query parameter and set the active tab
+        if (router.query.activeTab) {
+            const tabIndex = parseInt(router.query.activeTab);
+            if (!isNaN(tabIndex) && tabIndex >= 1 && tabIndex <= 3) {
+                setActiveIndex(tabIndex);
+            }
+        }
 
         const user = getUserData();
         if (user) {
@@ -369,6 +379,64 @@ export default function CandidateProfile() {
             setError("Une erreur inattendue s'est produite");
         }
     };
+
+    // Fonction pour déterminer la couleur du statut de candidature
+    const getStatusColor = (status) => {
+        switch (status?.toLowerCase()) {
+            case 'pending':
+                return 'warning';
+            case 'reviewing':
+                return 'info';
+            case 'interviewed':
+                return 'primary';
+            case 'accepted':
+                return 'success';
+            case 'rejected':
+                return 'danger';
+            default:
+                return 'secondary';
+        }
+    };
+
+    // Récupérer les emplois postulés par l'utilisateur
+    useEffect(() => {
+        const fetchAppliedJobs = async () => {
+            if (!userData || !userData._id) return;
+            
+            try {
+                setLoadingJobs(true);
+                const token = localStorage.getItem("token");
+                
+                if (!token) {
+                    console.error("No token found");
+                    return;
+                }
+                
+                const response = await axios.get(
+                    "http://localhost:5000/api/applications/user",
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+                
+                if (response.data) {
+                    console.log("Applied jobs:", response.data);
+                    setAppliedJobs(response.data);
+                }
+            } catch (error) {
+                console.error("Error fetching applied jobs:", error);
+            } finally {
+                setLoadingJobs(false);
+            }
+        };
+        
+        if (activeIndex === 2) {
+            fetchAppliedJobs();
+        }
+    }, [userData, activeIndex]);
 
     if (loading) {
         return (
@@ -688,13 +756,88 @@ export default function CandidateProfile() {
                                             
                                             {/* Tab 2: My Jobs */}
                                             <div className={`tab-pane fade ${activeIndex === 2 ? 'show active' : ''}`}>
-                                                <h3 className="mt-0 color-brand-1 mb-50">My Jobs</h3>
-                                                <div className="row display-list">
-                                                    {/* Contenu de l'onglet My Jobs */}
-                                                </div>
-                                                <div className="paginations">
-                                                    {/* Pagination */}
-                                                </div>
+                                                <h3 className="mt-0 color-brand-1 mb-50">My Applied Jobs</h3>
+                                                
+                                                {loadingJobs ? (
+                                                    <div className="text-center py-5">
+                                                        <div className="spinner-border text-primary" role="status">
+                                                            <span className="visually-hidden">Loading...</span>
+                                                        </div>
+                                                        <p className="mt-2">Loading your applications...</p>
+                                                    </div>
+                                                ) : appliedJobs.length === 0 ? (
+                                                    <div className="text-center py-5">
+                                                        <div className="mb-20">
+                                                            <img src="assets/imgs/page/candidates/no-data.png" alt="No applications" style={{ maxHeight: '150px' }} />
+                                                        </div>
+                                                        <h6 className="mb-20">You haven't applied to any jobs yet</h6>
+                                                        <p className="mb-20">Start exploring available positions and apply to find your dream job</p>
+                                                        <Link legacyBehavior href="/jobs-grid">
+                                                            <a className="btn btn-default">Find Jobs</a>
+                                                        </Link>
+                                                    </div>
+                                                ) : (
+                                                    <div className="row display-list">
+                                                        {appliedJobs.map((application) => (
+                                                            <div className="col-xl-12 col-12" key={application._id}>
+                                                                <div className="card-grid-2 hover-up">
+                                                                    <div className="row">
+                                                                        <div className="col-lg-6 col-md-6 col-sm-12">
+                                                                            <div className="card-grid-2-image-left">
+                                                                                <div className="image-box">
+                                                                                    <img src="assets/imgs/brands/brand-1.png" alt="jobBox" />
+                                                                                </div>
+                                                                                <div className="right-info">
+                                                                                    <Link legacyBehavior href={`/job-details?id=${application.job._id}`}>
+                                                                                        <a className="name-job">{application.job.title}</a>
+                                                                                    </Link>
+                                                                                    <span className="location-small">{application.job.location}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="col-lg-6 col-md-6 col-sm-12 text-md-end">
+                                                                            <div className="mt-4 mt-md-0">
+                                                                                <span className={`btn btn-${getStatusColor(application.status)} btn-sm tags-link`}>{application.status}</span>
+                                                                                <span className="card-text-price ml-10">
+                                                                                    Applied on: {new Date(application.createdAt).toLocaleDateString()}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="card-block-info">
+                                                                        <div className="mt-5">
+                                                                            <span className="card-briefcase">{application.job.workplaceType}</span>
+                                                                            <span className="card-time">
+                                                                                <span>{application.job.salaryRange || 'Salary not specified'}</span>
+                                                                            </span>
+                                                                        </div>
+                                                                        <p className="font-sm color-text-paragraph mt-10">
+                                                                            {application.job.description && application.job.description.length > 150 
+                                                                                ? `${application.job.description.substring(0, 150)}...` 
+                                                                                : application.job.description}
+                                                                        </p>
+                                                                        <div className="card-2-bottom mt-20">
+                                                                            <div className="row">
+                                                                                <div className="col-lg-7 col-7">
+                                                                                    <div className="mt-5">
+                                                                                        {application.job.requirements && application.job.requirements.slice(0, 3).map((req, index) => (
+                                                                                            <span className="btn btn-grey-small mr-5" key={index}>{req}</span>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="col-lg-5 col-5 text-end">
+                                                                                    <Link legacyBehavior href={`/job-details?id=${application.job._id}`}>
+                                                                                        <a className="btn btn-apply-now">View Details</a>
+                                                                                    </Link>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
                                             
                                             {/* Tab 3: Saved Jobs */}
