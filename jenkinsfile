@@ -55,6 +55,15 @@ pipeline {
             }
         }
         
+stage('Docker Setup') {
+    steps {
+        script {
+            // Disable BuildKit and remove problematic buildx plugin
+            sh 'export DOCKER_BUILDKIT=0'
+        }
+    }
+}
+
 stage('Dockerize') {
     steps {
         script {
