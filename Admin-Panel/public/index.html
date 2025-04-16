@@ -13,6 +13,16 @@
 	<!-- Apple Touch Icon -->
 	<link rel="apple-touch-icon" sizes="180x180" href="assets/Image1.png">
   <title>TuniHire - Admin Panel</title>
+  <script>
+    // Make environment variables available to the browser
+    window.ENV_API_URL = "%REACT_APP_API_URL%";
+    window.ENV_NODE_ENV = "%NODE_ENV%";
+  </script>
+  <script>
+    window.env = {
+      REACT_APP_API_URL: "%REACT_APP_API_URL%"
+    };
+  </script>
 </head>
 
 <body>

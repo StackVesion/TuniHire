@@ -381,3 +381,85 @@ exports.rejectCompany = async (req, res) => {
     });
   }
 };
+<<<<<<< Updated upstream
+=======
+
+// Add the getAnalytics method to the exports
+exports.getAnalytics = async (req, res) => {
+  try {
+    // Get company statistics
+    const totalCompanies = await Company.countDocuments();
+    const pendingCompanies = await Company.countDocuments({ status: 'pending' });
+    const approvedCompanies = await Company.countDocuments({ status: 'approved' });
+    const rejectedCompanies = await Company.countDocuments({ status: 'rejected' });
+    
+    // Get most recent companies
+    const recentCompanies = await Company.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('name logo industry location status createdAt');
+    
+    // Get companies by industry (for charts)
+    const companiesByIndustry = await Company.aggregate([
+      { $group: { _id: "$industry", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]);
+    
+    // Get companies by location (for geographic visualization)
+    const companiesByLocation = await Company.aggregate([
+      { $group: { _id: "$location", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]);
+    
+    // Monthly growth data (for trend analysis)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
+    const monthlyGrowth = await Company.aggregate([
+      { 
+        $match: { 
+          createdAt: { $gte: sixMonthsAgo } 
+        } 
+      },
+      {
+        $group: {
+          _id: { 
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1 } }
+    ]);
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        summary: {
+          totalCompanies,
+          pendingCompanies,
+          approvedCompanies,
+          rejectedCompanies,
+          approvalRate: totalCompanies > 0 ? (approvedCompanies / totalCompanies * 100).toFixed(1) : 0
+        },
+        recentCompanies,
+        companiesByIndustry,
+        companiesByLocation,
+        monthlyGrowth
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching analytics:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve analytics data",
+      error: error.message
+    });
+  }
+};
+
+
+>>>>>>> Stashed changes
