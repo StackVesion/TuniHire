@@ -425,7 +425,7 @@ function UserPortfolio() {
                     <i className="fi-rr-file-pdf text-danger" style={{ fontSize: '48px' }}></i>
                     <h5 className="mt-3">Candidate Resume</h5>
                     <a 
-                      href={portfolio.cvFile.downloadUrl || portfolio.cvFile} 
+                      href={`http://localhost:5000${portfolio.cvFile.path}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn btn-primary mt-2"
@@ -596,25 +596,34 @@ function UserPortfolio() {
                         <div className="project-card h-100 p-3 border rounded">
                           <h5 className="mb-1">{project.title}</h5>
                           
-                          {project.technologies && (
-                            <div className="mb-2">
-                              {project.technologies.split(',').map((tech, i) => (
-                                <span 
-                                  key={i} 
-                                  className="badge bg-light text-dark me-1"
-                                  style={{ border: '1px solid #e0e0e0' }}
-                                >
-                                  {tech.trim()}
-                                </span>
-                              ))}
+                          {project.image && (
+                            <div className="project-image mb-2">
+                              <img 
+                                src={project.image} 
+                                alt={project.title}
+                                className="img-fluid rounded mb-2"
+                                style={{ maxHeight: "150px", width: "100%", objectFit: "cover" }}
+                              />
                             </div>
                           )}
                           
+                          <div className="mb-2">
+                            {(project.technologies || []).map((tech, i) => (
+                              <span 
+                                key={i} 
+                                className="badge bg-light text-dark me-1 mb-1"
+                                style={{ border: '1px solid #e0e0e0' }}
+                              >
+                                {typeof tech === 'string' ? tech : tech.trim()}
+                              </span>
+                            ))}
+                          </div>
+                          
                           <p className="mb-2 small" style={{ whiteSpace: 'pre-line' }}>{project.description}</p>
                           
-                          {project.url && (
+                          {project.link && (
                             <a 
-                              href={project.url} 
+                              href={project.link} 
                               target="_blank" 
                               rel="noopener noreferrer"
                               className="btn btn-sm btn-outline-primary"
@@ -643,23 +652,30 @@ function UserPortfolio() {
                   <div className="row">
                     {portfolio.certificates.map((cert, index) => (
                       <div key={index} className="col-md-6 mb-3">
-                        <div className="certificate-card p-3 border rounded">
+                        <div className="certificate-card p-3 border rounded h-100">
                           <h5 className="mb-1">{cert.title}</h5>
-                          <p className="mb-1 text-primary">{cert.issuer}</p>
                           
-                          {cert.date && (
-                            <p className="text-muted small mb-2">
-                              <i className="fi-rr-calendar me-1"></i>
-                              {new Date(cert.date).toLocaleDateString('en-US', { 
-                                year: 'numeric', 
-                                month: 'long'
-                              })}
-                            </p>
+                          {cert.description && (
+                            <p className="mb-2 small" style={{ whiteSpace: 'pre-line' }}>{cert.description}</p>
                           )}
                           
-                          {cert.url && (
+                          {cert.skills && cert.skills.length > 0 && (
+                            <div className="mb-2">
+                              {cert.skills.map((skill, i) => (
+                                <span 
+                                  key={i} 
+                                  className="badge bg-light text-dark me-1 mb-1"
+                                  style={{ border: '1px solid #e0e0e0' }}
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {cert.certificateUrl && (
                             <a 
-                              href={cert.url} 
+                              href={cert.certificateUrl} 
                               target="_blank" 
                               rel="noopener noreferrer"
                               className="btn btn-sm btn-outline-primary mt-1"
