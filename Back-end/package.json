@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
+    "start": "node server.js",
+    "dev": "nodemon server.js",
     "seed": "node scripts/seedDB.js",
     "test": "NODE_ENV=test mocha --recursive './test/**/*.test.js' --timeout 10000",
     "test:coverage": "NODE_ENV=test nyc --reporter=html --reporter=text mocha --recursive './test/**/*.test.js' --timeout 10000"
-  },
+    },
   "keywords": [],
   "author": "",
   "license": "ISC",
