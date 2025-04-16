@@ -489,7 +489,7 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                     </li>
                                 </ul>
                             </div>
-                            <div className="site-copyright">Copyright 2022 &copy; JobBox. <br />Designed by AliThemes.</div>
+                            <div className="site-copyright">Copyright 2022 &copy; TuniHire. <br />Designed by StackVision.</div>
                         </div>
                     </div>
                 </div>

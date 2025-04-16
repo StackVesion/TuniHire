@@ -6,15 +6,20 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Swal from "sweetalert2";
 import { useRouter } from "next/router";
+import { getCompanyById, getJobsByCompany } from "../lib/api";
 
 export default function CompanyDetails() {
     const [activeIndex, setActiveIndex] = useState(1);
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(false);
+    const [company, setCompany] = useState(null);
+    const [companyJobs, setCompanyJobs] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [jobsLoading, setJobsLoading] = useState(true);
     const router = useRouter();
+    const { id } = router.query;
 
     const handleOnClick = (index) => {
-        setActiveIndex(index); // remove the curly braces
+        setActiveIndex(index); 
     };
 
     useEffect(() => {
@@ -35,6 +40,62 @@ export default function CompanyDetails() {
 
         fetchUserData();
     }, []);
+
+    useEffect(() => {
+        // Fetch company data when id is available
+        const fetchCompanyData = async () => {
+            if (!id) return;
+            
+            try {
+                setLoading(true);
+                const response = await getCompanyById(id);
+                setCompany(response.company);
+                setLoading(false);
+            } catch (error) {
+                console.error('Error fetching company data:', error);
+                setLoading(false);
+                
+                // Show error message and redirect if company not found
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'Company not found or you do not have permission to view it.',
+                    icon: 'error',
+                }).then(() => {
+                    router.push('/companies-grid');
+                });
+            }
+        };
+
+        fetchCompanyData();
+    }, [id, router]);
+    
+    // Fetch company jobs
+    useEffect(() => {
+        const fetchCompanyJobs = async () => {
+            if (!id) return;
+            
+            try {
+                setJobsLoading(true);
+                const response = await getJobsByCompany(id);
+                console.log('Jobs response:', response);
+                
+                if (response.jobs && Array.isArray(response.jobs)) {
+                    setCompanyJobs(response.jobs);
+                    console.log(`Loaded ${response.jobs.length} jobs for company`);
+                } else {
+                    console.warn('No jobs array in response:', response);
+                    setCompanyJobs([]);
+                }
+                setJobsLoading(false);
+            } catch (error) {
+                console.error('Error fetching company jobs:', error);
+                setJobsLoading(false);
+                setCompanyJobs([]);
+            }
+        };
+        
+        fetchCompanyJobs();
+    }, [id]);
 
     // Function to handle Apply for Company button click
     const handleApplyForCompany = async () => {
@@ -148,14 +209,22 @@ export default function CompanyDetails() {
                             </div>
                             <div className="box-company-profile">
                                 <div className="image-compay">
-                                    <img src="assets/imgs/page/company/company.png" alt="jobBox" />
+                                    {company?.logo ? (
+                                        <img 
+                                            src={company.logo}
+                                            alt={company?.name}
+                                            style={{ maxHeight: '100px', maxWidth: '100%', objectFit: 'contain' }}
+                                        />
+                                    ) : (
+                                        <img src="assets/imgs/page/company/company.png" alt="Default company logo" />
+                                    )}
                                 </div>
                                 <div className="row mt-10">
                                     <div className="col-lg-8 col-md-12">
                                         <h5 className="f-18">
-                                            AliThemes <span className="card-location font-regular ml-20">New York, US</span>
+                                            {company?.name} <span className="card-location font-regular ml-20">{company?.location}</span>
                                         </h5>
-                                        <p className="mt-5 font-md color-text-paragraph-2 mb-15">Our Mission to make working life simple</p>
+                                        <p className="mt-5 font-md color-text-paragraph-2 mb-15">{company?.description}</p>
                                     </div>
                                     <div className="col-lg-4 col-md-12 text-lg-end">
                                         {user && user.role === "candidate" ? (
@@ -203,9 +272,8 @@ export default function CompanyDetails() {
                                     <div className="content-single">
                                         <div className="tab-content">
                                             <div className={`tab-pane fade ${activeIndex === 1 && "show active"}`}>
-                                                <h4>Welcome to AliStudio Team</h4>
-                                                <p>The AliStudio Design team has a vision to establish a trusted platform that enables productive and healthy enterprises in a world of digital and remote everything, constantly changing work patterns and norms, and the need for organizational resiliency.</p>
-                                                <p>The ideal candidate will have strong creative skills and a portfolio of work which demonstrates their passion for illustrative design and typography. This candidate will have experiences in working with numerous different design platforms such as digital and print forms.</p>
+                                                <h4>Welcome to {company?.name}</h4>
+                                                <p>{company?.description}</p>
                                                 <h4>Essential Knowledge, Skills, and Experience</h4>
                                                 <ul>
                                                     <li>A portfolio demonstrating well thought through and polished end to end customer journeys</li>
@@ -221,242 +289,120 @@ export default function CompanyDetails() {
                                             </div>
                                             <div className={`tab-pane fade ${activeIndex === 2 && "show active"}`}>
                                                 <h4>Recruitments</h4>
-                                                <p>The AliStudio Design team has a vision to establish a trusted platform that enables productive and healthy enterprises in a world of digital and remote everything, constantly changing work patterns and norms, and the need for organizational resiliency.</p>
-                                                <p>The ideal candidate will have strong creative skills and a portfolio of work which demonstrates their passion for illustrative design and typography. This candidate will have experiences in working with numerous different design platforms such as digital and print forms.</p>
+                                                <p>{company?.description}</p>
                                             </div>
                                             <div className={`tab-pane fade ${activeIndex === 3 && "show active"}`}>
                                                 <h4>People</h4>
-                                                <p>The AliStudio Design team has a vision to establish a trusted platform that enables productive and healthy enterprises in a world of digital and remote everything, constantly changing work patterns and norms, and the need for organizational resiliency.</p>
-                                                <p>The ideal candidate will have strong creative skills and a portfolio of work which demonstrates their passion for illustrative design and typography. This candidate will have experiences in working with numerous different design platforms such as digital and print forms.</p>
+                                                <p>{company?.description}</p>
                                             </div>
                                         </div>
                                     </div>
                                     <div className="box-related-job content-page">
                                         <h5 className="mb-30">Latest Jobs</h5>
                                         <div className="box-list-jobs display-list">
-                                            <div className="col-xl-12 col-12">
-                                                <div className="card-grid-2 hover-up">
-                                                    <span className="flash" />
-                                                    <div className="row">
-                                                        <div className="col-lg-6 col-md-6 col-sm-12">
-                                                            <div className="card-grid-2-image-left">
-                                                                <div className="image-box">
-                                                                    <img src="assets/imgs/brands/brand-6.png" alt="jobBox" />
-                                                                </div>
-                                                                <div className="right-info">
-                                                                    <Link legacyBehavior href="#">
-                                                                        <a className="name-job">Quora JSC</a>
-                                                                    </Link>
-                                                                    <span className="location-small">New York, US</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="col-lg-6 text-start text-md-end pr-60 col-md-6 col-sm-12">
-                                                            <div className="pl-15 mb-15 mt-30">
-                                                                <Link legacyBehavior href="#">
-                                                                    <a className="btn btn-grey-small mr-5">Adobe XD</a>
-                                                                </Link>
-
-                                                                <Link legacyBehavior href="#">
-                                                                    <a className="btn btn-grey-small mr-5">Figma</a>
-                                                                </Link>
-                                                            </div>
-                                                        </div>
+                                            {jobsLoading ? (
+                                                <div className="text-center p-4">
+                                                    <div className="spinner-border text-primary" role="status">
+                                                        <span className="visually-hidden">Loading jobs...</span>
                                                     </div>
-                                                    <div className="card-block-info">
-                                                        <h4>
-                                                            <Link legacyBehavior href="job-details">
-                                                                <a>Senior System Engineer</a>
-                                                            </Link>
-                                                        </h4>
-                                                        <div className="mt-5">
-                                                            <span className="card-briefcase">Part time</span>
-                                                            <span className="card-time">
-                                                                <span>5</span>
-                                                                <span> mins ago</span>
-                                                            </span>
-                                                        </div>
-                                                        <p className="font-sm color-text-paragraph mt-10">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Recusandae architecto eveniet, dolor quo repellendus pariatur.</p>
-                                                        <div className="card-2-bottom mt-20">
+                                                    <p className="mt-2">Loading available jobs...</p>
+                                                </div>
+                                            ) : companyJobs.length === 0 ? (
+                                                <div className="text-center p-4">
+                                                    <p>No jobs available from this company at the moment.</p>
+                                                    <Link legacyBehavior href="/companies-grid">
+                                                        <a className="btn btn-outline-primary mt-3">
+                                                            <i className="fi-rr-building mr-5"></i>
+                                                            Browse other companies
+                                                        </a>
+                                                    </Link>
+                                                </div>
+                                            ) : (
+                                                companyJobs.map((job, index) => (
+                                                    <div key={job._id || index} className="col-xl-12 col-12">
+                                                        <div className="card-grid-2 hover-up">
+                                                            <span className="flash" />
                                                             <div className="row">
-                                                                <div className="col-lg-7 col-7">
-                                                                    <span className="card-text-price">$800</span>
-                                                                    <span className="text-muted">/Hour</span>
+                                                                <div className="col-lg-6 col-md-6 col-sm-12">
+                                                                    <div className="card-grid-2-image-left">
+                                                                        <div className="image-box">
+                                                                            <img 
+                                                                                src={company?.logo || "assets/imgs/brands/brand-6.png"} 
+                                                                                alt={company?.name}
+                                                                                style={{ maxHeight: '60px', objectFit: 'contain' }}
+                                                                            />
+                                                                        </div>
+                                                                        <div className="right-info">
+                                                                            <Link legacyBehavior href="#">
+                                                                                <a className="name-job">{company?.name}</a>
+                                                                            </Link>
+                                                                            <span className="location-small">{job.location || company?.location}</span>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
-                                                                <div className="col-lg-5 col-5 text-end">
-                                                                    <div className="btn btn-apply-now" data-bs-toggle="modal" data-bs-target="#ModalApplyJobForm">
-                                                                        Apply now
+                                                                <div className="col-lg-6 text-start text-md-end pr-60 col-md-6 col-sm-12">
+                                                                    <div className="pl-15 mb-15 mt-30">
+                                                                        <Link legacyBehavior href="#">
+                                                                            <a className="btn btn-grey-small mr-5">{job.category}</a>
+                                                                        </Link>
+
+                                                                        <Link legacyBehavior href="#">
+                                                                            <a className="btn btn-grey-small mr-5">{job.type || 'Full-time'}</a>
+                                                                        </Link>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="card-block-info">
+                                                                <h4>
+                                                                    <Link legacyBehavior href={`/job-details?id=${job._id}`}>
+                                                                        <a>{job.title}</a>
+                                                                    </Link>
+                                                                </h4>
+                                                                <div className="mt-5">
+                                                                    <span className="card-briefcase">{job.type || 'Full-time'}</span>
+                                                                    <span className="card-time">
+                                                                        <span>Posted {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'recently'}</span>
+                                                                    </span>
+                                                                </div>
+                                                                <p className="font-sm color-text-paragraph mt-10">
+                                                                    {job.description ? 
+                                                                        (job.description.length > 150 ? 
+                                                                            job.description.substring(0, 150) + '...' : 
+                                                                            job.description) : 
+                                                                        'No description available'
+                                                                    }
+                                                                </p>
+                                                                <div className="card-2-bottom mt-20">
+                                                                    <div className="row">
+                                                                        <div className="col-lg-7 col-7">
+                                                                            <span className="card-text-price">{job.salaryRange || 'Negotiable'}</span>
+                                                                            {job.salaryRange && <span className="text-muted">/Month</span>}
+                                                                        </div>
+                                                                        <div className="col-lg-5 col-5 text-end">
+                                                                            <Link legacyBehavior href={`/job-details?id=${job._id}`}>
+                                                                                <a className="btn btn-apply-now">
+                                                                                    View details
+                                                                                </a>
+                                                                            </Link>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-12 col-12">
-                                                <div className="card-grid-2 hover-up">
-                                                    <span className="flash" />
-                                                    <div className="row">
-                                                        <div className="col-lg-6 col-md-6 col-sm-12">
-                                                            <div className="card-grid-2-image-left">
-                                                                <div className="image-box">
-                                                                    <img src="assets/imgs/brands/brand-7.png" alt="jobBox" />
-                                                                </div>
-                                                                <div className="right-info">
-                                                                    <Link legacyBehavior href="#">
-                                                                        <a className="name-job">Nintendo</a>
-                                                                    </Link>
-                                                                    <span className="location-small">New York, US</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="col-lg-6 text-start text-md-end pr-60 col-md-6 col-sm-12">
-                                                            <div className="pl-15 mb-15 mt-30">
-                                                                <Link legacyBehavior href="#">
-                                                                    <a className="btn btn-grey-small mr-5">Adobe XD</a>
-                                                                </Link>
-
-                                                                <Link legacyBehavior href="#">
-                                                                    <a className="btn btn-grey-small mr-5">Figma</a>
-                                                                </Link>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="card-block-info">
-                                                        <h4>
-                                                            <Link legacyBehavior href="job-details">
-                                                                <a>Products Manager</a>
-                                                            </Link>
-                                                        </h4>
-                                                        <div className="mt-5">
-                                                            <span className="card-briefcase">Full time</span>
-                                                            <span className="card-time">
-                                                                <span>6</span>
-                                                                <span> mins ago</span>
-                                                            </span>
-                                                        </div>
-                                                        <p className="font-sm color-text-paragraph mt-10">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Recusandae architecto eveniet, dolor quo repellendus pariatur.</p>
-                                                        <div className="card-2-bottom mt-20">
-                                                            <div className="row">
-                                                                <div className="col-lg-7 col-7">
-                                                                    <span className="card-text-price">$250</span>
-                                                                    <span className="text-muted">/Hour</span>
-                                                                </div>
-                                                                <div className="col-lg-5 col-5 text-end">
-                                                                    <div className="btn btn-apply-now" data-bs-toggle="modal" data-bs-target="#ModalApplyJobForm">
-                                                                        Apply now
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="col-xl-12 col-12">
-                                                <div className="card-grid-2 hover-up">
-                                                    <span className="flash" />
-                                                    <div className="row">
-                                                        <div className="col-lg-6 col-md-6 col-sm-12">
-                                                            <div className="card-grid-2-image-left">
-                                                                <div className="image-box">
-                                                                    <img src="assets/imgs/brands/brand-8.png" alt="jobBox" />
-                                                                </div>
-                                                                <div className="right-info">
-                                                                    <Link legacyBehavior href="#">
-                                                                        <a className="name-job">Periscope</a>
-                                                                    </Link>
-                                                                    <span className="location-small">New York, US</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="col-lg-6 text-start text-md-end pr-60 col-md-6 col-sm-12">
-                                                            <div className="pl-15 mb-15 mt-30">
-                                                                <Link legacyBehavior href="#">
-                                                                    <a className="btn btn-grey-small mr-5">Adobe XD</a>
-                                                                </Link>
-
-                                                                <Link legacyBehavior href="#">
-                                                                    <a className="btn btn-grey-small mr-5">Figma</a>
-                                                                </Link>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="card-block-info">
-                                                        <h4>
-                                                            <Link legacyBehavior href="job-details">
-                                                                <a>Lead Quality Control QA</a>
-                                                            </Link>
-                                                        </h4>
-                                                        <div className="mt-5">
-                                                            <span className="card-briefcase">Full time</span>
-                                                            <span className="card-time">
-                                                                <span>6</span>
-                                                                <span> mins ago</span>
-                                                            </span>
-                                                        </div>
-                                                        <p className="font-sm color-text-paragraph mt-10">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Recusandae architecto eveniet, dolor quo repellendus pariatur.</p>
-                                                        <div className="card-2-bottom mt-20">
-                                                            <div className="row">
-                                                                <div className="col-lg-7 col-7">
-                                                                    <span className="card-text-price">$250</span>
-                                                                    <span className="text-muted">/Hour</span>
-                                                                </div>
-                                                                <div className="col-lg-5 col-5 text-end">
-                                                                    <div className="btn btn-apply-now" data-bs-toggle="modal" data-bs-target="#ModalApplyJobForm">
-                                                                        Apply now
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                                ))
+                                            )}
                                         </div>
-                                        <div className="paginations">
-                                            <ul className="pager">
-                                                <li>
-                                                    <a className="pager-prev" href="#" />
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="#">
-                                                        <a className="pager-number">1</a>
-                                                    </Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="#">
-                                                        <a className="pager-number">2</a>
-                                                    </Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="#">
-                                                        <a className="pager-number">3</a>
-                                                    </Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="#">
-                                                        <a className="pager-number">4</a>
-                                                    </Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="#">
-                                                        <a className="pager-number">5</a>
-                                                    </Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="#">
-                                                        <a className="pager-number active">6</a>
-                                                    </Link>
-                                                </li>
-                                                <li>
-                                                    <Link legacyBehavior href="#">
-                                                        <a className="pager-number">7</a>
-                                                    </Link>
-                                                </li>
-                                                <li>
-                                                    <a className="pager-next" href="#" />
-                                                </li>
-                                            </ul>
-                                        </div>
+                                        {companyJobs.length > 0 && (
+                                            <div className="paginations mt-4">
+                                                <Link legacyBehavior href="/jobs-grid">
+                                                    <a className="btn btn-brand-1 btn-icon">
+                                                        <i className="fi-rr-briefcase me-2"></i>
+                                                        View all jobs
+                                                    </a>
+                                                </Link>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="col-lg-4 col-md-12 col-sm-12 col-12 pl-40 pl-lg-15 mt-lg-30">
@@ -464,8 +410,8 @@ export default function CompanyDetails() {
                                         <div className="sidebar-heading">
                                             <div className="avatar-sidebar">
                                                 <div className="sidebar-info pl-0">
-                                                    <span className="sidebar-company">AliThemes</span>
-                                                    <span className="card-location">New York, US</span>
+                                                    <span className="sidebar-company">{company?.name}</span>
+                                                    <span className="card-location">{company?.location}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -482,7 +428,7 @@ export default function CompanyDetails() {
                                                     </div>
                                                     <div className="sidebar-text-info">
                                                         <span className="text-description">Company field</span>
-                                                        <strong className="small-heading">Accounting / Finance</strong>
+                                                        <strong className="small-heading">{company?.category}</strong>
                                                     </div>
                                                 </li>
                                                 <li>
@@ -491,7 +437,7 @@ export default function CompanyDetails() {
                                                     </div>
                                                     <div className="sidebar-text-info">
                                                         <span className="text-description">Location</span>
-                                                        <strong className="small-heading">Chicago, US Remote Friendly</strong>
+                                                        <strong className="small-heading">{company?.location}</strong>
                                                     </div>
                                                 </li>
                                                 <li>
