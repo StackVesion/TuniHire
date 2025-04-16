@@ -137,7 +137,7 @@ const EducationForm = ({ portfolioId, education = null, onSuccess, onCancel }) =
                 <div className="row">
                     <div className="col-md-6">
                         <div className="mb-3">
-                            <label className="form-label">School/University</label>
+                            <label className="form-label">School</label>
                             <input 
                                 type="text" 
                                 className={`form-control ${errors.school ? 'is-invalid' : ''}`}

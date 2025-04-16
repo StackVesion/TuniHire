@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
-import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import suggestions from '../../data/suggestions.json';
 import { createAuthAxios } from '@/utils/authUtils';
@@ -8,37 +7,28 @@ import { createAuthAxios } from '@/utils/authUtils';
 const CertificateForm = ({ portfolioId, certificate = null, onSuccess, onCancel }) => {
     const [formData, setFormData] = useState({
         title: '',
-        issuer: '',
-        date: null,
-        expiration: null,
-        noExpiration: false,
-        credentialId: '',
-        credentialUrl: '',
-        description: ''
+        description: '',
+        skills: [],
+        certificateUrl: ''
     });
     
     const [errors, setErrors] = useState({});
     const [titleSuggestions, setTitleSuggestions] = useState([]);
-    const [issuerSuggestions, setIssuerSuggestions] = useState([]);
+    const [newSkill, setNewSkill] = useState('');
     
     useEffect(() => {
         // If editing an existing certificate, populate the form
         if (certificate) {
             setFormData({
                 title: certificate.title || '',
-                issuer: certificate.issuer || '',
-                date: certificate.date ? new Date(certificate.date) : null,
-                expiration: certificate.expiration ? new Date(certificate.expiration) : null,
-                noExpiration: certificate.noExpiration || false,
-                credentialId: certificate.credentialId || '',
-                credentialUrl: certificate.credentialUrl || '',
-                description: certificate.description || ''
+                description: certificate.description || '',
+                skills: certificate.skills || [],
+                certificateUrl: certificate.certificateUrl || ''
             });
         }
         
         // Load suggestions
         if (suggestions.certificateTitles) setTitleSuggestions(suggestions.certificateTitles);
-        if (suggestions.certificateIssuers) setIssuerSuggestions(suggestions.certificateIssuers);
     }, [certificate]);
     
     const handleChange = (e) => {
@@ -51,31 +41,33 @@ const CertificateForm = ({ portfolioId, certificate = null, onSuccess, onCancel 
         }
     };
     
-    const handleDateChange = (date, name) => {
-        setFormData({ ...formData, [name]: date });
-        
-        // Clear error for the field being edited
-        if (errors[name]) {
-            setErrors({ ...errors, [name]: null });
+    const handleSkillChange = (e) => {
+        setNewSkill(e.target.value);
+    };
+    
+    const addSkill = () => {
+        if (newSkill.trim() && !formData.skills.includes(newSkill.trim())) {
+            setFormData({
+                ...formData,
+                skills: [...formData.skills, newSkill.trim()]
+            });
+            setNewSkill('');
         }
     };
     
-    const handleCheckbox = (e) => {
-        const { name, checked } = e.target;
-        setFormData({ ...formData, [name]: checked });
-        
-        // If no expiration, clear expiration date
-        if (name === 'noExpiration' && checked) {
-            setFormData(prev => ({ ...prev, expiration: null }));
-        }
+    const removeSkill = (index) => {
+        const updatedSkills = [...formData.skills];
+        updatedSkills.splice(index, 1);
+        setFormData({
+            ...formData,
+            skills: updatedSkills
+        });
     };
     
     const validateForm = () => {
         const newErrors = {};
         
         if (!formData.title.trim()) newErrors.title = 'Certificate title is required';
-        if (!formData.issuer.trim()) newErrors.issuer = 'Certificate issuer is required';
-        if (!formData.date) newErrors.date = 'Issue date is required';
         
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -93,9 +85,7 @@ const CertificateForm = ({ portfolioId, certificate = null, onSuccess, onCancel 
             let response;
             
             const payload = {
-                ...formData,
-                date: formData.date?.toISOString(),
-                expiration: formData.expiration?.toISOString() || null
+                ...formData
             };
             
             if (certificate) {
@@ -129,124 +119,35 @@ const CertificateForm = ({ portfolioId, certificate = null, onSuccess, onCancel 
         <div className="portfolio-form certificate-form mb-4">
             <h4 className="mb-3">{certificate ? 'Edit' : 'Add'} Certificate</h4>
             <form onSubmit={handleSubmit}>
-                <div className="row">
-                    <div className="col-md-6">
-                        <div className="mb-3">
-                            <label className="form-label">Certificate Title</label>
-                            <input 
-                                type="text" 
-                                className={`form-control ${errors.title ? 'is-invalid' : ''}`}
-                                name="title"
-                                value={formData.title}
-                                onChange={handleChange}
-                                list="title-suggestions"
-                                placeholder="e.g., AWS Certified Solutions Architect"
-                            />
-                            <datalist id="title-suggestions">
-                                {titleSuggestions.map((title, index) => (
-                                    <option key={index} value={title} />
-                                ))}
-                            </datalist>
-                            {errors.title && <div className="invalid-feedback">{errors.title}</div>}
-                        </div>
-                    </div>
-                    
-                    <div className="col-md-6">
-                        <div className="mb-3">
-                            <label className="form-label">Issuing Organization</label>
-                            <input 
-                                type="text" 
-                                className={`form-control ${errors.issuer ? 'is-invalid' : ''}`}
-                                name="issuer"
-                                value={formData.issuer}
-                                onChange={handleChange}
-                                list="issuer-suggestions"
-                                placeholder="e.g., Amazon Web Services"
-                            />
-                            <datalist id="issuer-suggestions">
-                                {issuerSuggestions.map((issuer, index) => (
-                                    <option key={index} value={issuer} />
-                                ))}
-                            </datalist>
-                            {errors.issuer && <div className="invalid-feedback">{errors.issuer}</div>}
-                        </div>
-                    </div>
+                <div className="mb-3">
+                    <label className="form-label">Certificate Title</label>
+                    <input 
+                        type="text" 
+                        className={`form-control ${errors.title ? 'is-invalid' : ''}`}
+                        name="title"
+                        value={formData.title}
+                        onChange={handleChange}
+                        list="title-suggestions"
+                        placeholder="e.g., AWS Certified Solutions Architect"
+                    />
+                    <datalist id="title-suggestions">
+                        {titleSuggestions.map((title, index) => (
+                            <option key={index} value={title} />
+                        ))}
+                    </datalist>
+                    {errors.title && <div className="invalid-feedback">{errors.title}</div>}
                 </div>
                 
-                <div className="row">
-                    <div className="col-md-6">
-                        <div className="mb-3">
-                            <label className="form-label">Issue Date</label>
-                            <DatePicker
-                                selected={formData.date}
-                                onChange={(date) => handleDateChange(date, 'date')}
-                                dateFormat="MMMM yyyy"
-                                showMonthYearPicker
-                                className={`form-control ${errors.date ? 'is-invalid' : ''}`}
-                                placeholderText="Select issue date"
-                            />
-                            {errors.date && <div className="invalid-feedback">{errors.date}</div>}
-                        </div>
-                    </div>
-                    
-                    <div className="col-md-6">
-                        <div className="mb-3">
-                            <label className="form-label">Expiration Date</label>
-                            <DatePicker
-                                selected={formData.expiration}
-                                onChange={(date) => handleDateChange(date, 'expiration')}
-                                dateFormat="MMMM yyyy"
-                                showMonthYearPicker
-                                className={`form-control`}
-                                placeholderText="Select expiration date (if applicable)"
-                                disabled={formData.noExpiration}
-                            />
-                        </div>
-                        
-                        <div className="form-check mb-3">
-                            <input
-                                type="checkbox"
-                                className="form-check-input"
-                                id="noExpiration"
-                                name="noExpiration"
-                                checked={formData.noExpiration}
-                                onChange={handleCheckbox}
-                            />
-                            <label className="form-check-label" htmlFor="noExpiration">
-                                This certificate does not expire
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                
-                <div className="row">
-                    <div className="col-md-6">
-                        <div className="mb-3">
-                            <label className="form-label">Credential ID</label>
-                            <input 
-                                type="text" 
-                                className="form-control"
-                                name="credentialId"
-                                value={formData.credentialId}
-                                onChange={handleChange}
-                                placeholder="e.g., ABC123456"
-                            />
-                        </div>
-                    </div>
-                    
-                    <div className="col-md-6">
-                        <div className="mb-3">
-                            <label className="form-label">Credential URL</label>
-                            <input 
-                                type="url" 
-                                className="form-control"
-                                name="credentialUrl"
-                                value={formData.credentialUrl}
-                                onChange={handleChange}
-                                placeholder="https://example.com/verify/ABC123456"
-                            />
-                        </div>
-                    </div>
+                <div className="mb-3">
+                    <label className="form-label">Certificate URL</label>
+                    <input 
+                        type="url" 
+                        className="form-control"
+                        name="certificateUrl"
+                        value={formData.certificateUrl}
+                        onChange={handleChange}
+                        placeholder="https://example.com/verify/certificate"
+                    />
                 </div>
                 
                 <div className="mb-3">
@@ -257,8 +158,50 @@ const CertificateForm = ({ portfolioId, certificate = null, onSuccess, onCancel 
                         value={formData.description}
                         onChange={handleChange}
                         rows="3"
-                        placeholder="Briefly describe what this certificate represents..."
+                        placeholder="Describe what this certificate represents and skills it certifies..."
                     ></textarea>
+                </div>
+                
+                <div className="mb-4">
+                    <label className="form-label">Skills</label>
+                    <div className="input-group mb-2">
+                        <input 
+                            type="text"
+                            className="form-control"
+                            placeholder="Add skills related to this certificate"
+                            value={newSkill}
+                            onChange={handleSkillChange}
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    addSkill();
+                                }
+                            }}
+                        />
+                        <button 
+                            type="button" 
+                            className="btn btn-outline-primary"
+                            onClick={addSkill}
+                        >
+                            Add
+                        </button>
+                    </div>
+                    
+                    {formData.skills.length > 0 && (
+                        <div className="d-flex flex-wrap gap-2 mt-2">
+                            {formData.skills.map((skill, index) => (
+                                <span key={index} className="badge bg-light text-dark border d-flex align-items-center">
+                                    {skill}
+                                    <button 
+                                        type="button" 
+                                        className="btn-close ms-2" 
+                                        style={{ fontSize: '0.6rem' }}
+                                        onClick={() => removeSkill(index)}
+                                    ></button>
+                                </span>
+                            ))}
+                        </div>
+                    )}
                 </div>
                 
                 {/* Live Preview */}
@@ -267,15 +210,26 @@ const CertificateForm = ({ portfolioId, certificate = null, onSuccess, onCancel 
                         <h5 className="preview-title">Preview</h5>
                         <div className="preview-content">
                             <h5>{formData.title || 'Certificate Title'}</h5>
-                            <p className="mb-1">Issued by {formData.issuer || 'Organization'}</p>
-                            <p className="text-muted small">
-                                Issued: {formData.date ? formData.date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : 'Issue Date'}
-                                {!formData.noExpiration && formData.expiration ? ` • Expires: ${formData.expiration.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}` : ''}
-                                {formData.noExpiration ? ' • No Expiration' : ''}
-                            </p>
-                            {formData.credentialId && <p className="mb-1 small">Credential ID: {formData.credentialId}</p>}
-                            {formData.credentialUrl && <p className="mb-1 small"><a href={formData.credentialUrl} target="_blank" rel="noopener noreferrer">View Credential</a></p>}
+                            {formData.certificateUrl && (
+                                <p className="mb-1 small">
+                                    <a href={formData.certificateUrl} target="_blank" rel="noopener noreferrer">
+                                        View Certificate
+                                    </a>
+                                </p>
+                            )}
                             {formData.description && <p className="mt-2">{formData.description}</p>}
+                            {formData.skills.length > 0 && (
+                                <div className="mt-2">
+                                    <p className="text-muted mb-1 small">Skills:</p>
+                                    <div className="d-flex flex-wrap gap-1">
+                                        {formData.skills.map((skill, index) => (
+                                            <span key={index} className="badge bg-light text-dark border">
+                                                {skill}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

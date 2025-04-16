@@ -21,6 +21,8 @@ import CertificateForm from '../components/portfolio/CertificateForm';
 import EducationSection from '../components/portfolio/EducationSection';
 import ExperienceSection from '../components/portfolio/ExperienceSection';
 import CertificateSection from '../components/portfolio/CertificateSection';
+import ProjectSection from '../components/portfolio/ProjectSection';
+import PortfolioGuide from '../components/portfolio/PortfolioGuide';
 
 // Import data
 import suggestions from '../data/suggestions.json';
@@ -259,46 +261,42 @@ function Portfolio({ user }) {
         }
     }, [portfolio]);
     
-    // Debug function to test API endpoints
+    // Test API function to restore
     const testApiEndpoints = async () => {
+        console.log("Testing API endpoints...");
+        
+        if (!user || !user._id) {
+            console.error("Missing user ID");
+            return;
+        }
+
         try {
-            const token = getToken();
-            if (!token || !user || !user._id) {
-                console.error('Missing token or user ID for API test');
-                return;
+            const authAxios = createAuthAxios();
+            const response = await authAxios.post(`http://localhost:5000/api/portfolios/${portfolio._id}/skills`, {
+                skill: newSkill.trim()
+            });
+
+            if (response.data.success) {
+                setPortfolio(response.data.portfolio);
+                setNewSkill('');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Skill Added',
+                    text: 'Your skill has been added successfully.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
             }
-            
-            // Testing different endpoint formats
-            const endpoints = [
-                `http://localhost:5000/api/users/${user._id}/portfolio`,
-                `http://localhost:5000/api/portfolio/user/${user._id}`,
-                `http://localhost:5000/api/portfolios/user/${user._id}`,
-                `http://localhost:5000/api/portfolio/${user._id}`,
-            ];
-            
-            console.log('Testing portfolio endpoints...');
-            
-            for (const endpoint of endpoints) {
-                try {
-                    console.log(`Testing endpoint: ${endpoint}`);
-                    const authAxios = createAuthAxios();
-                    const response = await authAxios.get(endpoint);
-                    console.log(`SUCCESS: ${endpoint}`, response.data);
-                    // If we found a working endpoint, use it to fetch the data
-                    if (response.data) {
-                        setPortfolio(response.data);
-                        setShowAlert(false);
-                        break;
-                    }
-                } catch (err) {
-                    console.log(`FAILED: ${endpoint}`, err.response?.status);
-                }
-            }
-        } catch (err) {
-            console.error('Error in API endpoint test:', err);
+        } catch (error) {
+            console.error('Error adding skill:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to add skill.'
+            });
         }
     };
-    
+
     // Function to calculate progress percentage
     const calculateProgress = () => {
         let totalItems = 3; // CV, Experience, Education are the required items
@@ -694,29 +692,40 @@ function Portfolio({ user }) {
         }
 
         try {
-            const authAxios = createAuthAxios();
-            const response = await authAxios.post(`http://localhost:5000/api/portfolios/${portfolio._id}/skills`, {
-                skill: newSkill.trim()
-            });
-
-            if (response.data.success) {
-                setPortfolio(response.data.portfolio);
-                setNewSkill('');
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Skill Added',
-                    text: 'Your skill has been added successfully.',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
+            const token = getToken();
+            if (!token || !user || !user._id) {
+                console.error('Missing token or user ID for API test');
+                return;
             }
-        } catch (error) {
-            console.error('Error adding skill:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Failed to add skill.'
-            });
+            
+            // Testing different endpoint formats
+            const endpoints = [
+                `http://localhost:5000/api/users/${user._id}/portfolio`,
+                `http://localhost:5000/api/portfolio/user/${user._id}`,
+                `http://localhost:5000/api/portfolios/user/${user._id}`,
+                `http://localhost:5000/api/portfolio/${user._id}`,
+            ];
+            
+            console.log('Testing portfolio endpoints...');
+            
+            for (const endpoint of endpoints) {
+                try {
+                    console.log(`Testing endpoint: ${endpoint}`);
+                    const authAxios = createAuthAxios();
+                    const response = await authAxios.get(endpoint);
+                    console.log(`SUCCESS: ${endpoint}`, response.data);
+                    // If we found a working endpoint, use it to fetch the data
+                    if (response.data) {
+                        setPortfolio(response.data);
+                        setShowAlert(false);
+                        break;
+                    }
+                } catch (err) {
+                    console.log(`FAILED: ${endpoint}`, err.response?.status);
+                }
+            }
+        } catch (err) {
+            console.error('Error in API endpoint test:', err);
         }
     };
 
@@ -1593,6 +1602,32 @@ function Portfolio({ user }) {
         }
     };
 
+    // Functions to handle project operations
+    const handleProjectUpdate = (data) => {
+        if (data && data.portfolio) {
+            // If we got a portfolio object directly, use it
+            setPortfolio(data.portfolio);
+        } else {
+            // Otherwise refresh from server
+            fetchPortfolioData();
+        }
+    };
+    
+    const handleProjectRemove = (index) => {
+        // Update local state if possible
+        if (portfolio && portfolio.projects) {
+            const updatedProjects = [...portfolio.projects];
+            updatedProjects.splice(index, 1);
+            setPortfolio(prev => ({
+                ...prev,
+                projects: updatedProjects
+            }));
+        } else {
+            // Otherwise refresh from server
+            fetchPortfolioData();
+        }
+    };
+
     // Function to generate and download CV
     const handleGenerateCV = async () => {
         try {
@@ -1817,6 +1852,13 @@ function Portfolio({ user }) {
                                         portfolio={portfolio} 
                                         onUpdate={handleExperienceUpdate} 
                                         onRemove={handleExperienceRemove} 
+                                    />
+                                    
+                                    <ProjectSection 
+                                        portfolio={portfolio} 
+                                        userId={user._id}
+                                        onUpdate={handleProjectUpdate} 
+                                        onRemove={handleProjectRemove} 
                                     />
                                     
                                     <CertificateSection 
