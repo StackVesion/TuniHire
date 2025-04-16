@@ -11,8 +11,6 @@ import Link from "next/link";
 import withAuth from "@/utils/withAuth";
 import { getToken, createAuthAxios } from "@/utils/authUtils";
 import { FaTimes, FaLock } from "react-icons/fa";
-import CVPreviewModal from '../components/portfolio/CVPreviewModal';
-import Button from 'react-bootstrap/Button';
 
 // Import form components
 import EducationForm from '../components/portfolio/EducationForm';
@@ -79,23 +77,18 @@ function Portfolio({ user }) {
     // Modal states
     const [showEducationModal, setShowEducationModal] = useState(false);
     const [showExperienceModal, setShowExperienceModal] = useState(false);
-    const [showCertificateModal, setShowCertificateModal] = useState(false);
-    const [showCVPreview, setShowCVPreview] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentItemId, setCurrentItemId] = useState(null);
     
-    // Project Form State
+    // Project section state
     const [projectForm, setProjectForm] = useState({
         title: '',
         description: '',
-        technologies: [],
+        technologies: '',
         link: '',
         image: ''
     });
-    
-    // State for the technology input field (separate from the technologies array)
-    const [techInput, setTechInput] = useState('');
-    
+    const [showProjectModal, setShowProjectModal] = useState(false);
     const [isProjectEditing, setIsProjectEditing] = useState(false);
     const [currentProjectIndex, setCurrentProjectIndex] = useState(null);
     
@@ -106,6 +99,7 @@ function Portfolio({ user }) {
         skills: '',
         certificateUrl: ''
     });
+    const [showCertificateModal, setShowCertificateModal] = useState(false);
     const [editingCertificateIndex, setEditingCertificateIndex] = useState(null);
     
     // State variables for step-by-step guide
@@ -758,7 +752,7 @@ function Portfolio({ user }) {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: 'Failed to remove skill. ' + (error.response?.data?.message || 'Please try again.')
+                text: 'Failed to remove skill'
             });
         }
     };
@@ -901,7 +895,7 @@ function Portfolio({ user }) {
                 }));
                 
                 // Reset form and close modal
-                setProjectForm({title: '', description: '', technologies: [], link: '', image: ''});
+                setProjectForm({title: '', description: '', technologies: '', link: '', image: ''});
                 setShowProjectModal(false);
                 
                 Swal.fire({
@@ -971,7 +965,7 @@ function Portfolio({ user }) {
                 });
                 
                 // Reset form and close modal
-                setProjectForm({title: '', description: '', technologies: [], link: '', image: ''});
+                setProjectForm({title: '', description: '', technologies: '', link: '', image: ''});
                 setShowProjectModal(false);
                 setEditingProjectIndex(null);
                 
@@ -1419,30 +1413,112 @@ function Portfolio({ user }) {
     };
 
     // Function to generate CV
-    const handleGenerateCV = () => {
-        if (!user || !portfolio) {
+    const [isGeneratingCV, setIsGeneratingCV] = useState(false);
+    const [cvGenerationStep, setCvGenerationStep] = useState('idle'); // idle, generating, uploading, complete
+    const [showCVModal, setShowCVModal] = useState(false);
+    const [cvURL, setCvURL] = useState('');
+
+    const generateCV = async () => {
+        try {
+            // Set loading states
+            setIsGeneratingCV(true);
+            setCvGenerationStep('generating');
+            
+            // Call API to generate CV with the updated endpoint path
+            const authAxios = createAuthAxios();
+            
+            // Instead of fetching user data, use the user object already available
+            const personalInfo = {
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                email: user.email || '',
+                phone: user.phone || '',
+                address: user.address || ''
+            };
+            
+            // Prepare data for CV generation
+            const payload = {
+                userId: user._id,
+                personalInfo,
+                education: portfolio.education || [],
+                experience: portfolio.experience || [],
+                skills: portfolio.skills || [],
+                certificates: portfolio.certificates || [],
+                projects: portfolio.projects || []
+            };
+            
+            setCvGenerationStep('uploading');
+            const response = await authAxios.post('http://localhost:5000/api/portfolios/generate-cv', payload);
+            
+            if (response.data.success) {
+                // Update portfolio with the CV file info
+                setPortfolio(prev => ({ ...prev, cvFile: response.data.cvUrl }));
+                setCvURL(response.data.cvUrl);
+                setCvGenerationStep('complete');
+                
+                // Show the CV modal
+                setShowCVModal(true);
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: 'CV generated successfully',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            } else {
+                throw new Error('Failed to generate CV');
+            }
+        } catch (error) {
+            console.error('Error generating CV:', error);
             Swal.fire({
                 icon: 'error',
-                title: 'Missing Information',
-                text: 'Please complete your portfolio before generating a CV.'
+                title: 'Error',
+                text: 'Failed to generate CV. Please try again.'
             });
-            return;
+            setCvGenerationStep('idle');
+        } finally {
+            setIsGeneratingCV(false);
         }
-        
-        // Open the preview modal
-        setShowCVPreview(true);
     };
 
-    // Handle successful CV save
-    const handleCVSaveSuccess = (updatedPortfolio) => {
-        // Update the portfolio state with the new CV URL
-        setPortfolio(updatedPortfolio);
-        
-        // Close the modal
-        setShowCVPreview(false);
+    // Function to save CV URL to portfolio
+    const saveCVToPortfolio = async () => {
+        try {
+            setIsGeneratingCV(true);
+            const authAxios = createAuthAxios();
+            
+            const response = await authAxios.put(`http://localhost:5000/api/portfolios/update-cv/${portfolio._id}`, {
+                cvFile: cvURL
+            });
+            
+            if (response.data.success) {
+                setPortfolio(response.data.portfolio);
+                setShowCVModal(false);
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: 'CV saved to your portfolio',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            } else {
+                throw new Error('Failed to save CV to portfolio');
+            }
+        } catch (error) {
+            console.error('Error saving CV:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to save CV to your portfolio. Please try again.'
+            });
+        } finally {
+            setIsGeneratingCV(false);
+        }
     };
 
-    // Add wizard state for portfolio creation flow
+    // Add a state to track if wizard is active
     const [wizardActive, setWizardActive] = useState(false);
 
     // Activate the wizard
@@ -1451,12 +1527,115 @@ function Portfolio({ user }) {
         setWizardStep(1);
     };
 
-    // Helper function to check if the portfolio exists and has content
+    // Add a helper function to check if the portfolio exists and has content
     const hasPortfolio = () => {
         return !!portfolio && !!portfolio._id;
     };
 
-    // Functions to handle portfolio updates
+    // Portfolio Creation Wizard State
+    const [tempEducation, setTempEducation] = useState({
+        school: '',
+        degree: '',
+        fieldOfStudy: '',
+        startDate: '',
+        endDate: '',
+        currentlyEnrolled: false,
+        description: '',
+        location: ''
+    });
+
+    // Experience Form State
+    const [tempExperience, setTempExperience] = useState({
+        company: '',
+        position: '',
+        startDate: '',
+        endDate: '',
+        currentlyWorking: false,
+        description: '',
+        location: ''
+    });
+
+    // Project Form State
+    const [tempProject, setTempProject] = useState({
+        title: '',
+        description: '',
+        technologies: '',
+        link: '',
+        image: ''
+    });
+
+    // Skills Form State
+    const [tempSkill, setTempSkill] = useState('');
+
+    // Certificate Form State
+    const [tempCertificate, setTempCertificate] = useState({
+        title: '',
+        description: '',
+        skills: '',
+        certificateUrl: ''
+    });
+
+    // State for managing individual technology inputs for projects
+    const [tempTech, setTempTech] = useState('');
+
+    // Function to add a technology to the project
+    const addTechnologyToProject = (e) => {
+        e.preventDefault();
+        if (!tempTech.trim()) return;
+        
+        // Update the project state with the new technology
+        setTempProject(prev => ({
+            ...prev,
+            technologies: Array.isArray(prev.technologies) 
+                ? [...prev.technologies, tempTech.trim()] 
+                : [tempTech.trim()]
+        }));
+        
+        // Clear the input
+        setTempTech('');
+    };
+
+    // Function to remove a technology from the project
+    const removeTechnologyFromProject = (index) => {
+        setTempProject(prev => {
+            const updatedTech = Array.isArray(prev.technologies) 
+                ? [...prev.technologies] 
+                : prev.technologies.split(',').map(t => t.trim()).filter(Boolean);
+            
+            updatedTech.splice(index, 1);
+            return { ...prev, technologies: updatedTech };
+        });
+    };
+
+    // New state variables for managing edit/add forms
+    const [showEducationForm, setShowEducationForm] = useState(false);
+    const [showExperienceForm, setShowExperienceForm] = useState(false);
+    const [showCertificateForm, setShowCertificateForm] = useState(false);
+    const [editingEducation, setEditingEducation] = useState(null);
+    const [editingExperience, setEditingExperience] = useState(null);
+    const [editingCertificate, setEditingCertificate] = useState(null);
+
+    // Function to fetch portfolio data
+    const fetchPortfolioData = async () => {
+        try {
+            setLoading(true);
+            const authAxios = createAuthAxios();
+            const response = await authAxios.get(`http://localhost:5000/api/portfolios/user/${user._id}`);
+            
+            if (response.data.success && response.data.portfolio) {
+                setPortfolio(response.data.portfolio);
+            } else {
+                setPortfolio(null);
+            }
+        } catch (error) {
+            console.error('Error fetching portfolio:', error);
+            setPortfolio(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Functions to handle education operations
     const handleEducationUpdate = (updatedPortfolio) => {
         setPortfolio(updatedPortfolio || portfolio);
         setShowEducationModal(false);
@@ -1529,85 +1708,80 @@ function Portfolio({ user }) {
         }
     };
 
-    // Function to fetch portfolio data
-    const fetchPortfolioData = async () => {
+    // Function to generate and download CV
+    const handleGenerateCV = async () => {
         try {
-            setLoading(true);
+            setIsDownloading(true);
             const authAxios = createAuthAxios();
-            const response = await authAxios.get(`http://localhost:5000/api/portfolios/user/${user._id}`);
             
-            if (response.data.success && response.data.portfolio) {
+            // Instead of fetching user data, use the user object already available
+            const personalInfo = {
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                email: user.email || '',
+                phone: user.phone || '',
+                address: user.address || ''
+            };
+            
+            // Prepare data for CV generation
+            const payload = {
+                userId: user._id,
+                personalInfo,
+                education: portfolio.education || [],
+                experience: portfolio.experience || [],
+                skills: portfolio.skills || [],
+                certificates: portfolio.certificates || []
+            };
+            
+            const response = await authAxios.post('http://localhost:5000/api/portfolios/generate-cv', payload);
+            
+            if (response.data.success) {
+                // Trigger download
+                const downloadUrl = response.data.downloadUrl;
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.setAttribute('download', 'cv.pdf');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
                 setPortfolio(response.data.portfolio);
-            } else {
-                setPortfolio(null);
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'CV Generated Successfully',
+                    text: 'Your CV has been generated and downloaded!',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
             }
         } catch (error) {
-            console.error('Error fetching portfolio:', error);
-            setPortfolio(null);
+            console.error('Error generating CV:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to generate CV. Please try again.'
+            });
         } finally {
-            setLoading(false);
+            setIsDownloading(false);
         }
     };
 
-    // Portfolio Creation Wizard State
-    const [tempEducation, setTempEducation] = useState({
-        school: '',
-        degree: '',
-        fieldOfStudy: '',
-        startDate: '',
-        endDate: '',
-        currentlyEnrolled: false,
-        description: '',
-        location: ''
-    });
-
-    // Experience Form State
-    const [tempExperience, setTempExperience] = useState({
-        company: '',
-        position: '',
-        startDate: '',
-        endDate: '',
-        currentlyWorking: false,
-        description: '',
-        location: ''
-    });
-
-    // Function to add a technology to the project
-    const addTechnologyToProject = (e) => {
-        e.preventDefault();
-        if (!techInput.trim()) return;
+    // Handle step completion in the guide
+    const handleStepComplete = (nextStep) => {
+        setCurrentStep(nextStep);
         
-        // Update the project state with the new technology
-        setProjectForm(prev => ({
-            ...prev,
-            technologies: Array.isArray(prev.technologies) 
-                ? [...prev.technologies, techInput.trim()] 
-                : [techInput.trim()]
-        }));
-        
-        // Clear the input
-        setTechInput('');
+        // If the user finished the guide
+        if (nextStep === 'completed') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Portfolio Complete!',
+                text: 'Your portfolio has been successfully set up.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }
     };
-
-    // Function to remove a technology from the project
-    const removeTechnologyFromProject = (index) => {
-        setProjectForm(prev => {
-            const updatedTech = Array.isArray(prev.technologies) 
-                ? [...prev.technologies] 
-                : prev.technologies.split(',').map(t => t.trim()).filter(Boolean);
-            
-            updatedTech.splice(index, 1);
-            return { ...prev, technologies: updatedTech };
-        });
-    };
-
-    // New state variables for managing edit/add forms
-    const [showEducationForm, setShowEducationForm] = useState(false);
-    const [showExperienceForm, setShowExperienceForm] = useState(false);
-    const [showCertificateForm, setShowCertificateForm] = useState(false);
-    const [editingEducation, setEditingEducation] = useState(null);
-    const [editingExperience, setEditingExperience] = useState(null);
-    const [editingCertificate, setEditingCertificate] = useState(null);
 
     // Return the appropriate view based on portfolio existence
     return (
@@ -1734,268 +1908,266 @@ function Portfolio({ user }) {
                 // EXISTING PORTFOLIO VIEW
                 <div className="container">
                     <div className="row">
-                        {/* Top section with user profile and portfolio info */}
-                        <div className="row mb-4">
-                            <div className="col-md-12">
-                                <div className="card shadow-sm">
-                                    <div className="card-body d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h4 className="mb-0">My Portfolio</h4>
-                                            <p className="text-muted mb-0">Manage your professional profile</p>
-                                        </div>
-                                        <div>
-                                            <Button 
-                                                variant="primary" 
-                                                className="me-2 animate__animated animate__fadeIn"
-                                                onClick={handleGenerateCV}
-                                                disabled={!portfolio || loading}
-                                            >
-                                                <i className="fas fa-file-pdf me-2"></i> Generate CV
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {/* Portfolio Content */}
-                        <div className="row">
-                            <div className="col-lg-12">
-                                {portfolio && (
+                        {/* Generate CV Button at the top */}
+                        <div className="col-12 mb-4 d-flex justify-content-end">
+                            <button 
+                                className="btn btn-primary btn-lg" 
+                                onClick={generateCV}
+                                disabled={isGeneratingCV}
+                            >
+                                {isGeneratingCV ? (
                                     <>
-                                        <EducationSection 
-                                            portfolio={portfolio} 
-                                            onUpdate={handleEducationUpdate} 
-                                            onRemove={handleEducationRemove} 
-                                        />
-                                        
-                                        <ExperienceSection 
-                                            portfolio={portfolio} 
-                                            onUpdate={handleExperienceUpdate} 
-                                            onRemove={handleExperienceRemove} 
-                                        />
-                                        
-                                        <ProjectSection 
-                                            portfolio={portfolio} 
-                                            userId={user._id}
-                                            onUpdate={handleProjectUpdate} 
-                                            onRemove={handleProjectRemove} 
-                                        />
-                                        
-                                        <CertificateSection 
-                                            portfolio={portfolio}
-                                            userId={user._id}
-                                            onUpdate={handleCertificateUpdate} 
-                                            onRemove={handleCertificateRemove} 
-                                        />
+                                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                        {cvGenerationStep === 'generating' && 'Generating CV...'}
+                                        {cvGenerationStep === 'uploading' && 'Uploading CV...'}
+                                        {cvGenerationStep === 'complete' && 'CV Generated!'}
+                                    </>
+                                ) : (
+                                    <>
+                                        <i className="fi-rr-file-pdf me-2"></i> Generate CV
                                     </>
                                 )}
-                                
-                                {/* Skills Section */}
-                                <div className="dashboard-list-block mt-5">
-                                    <div className="d-flex justify-content-between align-items-center mb-4">
-                                        <h4>Skills</h4>
-                                        <div className="d-flex">
-                                            <input
-                                                type="text"
-                                                className="form-control me-2"
-                                                placeholder="Add a skill"
-                                                value={newSkill}
-                                                onChange={(e) => setNewSkill(e.target.value)}
-                                                list="skillSuggestions"
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        e.preventDefault();
-                                                        handleAddSkill();
-                                                    }
-                                                }}
-                                            />
-                                            <datalist id="skillSuggestions">
-                                                {suggestions.skills.map((skill, index) => (
-                                                    <option key={index} value={skill} />
-                                                ))}
-                                            </datalist>
-                                            <Button onClick={handleAddSkill} className="btn btn-primary">
-                                                <i className="fi-rr-plus"></i>
-                                            </Button>
-                                        </div>
-                                    </div>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    {/* Portfolio Content */}
+                    <div className="row">
+                        <div className="col-lg-12">
+                            {portfolio && (
+                                <>
+                                    <EducationSection 
+                                        portfolio={portfolio} 
+                                        onUpdate={handleEducationUpdate} 
+                                        onRemove={handleEducationRemove} 
+                                    />
                                     
-                                    {/* Display Skills as Tags */}
-                                    <div className="skill-tags mb-3">
-                                        {portfolio?.skills && portfolio.skills.length > 0 ? (
-                                            <div className="d-flex flex-wrap gap-2">
-                                                {portfolio.skills.map((skill, index) => (
-                                                    <span key={index} className="badge bg-light text-dark p-2 d-flex align-items-center">
-                                                        {skill}
-                                                        <Button 
-                                                            type="button" 
-                                                            className="btn-close ms-2" 
-                                                            style={{fontSize: '0.5rem'}} 
-                                                            onClick={() => handleRemoveSkill(skill)}
-                                                        ></Button>
-                                                    </span>
-                                                ))}
+                                    <ExperienceSection 
+                                        portfolio={portfolio} 
+                                        onUpdate={handleExperienceUpdate} 
+                                        onRemove={handleExperienceRemove} 
+                                    />
+                                    
+                                    <ProjectSection 
+                                        portfolio={portfolio} 
+                                        userId={user._id}
+                                        onUpdate={handleProjectUpdate} 
+                                        onRemove={handleProjectRemove} 
+                                    />
+                                    
+                                    <CertificateSection 
+                                        portfolio={portfolio}
+                                        userId={user._id}
+                                        onUpdate={handleCertificateUpdate} 
+                                        onRemove={handleCertificateRemove} 
+                                    />
+                                </>
+                            )}
+                            
+                            {/* Skills Section */}
+                            <div className="dashboard-list-block mt-5">
+                                <div className="d-flex justify-content-between align-items-center mb-4">
+                                    <h4>Skills</h4>
+                                    <div className="d-flex">
+                                        <input
+                                            type="text"
+                                            className="form-control me-2"
+                                            placeholder="Add a skill"
+                                            value={newSkill}
+                                            onChange={(e) => setNewSkill(e.target.value)}
+                                            list="skillSuggestions"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    handleAddSkill();
+                                                }
+                                            }}
+                                        />
+                                        <datalist id="skillSuggestions">
+                                            {suggestions.skills.map((skill, index) => (
+                                                <option key={index} value={skill} />
+                                            ))}
+                                        </datalist>
+                                        <button onClick={handleAddSkill} className="btn btn-primary">
+                                            <i className="fi-rr-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                {/* Display Skills as Tags */}
+                                <div className="skill-tags mb-3">
+                                    {portfolio?.skills && portfolio.skills.length > 0 ? (
+                                        <div className="d-flex flex-wrap gap-2">
+                                            {portfolio.skills.map((skill, index) => (
+                                                <span key={index} className="badge bg-light text-dark p-2 d-flex align-items-center">
+                                                    {skill}
+                                                    <button 
+                                                        type="button" 
+                                                        className="btn-close ms-2" 
+                                                        style={{fontSize: '0.5rem'}} 
+                                                        onClick={() => handleRemoveSkill(skill)}
+                                                    ></button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-4 border rounded">
+                                            <p className="mb-0 text-muted">No skills added yet. Add skills to highlight your expertise.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            {/* Social Links Section */}
+                            <div className="dashboard-list-block mt-5">
+                                <div className="d-flex justify-content-between align-items-center mb-4">
+                                    <h4>Social Links</h4>
+                                    <button onClick={() => setShowSocialLinksForm(true)} className="btn btn-primary btn-sm">
+                                        <i className="fi-rr-edit me-1"></i> Edit Links
+                                    </button>
+                                </div>
+                                
+                                {showSocialLinksForm ? (
+                                    <div className="p-4 border rounded shadow-sm mb-4">
+                                        <form onSubmit={handleSocialLinksSubmit}>
+                                            <div className="mb-3">
+                                                <label>LinkedIn URL</label>
+                                                <input
+                                                    type="url"
+                                                    className="form-control"
+                                                    value={socialLinks.linkedin || ''}
+                                                    onChange={(e) => setSocialLinks({...socialLinks, linkedin: e.target.value})}
+                                                    placeholder="https://linkedin.com/in/yourprofile"
+                                                />
+                                            </div>
+                                            <div className="mb-3">
+                                                <label>GitHub URL</label>
+                                                <input
+                                                    type="url"
+                                                    className="form-control"
+                                                    value={socialLinks.github || ''}
+                                                    onChange={(e) => setSocialLinks({...socialLinks, github: e.target.value})}
+                                                    placeholder="https://github.com/yourusername"
+                                                />
+                                            </div>
+                                            <div className="mb-3">
+                                                <label>Personal Website</label>
+                                                <input
+                                                    type="url"
+                                                    className="form-control"
+                                                    value={socialLinks.website || ''}
+                                                    onChange={(e) => setSocialLinks({...socialLinks, website: e.target.value})}
+                                                    placeholder="https://yourwebsite.com"
+                                                />
+                                            </div>
+                                            <div className="mb-3">
+                                                <label>Twitter URL</label>
+                                                <input
+                                                    type="url"
+                                                    className="form-control"
+                                                    value={socialLinks.twitter || ''}
+                                                    onChange={(e) => setSocialLinks({...socialLinks, twitter: e.target.value})}
+                                                    placeholder="https://twitter.com/yourusername"
+                                                />
+                                            </div>
+                                            <div className="d-flex justify-content-end gap-2">
+                                                <button 
+                                                    type="button" 
+                                                    className="btn btn-outline-secondary" 
+                                                    onClick={() => setShowSocialLinksForm(false)}
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button type="submit" className="btn btn-primary">
+                                                    Save Links
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                ) : (
+                                    <div className="social-links">
+                                        {((portfolio?.socialLinks?.linkedin || portfolio?.socialLinks?.github || 
+                                          portfolio?.socialLinks?.website || portfolio?.socialLinks?.twitter)) ? (
+                                            <div className="d-flex flex-wrap gap-3">
+                                                {portfolio?.socialLinks?.linkedin && (
+                                                    <a href={portfolio.socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary">
+                                                        <i className="fi-brands-linkedin me-2"></i>LinkedIn
+                                                    </a>
+                                                )}
+                                                {portfolio?.socialLinks?.github && (
+                                                    <a href={portfolio.socialLinks.github} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary">
+                                                        <i className="fi-brands-github me-2"></i>GitHub
+                                                    </a>
+                                                )}
+                                                {portfolio?.socialLinks?.website && (
+                                                    <a href={portfolio.socialLinks.website} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary">
+                                                        <i className="fi-rr-globe me-2"></i>Website
+                                                    </a>
+                                                )}
+                                                {portfolio?.socialLinks?.twitter && (
+                                                    <a href={portfolio.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary">
+                                                        <i className="fi-brands-twitter me-2"></i>Twitter
+                                                    </a>
+                                                )}
                                             </div>
                                         ) : (
                                             <div className="text-center py-4 border rounded">
-                                                <p className="mb-0 text-muted">No skills added yet. Add skills to highlight your expertise.</p>
+                                                <p className="mb-0 text-muted">No social links added yet. Add your professional profiles to connect with others.</p>
                                             </div>
                                         )}
                                     </div>
+                                )}
+                            </div>
+                            
+                            {/* About Me Section */}
+                            <div className="dashboard-list-block mt-5">
+                                <div className="d-flex justify-content-between align-items-center mb-4">
+                                    <h4>About Me</h4>
+                                    <button onClick={() => setShowAboutForm(true)} className="btn btn-primary btn-sm">
+                                        <i className="fi-rr-edit me-1"></i> Edit About
+                                    </button>
                                 </div>
                                 
-                                {/* Social Links Section */}
-                                <div className="dashboard-list-block mt-5">
-                                    <div className="d-flex justify-content-between align-items-center mb-4">
-                                        <h4>Social Links</h4>
-                                        <Button onClick={() => setShowSocialLinksForm(true)} className="btn btn-primary btn-sm">
-                                            <i className="fi-rr-edit me-1"></i> Edit Links
-                                        </Button>
+                                {showAboutForm ? (
+                                    <div className="p-4 border rounded shadow-sm mb-4">
+                                        <form onSubmit={handleAboutSubmit}>
+                                            <div className="mb-3">
+                                                <label>Tell us about yourself</label>
+                                                <textarea 
+                                                    className="form-control" 
+                                                    rows="6"
+                                                    value={about || ''}
+                                                    onChange={(e) => setAbout(e.target.value)}
+                                                    placeholder="Write a brief description about yourself, your background, interests, and career goals..."
+                                                ></textarea>
+                                            </div>
+                                            <div className="d-flex justify-content-end gap-2">
+                                                <button 
+                                                    type="button" 
+                                                    className="btn btn-outline-secondary" 
+                                                    onClick={() => setShowAboutForm(false)}
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button type="submit" className="btn btn-primary">
+                                                    Save About
+                                                </button>
+                                            </div>
+                                        </form>
                                     </div>
-                                    
-                                    {showSocialLinksForm ? (
-                                        <div className="p-4 border rounded shadow-sm mb-4">
-                                            <form onSubmit={handleSocialLinksSubmit}>
-                                                <div className="mb-3">
-                                                    <label>LinkedIn URL</label>
-                                                    <input
-                                                        type="url"
-                                                        className="form-control"
-                                                        value={socialLinks.linkedin || ''}
-                                                        onChange={(e) => setSocialLinks({...socialLinks, linkedin: e.target.value})}
-                                                        placeholder="https://linkedin.com/in/yourprofile"
-                                                    />
-                                                </div>
-                                                <div className="mb-3">
-                                                    <label>GitHub URL</label>
-                                                    <input
-                                                        type="url"
-                                                        className="form-control"
-                                                        value={socialLinks.github || ''}
-                                                        onChange={(e) => setSocialLinks({...socialLinks, github: e.target.value})}
-                                                        placeholder="https://github.com/yourusername"
-                                                    />
-                                                </div>
-                                                <div className="mb-3">
-                                                    <label>Personal Website</label>
-                                                    <input
-                                                        type="url"
-                                                        className="form-control"
-                                                        value={socialLinks.website || ''}
-                                                        onChange={(e) => setSocialLinks({...socialLinks, website: e.target.value})}
-                                                        placeholder="https://yourwebsite.com"
-                                                    />
-                                                </div>
-                                                <div className="mb-3">
-                                                    <label>Twitter URL</label>
-                                                    <input
-                                                        type="url"
-                                                        className="form-control"
-                                                        value={socialLinks.twitter || ''}
-                                                        onChange={(e) => setSocialLinks({...socialLinks, twitter: e.target.value})}
-                                                        placeholder="https://twitter.com/yourusername"
-                                                    />
-                                                </div>
-                                                <div className="d-flex justify-content-end gap-2">
-                                                    <Button 
-                                                        type="button" 
-                                                        className="btn btn-outline-secondary" 
-                                                        onClick={() => setShowSocialLinksForm(false)}
-                                                    >
-                                                        Cancel
-                                                    </Button>
-                                                    <Button type="submit" className="btn btn-primary">
-                                                        Save Links
-                                                    </Button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    ) : (
-                                        <div className="social-links">
-                                            {((portfolio?.socialLinks?.linkedin || portfolio?.socialLinks?.github || 
-                                              portfolio?.socialLinks?.website || portfolio?.socialLinks?.twitter)) ? (
-                                                <div className="d-flex flex-wrap gap-3">
-                                                    {portfolio?.socialLinks?.linkedin && (
-                                                        <a href={portfolio.socialLinks.linkedin} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary">
-                                                            <i className="fi-brands-linkedin me-2"></i>LinkedIn
-                                                        </a>
-                                                    )}
-                                                    {portfolio?.socialLinks?.github && (
-                                                        <a href={portfolio.socialLinks.github} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary">
-                                                            <i className="fi-brands-github me-2"></i>GitHub
-                                                        </a>
-                                                    )}
-                                                    {portfolio?.socialLinks?.website && (
-                                                        <a href={portfolio.socialLinks.website} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary">
-                                                            <i className="fi-rr-globe me-2"></i>Website
-                                                        </a>
-                                                    )}
-                                                    {portfolio?.socialLinks?.twitter && (
-                                                        <a href={portfolio.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="btn btn-outline-primary">
-                                                            <i className="fi-brands-twitter me-2"></i>Twitter
-                                                        </a>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <div className="text-center py-4 border rounded">
-                                                    <p className="mb-0 text-muted">No social links added yet. Add your professional profiles to connect with others.</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                                
-                                {/* About Me Section */}
-                                <div className="dashboard-list-block mt-5">
-                                    <div className="d-flex justify-content-between align-items-center mb-4">
-                                        <h4>About Me</h4>
-                                        <Button onClick={() => setShowAboutForm(true)} className="btn btn-primary btn-sm">
-                                            <i className="fi-rr-edit me-1"></i> Edit About
-                                        </Button>
+                                ) : (
+                                    <div className="about-section">
+                                        {portfolio?.about ? (
+                                            <div className="p-4 border rounded">
+                                                <p className="mb-0">{portfolio.about}</p>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-4 border rounded">
+                                                <p className="mb-0 text-muted">No about information added yet. Tell others about yourself to enhance your portfolio.</p>
+                                            </div>
+                                        )}
                                     </div>
-                                    
-                                    {showAboutForm ? (
-                                        <div className="p-4 border rounded shadow-sm mb-4">
-                                            <form onSubmit={handleAboutSubmit}>
-                                                <div className="mb-3">
-                                                    <label>Tell us about yourself</label>
-                                                    <textarea 
-                                                        className="form-control" 
-                                                        rows="6"
-                                                        value={about || ''}
-                                                        onChange={(e) => setAbout(e.target.value)}
-                                                        placeholder="Write a brief description about yourself, your background, interests, and career goals..."
-                                                    ></textarea>
-                                                </div>
-                                                <div className="d-flex justify-content-end gap-2">
-                                                    <Button 
-                                                        type="button" 
-                                                        className="btn btn-outline-secondary" 
-                                                        onClick={() => setShowAboutForm(false)}
-                                                    >
-                                                        Cancel
-                                                    </Button>
-                                                    <Button type="submit" className="btn btn-primary">
-                                                        Save About
-                                                    </Button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    ) : (
-                                        <div className="about-section">
-                                            {portfolio?.about ? (
-                                                <div className="p-4 border rounded">
-                                                    <p className="mb-0">{portfolio.about}</p>
-                                                </div>
-                                            ) : (
-                                                <div className="text-center py-4 border rounded">
-                                                    <p className="mb-0 text-muted">No about information added yet. Tell others about yourself to enhance your portfolio.</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -2062,7 +2234,7 @@ function Portfolio({ user }) {
                                                                     </small>
                                                                     {edu.description && <p className="mb-0">{edu.description}</p>}
                                                                 </div>
-                                                                <Button 
+                                                                <button 
                                                                     type="button" 
                                                                     className="btn btn-sm btn-outline-danger"
                                                                     onClick={() => {
@@ -2075,7 +2247,7 @@ function Portfolio({ user }) {
                                                                     }}
                                                                 >
                                                                     <i className="fi-rr-trash"></i>
-                                                                </Button>
+                                                                </button>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -2237,9 +2409,9 @@ function Portfolio({ user }) {
                                                     ></textarea>
                                                 </div>
                                                 <div className="text-end">
-                                                    <Button type="submit" className="btn btn-primary">
+                                                    <button type="submit" className="btn btn-primary">
                                                         <i className="fi-rr-plus me-1"></i> Add Education
-                                                    </Button>
+                                                    </button>
                                                 </div>
                                             </form>
                                         </div>
@@ -2255,13 +2427,15 @@ function Portfolio({ user }) {
                                                         {tempPortfolio.experience.map((exp, index) => (
                                                             <li className="list-group-item d-flex justify-content-between align-items-center" key={index}>
                                                                 <div>
-                                                                    <strong>{exp.position}</strong> at {exp.company}
-                                                                    <br />
-                                                                    <small>{exp.startDate} - {exp.endDate || 'Present'}</small>
-                                                                    {exp.location && <small className="d-block">{exp.location}</small>}
+                                                                    <div className="fw-bold">{exp.position}</div>
+                                                                    <div>{exp.company}, {exp.location}</div>
+                                                                    <small className="text-muted">
+                                                                        {new Date(exp.startDate).toLocaleDateString('en-US', {year: 'numeric', month: 'short'})} - 
+                                                                        {exp.endDate || 'Present'}
+                                                                    </small>
+                                                                    {exp.description && <p className="mb-0">{exp.description}</p>}
                                                                 </div>
-                                                                <Button 
-                                                                    type="button" 
+                                                                <button 
                                                                     className="btn btn-sm btn-outline-danger"
                                                                     onClick={() => {
                                                                         // Remove this experience entry
@@ -2273,7 +2447,7 @@ function Portfolio({ user }) {
                                                                     }}
                                                                 >
                                                                     <i className="fi-rr-trash"></i>
-                                                                </Button>
+                                                                </button>
                                                             </li>
                                                         ))}
                                                     </ul>
@@ -2392,9 +2566,9 @@ function Portfolio({ user }) {
                                                     ></textarea>
                                                 </div>
                                                 <div className="text-end mb-3">
-                                                    <Button type="submit" className="btn btn-primary">
+                                                    <button type="submit" className="btn btn-primary">
                                                         <i className="fi-rr-plus me-1"></i> Add Experience
-                                                    </Button>
+                                                    </button>
                                                 </div>
                                             </form>
                                         </div>
@@ -2424,8 +2598,7 @@ function Portfolio({ user }) {
                                                                             </a>
                                                                         )}
                                                                     </div>
-                                                                    <Button 
-                                                                        type="button" 
+                                                                    <button 
                                                                         className="btn btn-sm btn-outline-danger"
                                                                         onClick={() => {
                                                                             const updatedProjects = [...tempPortfolio.projects];
@@ -2434,7 +2607,7 @@ function Portfolio({ user }) {
                                                                         }}
                                                                     >
                                                                         <i className="fi-rr-trash"></i>
-                                                                    </Button>
+                                                                    </button>
                                                                 </div>
                                                             </li>
                                                         ))}
@@ -2450,7 +2623,7 @@ function Portfolio({ user }) {
                                             
                                             <form onSubmit={(e) => {
                                                 e.preventDefault();
-                                                if (!projectForm.title) {
+                                                if (!tempProject.title) {
                                                     Swal.fire({
                                                         icon: 'warning',
                                                         title: 'Missing Information',
@@ -2464,14 +2637,15 @@ function Portfolio({ user }) {
                                                 setTempPortfolio(prev => ({
                                                     ...prev,
                                                     projects: [...prev.projects, {
-                                                        ...projectForm,
-                                                        technologies: Array.isArray(projectForm.technologies) ? 
-                                                            projectForm.technologies : []
+                                                        ...tempProject,
+                                                        technologies: Array.isArray(tempProject.technologies) ? 
+                                                            tempProject.technologies : []
                                                     }]
                                                 }));
                                                 
                                                 // Reset form
-                                                setProjectForm({title: '', description: '', technologies: [], link: '', image: ''});
+                                                setTempProject({title: '', description: '', technologies: [], link: '', image: ''});
+                                                setTempTech(''); // Also reset the temp tech input
                                                 
                                                 // Show success message
                                                 Swal.fire({
@@ -2488,8 +2662,8 @@ function Portfolio({ user }) {
                                                     <input
                                                         type="text"
                                                         className="form-control"
-                                                        value={projectForm.title}
-                                                        onChange={(e) => setProjectForm({...projectForm, title: e.target.value})}
+                                                        value={tempProject.title}
+                                                        onChange={(e) => setTempProject({...tempProject, title: e.target.value})}
                                                         required
                                                     />
                                                 </div>
@@ -2498,25 +2672,25 @@ function Portfolio({ user }) {
                                                     <textarea
                                                         className="form-control"
                                                         rows="3"
-                                                        value={projectForm.description}
-                                                        onChange={(e) => setProjectForm({...projectForm, description: e.target.value})}
+                                                        value={tempProject.description}
+                                                        onChange={(e) => setTempProject({...tempProject, description: e.target.value})}
                                                     ></textarea>
                                                 </div>
                                                 <div className="mb-3">
                                                     <label>Technologies (comma separated)</label>
                                                     <div className="mb-2">
                                                         {/* Display added technologies as tags */}
-                                                        {Array.isArray(projectForm.technologies) && projectForm.technologies.length > 0 && (
+                                                        {Array.isArray(tempProject.technologies) && tempProject.technologies.length > 0 && (
                                                             <div className="d-flex flex-wrap gap-2 mb-2">
-                                                                {projectForm.technologies.map((tech, index) => (
+                                                                {tempProject.technologies.map((tech, index) => (
                                                                     <span key={index} className="badge bg-light text-dark p-2 d-flex align-items-center">
                                                                         {tech}
-                                                                        <Button 
+                                                                        <button 
                                                                             type="button" 
                                                                             className="btn-close ms-2" 
                                                                             style={{fontSize: '0.5rem'}} 
                                                                             onClick={() => removeTechnologyFromProject(index)}
-                                                                        ></Button>
+                                                                        ></button>
                                                                     </span>
                                                                 ))}
                                                             </div>
@@ -2529,8 +2703,8 @@ function Portfolio({ user }) {
                                                             type="text"
                                                             className="form-control"
                                                             placeholder="Add a technology and press Enter"
-                                                            value={techInput}
-                                                            onChange={(e) => setTechInput(e.target.value)}
+                                                            value={tempTech}
+                                                            onChange={(e) => setTempTech(e.target.value)}
                                                             list="techSuggestions"
                                                             onKeyDown={(e) => {
                                                                 if (e.key === 'Enter') {
@@ -2544,13 +2718,13 @@ function Portfolio({ user }) {
                                                                 <option key={index} value={tech} />
                                                             ))}
                                                         </datalist>
-                                                        <Button 
+                                                        <button 
                                                             type="button" 
                                                             className="btn btn-outline-primary" 
                                                             onClick={addTechnologyToProject}
                                                         >
                                                             Add
-                                                        </Button>
+                                                        </button>
                                                     </div>
                                                     <small className="text-muted">Add each technology individually</small>
                                                 </div>
@@ -2560,14 +2734,14 @@ function Portfolio({ user }) {
                                                         type="url"
                                                         className="form-control"
                                                         placeholder="https://..."
-                                                        value={projectForm.link}
-                                                        onChange={(e) => setProjectForm({...projectForm, link: e.target.value})}
+                                                        value={tempProject.link}
+                                                        onChange={(e) => setTempProject({...tempProject, link: e.target.value})}
                                                     />
                                                 </div>
                                                 <div className="text-end">
-                                                    <Button type="submit" className="btn btn-primary">
+                                                    <button type="submit" className="btn btn-primary">
                                                         <i className="fi-rr-plus me-1"></i> Add Project
-                                                    </Button>
+                                                    </button>
                                                 </div>
                                             </form>
                                         </div>
@@ -2587,7 +2761,7 @@ function Portfolio({ user }) {
                                                         {tempPortfolio.skills.map((skill, index) => (
                                                             <span key={index} className="badge bg-light text-dark p-2 d-flex align-items-center">
                                                                 {skill}
-                                                                <Button 
+                                                                <button 
                                                                     type="button" 
                                                                     className="btn-close ms-2" 
                                                                     style={{fontSize: '0.5rem'}} 
@@ -2599,7 +2773,7 @@ function Portfolio({ user }) {
                                                                             return { ...prev, skills: updatedSkills };
                                                                         });
                                                                     }}
-                                                                ></Button>
+                                                                ></button>
                                                             </span>
                                                         ))}
                                                     </div>
@@ -2643,9 +2817,7 @@ function Portfolio({ user }) {
                                                                 <option key={index} value={skill} />
                                                             ))}
                                                         </datalist>
-                                                        <Button type="submit" className="btn btn-primary">
-                                                            Add
-                                                        </Button>
+                                                        <button type="submit" className="btn btn-primary">Add</button>
                                                     </div>
                                                     <small className="text-muted">Press Enter or click Add to add the skill</small>
                                                 </div>
@@ -2784,7 +2956,7 @@ function Portfolio({ user }) {
                                                                         </div>
                                                                     )}
                                                                 </div>
-                                                                <Button 
+                                                                <button 
                                                                     type="button" 
                                                                     className="btn btn-sm btn-outline-danger"
                                                                     onClick={() => {
@@ -2797,7 +2969,7 @@ function Portfolio({ user }) {
                                                                     }}
                                                                 >
                                                                     <i className="fi-rr-trash"></i>
-                                                                </Button>
+                                                                </button>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -2890,9 +3062,9 @@ function Portfolio({ user }) {
                                                     />
                                                 </div>
                                                 <div className="text-end">
-                                                    <Button type="submit" className="btn btn-primary">
+                                                    <button type="submit" className="btn btn-primary">
                                                         <i className="fi-rr-plus me-1"></i> Add Certificate
-                                                    </Button>
+                                                    </button>
                                                 </div>
                                             </form>
                                         </div>
@@ -2900,16 +3072,16 @@ function Portfolio({ user }) {
                                     
                                     {/* Navigation buttons */}
                                     <div className="d-flex justify-content-between mt-4">
-                                        <Button 
+                                        <button 
                                             className="btn btn-secondary"
                                             onClick={prevStep}
                                             disabled={wizardStep === 1}
                                         >
                                             Back
-                                        </Button>
+                                        </button>
                                         
                                         {wizardStep < 7 ? (
-                                            <Button 
+                                            <button 
                                                 className="btn btn-primary"
                                                 onClick={nextStep}
                                                 disabled={
@@ -2920,15 +3092,15 @@ function Portfolio({ user }) {
                                                 }
                                             >
                                                 Next
-                                            </Button>
+                                            </button>
                                         ) : (
-                                            <Button 
+                                            <button 
                                                 className="btn btn-success"
                                                 onClick={submitPortfolio}
                                                 disabled={loading}
                                             >
                                                 {loading ? 'Creating...' : 'Create Portfolio'}
-                                            </Button>
+                                            </button>
                                         )}
                                     </div>
                                 </div>
@@ -2967,9 +3139,9 @@ function Portfolio({ user }) {
                                                     ></textarea>
                                                     <div className="form-text">This will be displayed at the top of your portfolio.</div>
                                                 </div>
-                                                <Button type="submit" className="btn btn-primary" disabled={!about.trim()}>
+                                                <button type="submit" className="btn btn-primary" disabled={!about.trim()}>
                                                     <i className="fi-rr-check me-2"></i> Create Profile & Continue
-                                                </Button>
+                                                </button>
                                             </form>
                                         </div>
                                     )}
@@ -2993,13 +3165,54 @@ function Portfolio({ user }) {
                 </div>
             )}
             
-            {/* CV Preview Modal */}
-            <CVPreviewModal
-                show={showCVPreview}
-                onHide={() => setShowCVPreview(false)}
-                portfolio={portfolio}
-                onSaveSuccess={handleCVSaveSuccess}
-            />
+            {/* CV Generation Modal */}
+            {showCVModal && (
+                <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <div className="modal-dialog modal-lg modal-dialog-centered">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title">Your CV Preview</h5>
+                                <button type="button" className="btn-close" onClick={() => setShowCVModal(false)}></button>
+                            </div>
+                            <div className="modal-body">
+                                <div className="ratio ratio-16x9">
+                                    <iframe
+                                        src={cvURL}
+                                        title="CV Preview"
+                                        className="border-0"
+                                        allowFullScreen
+                                    ></iframe>
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button 
+                                    type="button" 
+                                    className="btn btn-secondary"
+                                    onClick={() => setShowCVModal(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <a
+                                    href={cvURL}
+                                    className="btn btn-primary me-2"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    <i className="fi-rr-download me-1"></i> Download
+                                </a>
+                                <button 
+                                    type="button" 
+                                    className="btn btn-success"
+                                    onClick={saveCVToPortfolio}
+                                    disabled={isGeneratingCV}
+                                >
+                                    <i className="fi-rr-check me-1"></i> Save to Portfolio
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </Layout>
     );
 }
