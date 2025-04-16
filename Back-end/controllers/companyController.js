@@ -379,10 +379,7 @@ exports.rejectCompany = async (req, res) => {
       message: "Internal server error", 
       error: error.message 
     });
-  }
-};
-<<<<<<< Updated upstream
-=======
+  }};
 
 // Add the getAnalytics method to the exports
 exports.getAnalytics = async (req, res) => {
@@ -461,5 +458,3 @@ exports.getAnalytics = async (req, res) => {
   }
 };
 
-
->>>>>>> Stashed changes

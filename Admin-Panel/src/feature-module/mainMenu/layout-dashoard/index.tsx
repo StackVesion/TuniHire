@@ -1181,11 +1181,11 @@ const LayoutDemo = () => {
             {/* /Clock-In/Out */}
           </div>
           <div className="row">
-            {/* Jobs Applicants */}
+            {/* Applications List Applicants */}
             <div className="col-xxl-4 d-flex">
               <div className="card flex-fill">
                 <div className="card-header pb-2 d-flex align-items-center justify-content-between flex-wrap">
-                  <h5 className="mb-2">Jobs Applicants</h5>
+                  <h5 className="mb-2">Applications List Applicants</h5>
                   <Link to="job-list.html" className="btn btn-light btn-md mb-2">
                     View All
                   </Link>
@@ -1435,7 +1435,7 @@ const LayoutDemo = () => {
                 </div>
               </div>
             </div>
-            {/* /Jobs Applicants */}
+            {/* /Applications List Applicants */}
             {/* Employees */}
             <div className="col-xxl-4 col-xl-6 d-flex">
               <div className="card flex-fill">
