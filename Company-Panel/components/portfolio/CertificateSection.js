@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Swal from 'sweetalert2';
 import CertificateForm from './CertificateForm';
+import ItemPagination from './ItemPagination';
 import { createAuthAxios } from '@/utils/authUtils';
 
 const CertificateSection = ({ portfolio, userId, onUpdate, onRemove }) => {
@@ -17,117 +18,206 @@ const CertificateSection = ({ portfolio, userId, onUpdate, onRemove }) => {
         setShowForm(true);
     };
 
-    const handleCertificateSuccess = (response) => {
-        // Certificate endpoint may return different structure
-        if (response.portfolio) {
-            onUpdate(response.portfolio);
-        } else {
-            // Force a refresh
-            onUpdate(null, true);
-        }
+    const handleFormSuccess = (updatedPortfolio) => {
+        onUpdate(updatedPortfolio);
         setShowForm(false);
         setEditingCertificate(null);
     };
 
-    const handleRemove = (index) => {
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "You won't be able to revert this!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, delete it!'
-        }).then(async (result) => {
-            if (result.isConfirmed) {
-                try {
-                    const authAxios = createAuthAxios();
-                    const response = await authAxios.delete(`http://localhost:5000/api/portfolios/${portfolio._id}/certificates/${index}`);
-                    
-                    if (response.data.success) {
-                        onRemove(index);
+    const handleRemoveCertificate = async (index) => {
+        try {
+            const authAxios = createAuthAxios();
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, delete it!'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const response = await authAxios.delete(
+                            `http://localhost:5000/api/portfolios/${portfolio._id}/certificates/${index}`
+                        );
+
+                        if (response.data.success) {
+                            onRemove(index);
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Deleted!',
+                                text: 'Certificate has been deleted.',
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Error deleting certificate:', error);
                         Swal.fire({
-                            icon: 'success',
-                            title: 'Deleted!',
-                            text: 'Your certificate has been deleted.',
-                            timer: 1500,
-                            showConfirmButton: false
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to delete certificate'
                         });
                     }
-                } catch (error) {
-                    console.error('Error removing certificate:', error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Failed to delete certificate'
-                    });
                 }
-            }
-        });
+            });
+        } catch (error) {
+            console.error('Error deleting certificate:', error);
+        }
+    };
+
+    // Certificate item renderer for pagination
+    const renderCertificateItem = (certificate, localIndex) => {
+        const index = portfolio.certificates.findIndex(c => c === certificate);
+        return (
+            <div key={localIndex} className="certificate-card-container animate__animated animate__fadeIn">
+                <div className="card certificate-card h-100">
+                    <div className="card-body">
+                        <div className="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 className="card-title">{certificate.name}</h5>
+                                <h6 className="card-subtitle mb-2 text-muted">
+                                    {certificate.issuer}
+                                    {certificate.date && (
+                                        <span className="ms-2">
+                                            ({new Date(certificate.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })})
+                                        </span>
+                                    )}
+                                </h6>
+                            </div>
+                            <div className="certificate-badge">
+                                <i className="fi-rr-diploma certificate-icon"></i>
+                            </div>
+                        </div>
+                        
+                        {certificate.description && (
+                            <p className="card-text mt-3">{certificate.description}</p>
+                        )}
+                        
+                        {certificate.skills && certificate.skills.length > 0 && (
+                            <div className="mt-3">
+                                <p className="text-muted mb-1 small">Related skills:</p>
+                                <div className="d-flex flex-wrap gap-1">
+                                    {certificate.skills.map((skill, i) => (
+                                        <span key={i} className="badge bg-light text-dark border">{skill}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {certificate.credentialURL && (
+                            <div className="mt-3">
+                                <a 
+                                    href={certificate.credentialURL} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="btn btn-sm btn-outline-primary"
+                                >
+                                    <i className="fi-rr-link me-1"></i> View Certificate
+                                </a>
+                            </div>
+                        )}
+                    </div>
+                    <div className="card-footer">
+                        <div className="d-flex justify-content-end">
+                            <button 
+                                onClick={() => handleEditCertificate(certificate, index)} 
+                                className="btn btn-sm btn-outline-primary me-2"
+                            >
+                                <i className="fi-rr-edit"></i>
+                            </button>
+                            <button 
+                                onClick={() => handleRemoveCertificate(index)} 
+                                className="btn btn-sm btn-outline-danger"
+                            >
+                                <i className="fi-rr-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
     };
 
     return (
-        <div className="dashboard-list-block mt-5">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <h4>Certificates</h4>
+        <div className="dashboard-list-block section-block mt-5">
+            <div className="section-header d-flex justify-content-between align-items-center mb-4">
+                <h4>Certifications</h4>
                 <button onClick={handleAddCertificate} className="btn btn-primary btn-sm">
                     <i className="fi-rr-plus me-1"></i> Add Certificate
                 </button>
             </div>
-            
-            {/* Display Certificate Form when adding/editing */}
+
             {showForm && (
-                <CertificateForm 
+                <CertificateForm
                     portfolioId={portfolio._id}
                     certificate={editingCertificate}
-                    onSuccess={handleCertificateSuccess}
+                    onSuccess={handleFormSuccess}
                     onCancel={() => setShowForm(false)}
                 />
             )}
-            
-            {/* Display Certificate List */}
+
             {portfolio.certificates && portfolio.certificates.length > 0 ? (
-                <ul className="dashboard-list">
-                    {portfolio.certificates.map((cert, index) => (
-                        <li key={index} className="dashboard-list-item portfolio-item">
-                            <div className="dashboard-list-item-content">
-                                <h5 className="mb-2">{cert.title}</h5>
-                                <p className="mb-1">Issued by {cert.issuer}</p>
-                                <p className="text-muted small mb-2">
-                                    Issued: {new Date(cert.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
-                                    {cert.expiration && ` • Expires: ${new Date(cert.expiration).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}`}
-                                </p>
-                                {cert.credentialId && <p className="mb-1 small">Credential ID: {cert.credentialId}</p>}
-                                {cert.credentialUrl && (
-                                    <p className="mb-1 small">
-                                        <a href={cert.credentialUrl} target="_blank" rel="noopener noreferrer">
-                                            View Credential
-                                        </a>
-                                    </p>
-                                )}
-                            </div>
-                            <div className="dashboard-list-item-actions">
-                                <button 
-                                    onClick={() => handleEditCertificate(cert, index)} 
-                                    className="btn btn-sm btn-outline-primary me-2"
-                                >
-                                    <i className="fi-rr-edit"></i>
-                                </button>
-                                <button 
-                                    onClick={() => handleRemove(index)} 
-                                    className="btn btn-sm btn-outline-danger"
-                                >
-                                    <i className="fi-rr-trash"></i>
-                                </button>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
+                <ItemPagination
+                    items={portfolio.certificates}
+                    renderItem={renderCertificateItem}
+                    itemsPerPage={1}
+                    autoScroll={true}
+                    autoScrollInterval={3000}
+                />
             ) : (
                 <div className="text-center py-4 border rounded">
-                    <p className="mb-0 text-muted">No certificates added yet. Click "Add Certificate" to get started.</p>
+                    <p className="mb-0 text-muted">No certifications added yet. Click "Add Certificate" to get started.</p>
                 </div>
             )}
+
+            <style jsx>{`
+                .certificate-card {
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                    border-radius: 8px;
+                    overflow: hidden;
+                }
+                .certificate-card:hover {
+                    transform: translateY(-5px);
+                    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+                }
+                .certificate-badge {
+                    background-color: #f8f9fa;
+                    border-radius: 50%;
+                    width: 40px;
+                    height: 40px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-left: 10px;
+                }
+                .certificate-icon {
+                    color: #007bff;
+                    font-size: 1.2rem;
+                }
+                .section-block {
+                    position: relative;
+                    padding: 25px;
+                    border-radius: 10px;
+                    background-color: white;
+                    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.04);
+                    margin-bottom: 30px;
+                }
+                .section-header {
+                    padding-bottom: 15px;
+                    border-bottom: 1px solid #eee;
+                    margin-bottom: 25px;
+                }
+                .section-header h4 {
+                    font-weight: 600;
+                    margin-bottom: 0;
+                    color: #333;
+                }
+                .certificate-card-container {
+                    min-height: 300px;
+                }
+            `}</style>
         </div>
     );
 };

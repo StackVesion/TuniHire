@@ -681,54 +681,82 @@ function Portfolio({ user }) {
     };
     
     // Skills management functions
-    const addSkill = async () => {
+    const handleAddSkill = async () => {
         if (!newSkill.trim()) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Empty skill',
-                text: 'Please enter a skill before adding.'
-            });
             return;
         }
 
         try {
-            const token = getToken();
-            if (!token || !user || !user._id) {
-                console.error('Missing token or user ID for API test');
+            const authAxios = createAuthAxios();
+            // Make sure we have the portfolio ID
+            if (!portfolio || !portfolio._id) {
+                console.error('Portfolio ID missing');
                 return;
             }
             
-            // Testing different endpoint formats
-            const endpoints = [
-                `http://localhost:5000/api/users/${user._id}/portfolio`,
-                `http://localhost:5000/api/portfolio/user/${user._id}`,
-                `http://localhost:5000/api/portfolios/user/${user._id}`,
-                `http://localhost:5000/api/portfolio/${user._id}`,
-            ];
-            
-            console.log('Testing portfolio endpoints...');
-            
-            for (const endpoint of endpoints) {
-                try {
-                    console.log(`Testing endpoint: ${endpoint}`);
-                    const authAxios = createAuthAxios();
-                    const response = await authAxios.get(endpoint);
-                    console.log(`SUCCESS: ${endpoint}`, response.data);
-                    // If we found a working endpoint, use it to fetch the data
-                    if (response.data) {
-                        setPortfolio(response.data);
-                        setShowAlert(false);
-                        break;
-                    }
-                } catch (err) {
-                    console.log(`FAILED: ${endpoint}`, err.response?.status);
-                }
+            const response = await authAxios.post(`http://localhost:5000/api/portfolios/${portfolio._id}/skills`, {
+                skill: newSkill.trim()
+            });
+
+            if (response.data.success) {
+                // Update the portfolio state with the returned portfolio object
+                setPortfolio(response.data.portfolio);
+                setNewSkill(''); // Reset the input field
+                
+                // Show success message
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Skill Added',
+                    text: 'Your skill has been added successfully.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
             }
-        } catch (err) {
-            console.error('Error in API endpoint test:', err);
+        } catch (error) {
+            console.error('Error adding skill:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to add skill. ' + (error.response?.data?.message || 'Please try again.') 
+            });
         }
     };
 
+    const handleRemoveSkill = async (index) => {
+        try {
+            const authAxios = createAuthAxios();
+            
+            // Make sure we have the portfolio ID
+            if (!portfolio || !portfolio._id) {
+                console.error('Portfolio ID missing');
+                return;
+            }
+            
+            const response = await authAxios.delete(`http://localhost:5000/api/portfolios/${portfolio._id}/skills/${index}`);
+            
+            if (response.data.success) {
+                // Update the portfolio state with the returned portfolio object
+                setPortfolio(response.data.portfolio);
+                
+                // Show success message
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Skill Removed',
+                    text: 'Your skill has been removed successfully.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
+        } catch (error) {
+            console.error('Error removing skill:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to remove skill. ' + (error.response?.data?.message || 'Please try again.')
+            });
+        }
+    };
+    
     const handleSocialLinksSubmit = async (e) => {
         e.preventDefault();
         try {
@@ -1885,7 +1913,7 @@ function Portfolio({ user }) {
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
                                                     e.preventDefault();
-                                                    addSkill();
+                                                    handleAddSkill();
                                                 }
                                             }}
                                         />
@@ -1894,7 +1922,7 @@ function Portfolio({ user }) {
                                                 <option key={index} value={skill} />
                                             ))}
                                         </datalist>
-                                        <button onClick={addSkill} className="btn btn-primary">
+                                        <button onClick={handleAddSkill} className="btn btn-primary">
                                             <i className="fi-rr-plus"></i>
                                         </button>
                                     </div>
@@ -1911,7 +1939,7 @@ function Portfolio({ user }) {
                                                         type="button" 
                                                         className="btn-close ms-2" 
                                                         style={{fontSize: '0.5rem'}} 
-                                                        onClick={() => removeSkill(index)}
+                                                        onClick={() => handleRemoveSkill(index)}
                                                     ></button>
                                                 </span>
                                             ))}

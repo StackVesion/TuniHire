@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 import ProjectForm from './ProjectForm';
+import ItemPagination from './ItemPagination';
 import { createAuthAxios } from '@/utils/authUtils';
 
 const ProjectSection = ({ portfolio, userId, onUpdate, onRemove }) => {
@@ -66,9 +67,75 @@ const ProjectSection = ({ portfolio, userId, onUpdate, onRemove }) => {
         });
     };
 
+    // Project item renderer for pagination
+    const renderProjectItem = (project, localIndex) => {
+        const index = portfolio.projects.findIndex(p => p === project);
+        return (
+            <div key={localIndex} className="project-card-container animate__animated animate__fadeIn">
+                <div className="card h-100 portfolio-item project-card">
+                    {project.image && (
+                        <img 
+                            src={project.image} 
+                            className="card-img-top" 
+                            alt={project.title}
+                            onError={(e) => {
+                                e.target.src = 'https://via.placeholder.com/300x150?text=Project+Image';
+                            }}
+                        />
+                    )}
+                    <div className="card-body">
+                        <h5 className="card-title">{project.title}</h5>
+                        {project.description && (
+                            <p className="card-text text-muted">
+                                {project.description}
+                            </p>
+                        )}
+                        {project.technologies && project.technologies.length > 0 && (
+                            <div className="mb-3">
+                                <div className="d-flex flex-wrap gap-1">
+                                    {project.technologies.map((tech, techIndex) => (
+                                        <span key={techIndex} className="badge bg-light text-dark border">
+                                            {tech}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {project.link && (
+                            <a 
+                                href={project.link} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="btn btn-sm btn-outline-primary"
+                            >
+                                <i className="fi-rr-link me-1"></i> View Project
+                            </a>
+                        )}
+                    </div>
+                    <div className="card-footer">
+                        <div className="d-flex justify-content-end">
+                            <button 
+                                onClick={() => handleEditProject(project, index)} 
+                                className="btn btn-sm btn-outline-primary me-2"
+                            >
+                                <i className="fi-rr-edit"></i>
+                            </button>
+                            <button 
+                                onClick={() => handleRemove(index)} 
+                                className="btn btn-sm btn-outline-danger"
+                            >
+                                <i className="fi-rr-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
-        <div className="dashboard-list-block mt-5">
-            <div className="d-flex justify-content-between align-items-center mb-4">
+        <div className="dashboard-list-block section-block mt-5">
+            <div className="section-header d-flex justify-content-between align-items-center mb-4">
                 <h4>Projects</h4>
                 <button onClick={handleAddProject} className="btn btn-primary btn-sm">
                     <i className="fi-rr-plus me-1"></i> Add Project
@@ -85,73 +152,15 @@ const ProjectSection = ({ portfolio, userId, onUpdate, onRemove }) => {
                 />
             )}
             
-            {/* Display Project Grid */}
+            {/* Display Project Grid with Pagination */}
             {portfolio.projects && portfolio.projects.length > 0 ? (
-                <div className="row row-cols-1 row-cols-md-2 g-4">
-                    {portfolio.projects.map((project, index) => (
-                        <div key={index} className="col animate__animated animate__fadeInUp" style={{animationDelay: `${index * 0.1}s`}}>
-                            <div className="card h-100 portfolio-item project-card">
-                                {project.image && (
-                                    <img 
-                                        src={project.image} 
-                                        className="card-img-top" 
-                                        alt={project.title}
-                                        onError={(e) => {
-                                            e.target.src = 'https://via.placeholder.com/300x150?text=Project+Image';
-                                        }}
-                                    />
-                                )}
-                                <div className="card-body">
-                                    <h5 className="card-title">{project.title}</h5>
-                                    {project.description && (
-                                        <p className="card-text text-muted">
-                                            {project.description.length > 100 
-                                                ? `${project.description.substring(0, 100)}...` 
-                                                : project.description}
-                                        </p>
-                                    )}
-                                    {project.technologies && project.technologies.length > 0 && (
-                                        <div className="mb-2">
-                                            <div className="d-flex flex-wrap gap-1">
-                                                {project.technologies.map((tech, techIndex) => (
-                                                    <span key={techIndex} className="badge bg-light text-dark border">
-                                                        {tech}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                    {project.link && (
-                                        <a 
-                                            href={project.link} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer" 
-                                            className="btn btn-sm btn-outline-primary"
-                                        >
-                                            <i className="fi-rr-link me-1"></i> View Project
-                                        </a>
-                                    )}
-                                </div>
-                                <div className="card-footer">
-                                    <div className="d-flex justify-content-end">
-                                        <button 
-                                            onClick={() => handleEditProject(project, index)} 
-                                            className="btn btn-sm btn-outline-primary me-2"
-                                        >
-                                            <i className="fi-rr-edit"></i>
-                                        </button>
-                                        <button 
-                                            onClick={() => handleRemove(index)} 
-                                            className="btn btn-sm btn-outline-danger"
-                                        >
-                                            <i className="fi-rr-trash"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                <ItemPagination
+                    items={portfolio.projects}
+                    renderItem={renderProjectItem}
+                    itemsPerPage={1}
+                    autoScroll={true}
+                    autoScrollInterval={3000}
+                />
             ) : (
                 <div className="text-center py-4 border rounded">
                     <p className="mb-0 text-muted">No projects added yet. Click "Add Project" to get started.</p>
@@ -162,14 +171,33 @@ const ProjectSection = ({ portfolio, userId, onUpdate, onRemove }) => {
                 .project-card {
                     transition: transform 0.3s ease, box-shadow 0.3s ease;
                     overflow: hidden;
+                    height: 100%;
                 }
                 .project-card:hover {
                     transform: translateY(-5px);
                     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
                 }
                 .project-card .card-img-top {
-                    height: 180px;
+                    height: 200px;
                     object-fit: cover;
+                }
+                .section-block {
+                    position: relative;
+                    padding: 25px;
+                    border-radius: 10px;
+                    background-color: white;
+                    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.04);
+                    margin-bottom: 30px;
+                }
+                .section-header {
+                    padding-bottom: 15px;
+                    border-bottom: 1px solid #eee;
+                    margin-bottom: 25px;
+                }
+                .section-header h4 {
+                    font-weight: 600;
+                    margin-bottom: 0;
+                    color: #333;
                 }
                 .portfolio-item {
                     position: relative;
@@ -187,6 +215,9 @@ const ProjectSection = ({ portfolio, userId, onUpdate, onRemove }) => {
                 .portfolio-item .btn-outline-danger:hover {
                     background-color: #dc3545;
                     color: white;
+                }
+                .project-card-container {
+                    min-height: 450px;
                 }
             `}</style>
         </div>
