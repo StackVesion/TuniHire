@@ -1,6 +1,6 @@
 const User = require('../models/User');
 const Company = require('../models/Company');
-const Job = require('../models/Job');
+const Job = require('../models/JobPost');
 const Application = require('../models/Application');
 
 // Get dashboard statistics
