@@ -1,0 +1,35 @@
+FROM node:16-alpine AS builder
+
+# Create app directory
+WORKDIR /app
+
+# Install app dependencies
+# Copy package.json and package-lock.json first for better caching
+COPY package*.json ./
+RUN npm install
+
+# Copy app source code
+COPY . .
+
+# Build the application
+RUN npm run build
+
+# Production image
+FROM node:16-alpine
+WORKDIR /app
+
+# Copy build artifacts from builder stage
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/public ./public
+
+# Expose the port used in docker-compose.yml
+EXPOSE 3001
+
+# Add health check
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3001/ || exit 1
+
+# Start the application
+CMD ["npm", "start"]

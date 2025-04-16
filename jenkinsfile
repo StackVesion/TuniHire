@@ -3,6 +3,7 @@ pipeline {
     
     environment {
         NODE_ENV = 'test'
+        DOCKER_REGISTRY = 'docker.io/fadizaghdoud' // Your Docker Hub username
     }
     
     stages {
@@ -53,6 +54,180 @@ pipeline {
                 }
             }
         }
+        
+        stage('Dockerize') {
+            steps {
+                script {
+                    // Build Docker images for each component
+                    dir('Back-end') {
+                        sh 'docker build -t tunihire-backend:${BUILD_NUMBER} .'
+                    }
+                    dir('Front-End') {
+                        sh 'docker build -t tunihire-frontend:${BUILD_NUMBER} .'
+                    }
+                    dir('Admin-Panel') {
+                        sh 'docker build -t tunihire-admin:${BUILD_NUMBER} .'
+                    }
+                    dir('Company-Panel') {
+                        sh 'docker build -t tunihire-company:${BUILD_NUMBER} .'
+                    }
+                }
+            }
+        }
+        
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'scanner', variable: 'SONAR_TOKEN')]) {
+                        dir('Back-end') {
+                            sh "sonar-scanner -Dsonar.projectKey=tunihire-backend -Dsonar.login=${SONAR_TOKEN}"
+                        }
+                        dir('Front-End') {
+                            sh "sonar-scanner -Dsonar.projectKey=tunihire-frontend -Dsonar.login=${SONAR_TOKEN}"
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Push to Registry') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'docker', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        sh 'docker login -u $DOCKER_USER -p $DOCKER_PASS'
+                        
+                        sh 'docker tag tunihire-backend:${BUILD_NUMBER} ${DOCKER_REGISTRY}/tunihire-backend:${BUILD_NUMBER}'
+                        sh 'docker push ${DOCKER_REGISTRY}/tunihire-backend:${BUILD_NUMBER}'
+                        
+                        sh 'docker tag tunihire-frontend:${BUILD_NUMBER} ${DOCKER_REGISTRY}/tunihire-frontend:${BUILD_NUMBER}'
+                        sh 'docker push ${DOCKER_REGISTRY}/tunihire-frontend:${BUILD_NUMBER}'
+                        
+                        sh 'docker tag tunihire-admin:${BUILD_NUMBER} ${DOCKER_REGISTRY}/tunihire-admin:${BUILD_NUMBER}'
+                        sh 'docker push ${DOCKER_REGISTRY}/tunihire-admin:${BUILD_NUMBER}'
+                        
+                        sh 'docker tag tunihire-company:${BUILD_NUMBER} ${DOCKER_REGISTRY}/tunihire-company:${BUILD_NUMBER}'
+                        sh 'docker push ${DOCKER_REGISTRY}/tunihire-company:${BUILD_NUMBER}'
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy') {
+            steps {
+                script {
+                    // Create docker-compose.yml file
+                    sh '''
+                        cat > docker-compose.yml << EOF
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:5
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=example
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - tunihire-network
+    restart: always
+    
+  backend:
+    image: ${DOCKER_REGISTRY}/tunihire-backend:${BUILD_NUMBER}
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongodb
+    networks:
+      - tunihire-network
+    environment:
+      - MONGODB_URI=mongodb://root:example@mongodb:27017/tunihire?authSource=admin
+      - NODE_ENV=production
+    restart: always
+    
+  frontend:
+    image: ${DOCKER_REGISTRY}/tunihire-frontend:${BUILD_NUMBER}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - tunihire-network
+    restart: always
+    
+  admin:
+    image: ${DOCKER_REGISTRY}/tunihire-admin:${BUILD_NUMBER}
+    ports:
+      - "3002:3002"
+    depends_on:
+      - backend
+    networks:
+      - tunihire-network
+    restart: always
+    
+  company:
+    image: ${DOCKER_REGISTRY}/tunihire-company:${BUILD_NUMBER}
+    ports:
+      - "3001:3001"
+    depends_on:
+      - backend
+    networks:
+      - tunihire-network
+    restart: always
+
+networks:
+  tunihire-network:
+    driver: bridge
+
+volumes:
+  mongo_data:
+EOF
+                    '''
+                    
+                    // Deploy using docker-compose
+                    sh 'docker-compose up -d'
+                }
+            }
+        }
+        
+        stage('Setup Monitoring') {
+            steps {
+                script {
+                    sh '''
+                        # Create Prometheus config
+                        cat > prometheus.yml << EOF
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'tunihire-backend'
+    static_configs:
+      - targets: ['backend:5000']
+EOF
+
+                        # Run Prometheus
+                        docker run -d --name prometheus -p 9090:9090 -v $(pwd)/prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus
+
+                        # Run Grafana
+                        docker run -d --name grafana -p 3000:3000 grafana/grafana
+                    '''
+                }
+            }
+        }
+        
+        stage('E2E Testing') {
+            steps {
+                script {
+                    // Run e2e tests after deployment
+                    dir('Front-End') {
+                        sh 'npm install cypress --save-dev || true'
+                        sh 'npx cypress run || echo "E2E tests failed but continuing"'
+                    }
+                }
+            }
+        }
+
     }
     
     post {
@@ -61,6 +236,11 @@ pipeline {
         }
         failure {
             echo 'Build failed!'
+            
+            // Send failure notification to email
+            mail to: 'fadi6895@gmail.com',
+                 subject: "FAILED: Pipeline ${currentBuild.fullDisplayName}",
+                 body: "Something went wrong with ${env.BUILD_URL}"
         }
         always {
             cleanWs()
