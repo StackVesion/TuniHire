@@ -41,8 +41,8 @@ stage('SonarQube Analysis') {
                 // Build images before tagging
                 sh 'docker build -t tunihire-backend:${BUILD_NUMBER} Back-end'
                 sh 'docker build -t tunihire-frontend:${BUILD_NUMBER} Front-End'
-                sh 'docker build -t tunihire-admin:${BUILD_NUMBER} Admin'
-                sh 'docker build -t tunihire-company:${BUILD_NUMBER} Company'
+                sh 'docker build -t tunihire-admin:${BUILD_NUMBER} Admin-Panel'
+                sh 'docker build -t tunihire-company:${BUILD_NUMBER} Company-Panel'
 
                 // Tag and push
                 sh 'docker tag tunihire-backend:${BUILD_NUMBER} ${DOCKER_REGISTRY}/tunihire-backend:${BUILD_NUMBER}'
