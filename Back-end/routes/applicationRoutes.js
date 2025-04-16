@@ -155,4 +155,90 @@ router.put("/:applicationId/status", verifyToken, async (req, res) => {
   }
 });
 
+// Withdraw/delete an application (for candidates)
+router.delete("/:applicationId", verifyToken, async (req, res) => {
+  try {
+    const application = await Application.findById(req.params.applicationId);
+    
+    if (!application) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Application not found' 
+      });
+    }
+    
+    // Ensure only the application owner can withdraw it
+    if (application.userId.toString() !== req.user.id) {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Unauthorized: You can only withdraw your own applications' 
+      });
+    }
+    
+    // Only allow withdrawal of pending applications
+    if (application.status.toUpperCase() !== 'PENDING') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only pending applications can be withdrawn'
+      });
+    }
+    
+    await Application.findByIdAndDelete(req.params.applicationId);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Application withdrawn successfully'
+    });
+  } catch (error) {
+    console.error('Error withdrawing application:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
+// Alternative endpoint for withdraw functionality
+router.put("/:applicationId/withdraw", verifyToken, async (req, res) => {
+  try {
+    const application = await Application.findById(req.params.applicationId);
+    
+    if (!application) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Application not found' 
+      });
+    }
+    
+    // Ensure only the application owner can withdraw it
+    if (application.userId.toString() !== req.user.id) {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Unauthorized: You can only withdraw your own applications' 
+      });
+    }
+    
+    // Only allow withdrawal of pending applications
+    if (application.status.toUpperCase() !== 'PENDING') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only pending applications can be withdrawn'
+      });
+    }
+    
+    await Application.findByIdAndDelete(req.params.applicationId);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Application withdrawn successfully'
+    });
+  } catch (error) {
+    console.error('Error withdrawing application:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
 module.exports = router;

@@ -105,6 +105,9 @@ function MyApplications({ user }) {
   const [authAxios] = useState(() => createAuthAxios());
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showConfirmWithdraw, setShowConfirmWithdraw] = useState(false);
+  const [withdrawApplicationId, setWithdrawApplicationId] = useState(null);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   useEffect(() => {
     fetchApplications();
@@ -135,16 +138,44 @@ function MyApplications({ user }) {
   };
 
   const handleWithdraw = async (applicationId) => {
-    if (!confirm('Are you sure you want to withdraw this application?')) return;
+    setWithdrawApplicationId(applicationId);
+    setShowConfirmWithdraw(true);
+  };
+  
+  const confirmWithdraw = async () => {
+    if (!withdrawApplicationId) return;
     
+    setIsWithdrawing(true);
     try {
-      await authAxios.put(`/api/applications/${applicationId}/withdraw`);
+      // First try the DELETE endpoint
+      try {
+        await authAxios.delete(`/api/applications/${withdrawApplicationId}`);
+      } catch (error) {
+        // If DELETE fails, try the PUT /withdraw endpoint as fallback
+        await authAxios.put(`/api/applications/${withdrawApplicationId}/withdraw`);
+      }
+      
       toast.success('Application withdrawn successfully');
-      fetchApplications();
+      
+      // Update the UI by removing the withdrawn application
+      setApplications(prevApps => prevApps.filter(app => app._id !== withdrawApplicationId));
+      
+      // Close confirmation and detail modals if open
+      setShowConfirmWithdraw(false);
+      if (selectedApplication && selectedApplication._id === withdrawApplicationId) {
+        setShowModal(false);
+      }
     } catch (error) {
       console.error('Error withdrawing application:', error);
-      toast.error('Failed to withdraw application');
+      toast.error(error.response?.data?.message || 'Failed to withdraw application');
+    } finally {
+      setIsWithdrawing(false);
     }
+  };
+  
+  const cancelWithdraw = () => {
+    setShowConfirmWithdraw(false);
+    setWithdrawApplicationId(null);
   };
 
   // Animation variants
@@ -724,6 +755,130 @@ function MyApplications({ user }) {
               background: #a1a1a1;
             }
           `}</style>
+        </div>
+      )}
+      
+      {/* Withdraw Confirmation Modal */}
+      {showConfirmWithdraw && (
+        <div 
+          className="withdraw-confirmation-modal"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            zIndex: 10000,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            backdropFilter: 'blur(5px)'
+          }}
+          onClick={cancelWithdraw}
+        >
+          <div 
+            className="modal-content"
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
+              width: '100%',
+              maxWidth: '450px',
+              animation: 'fadeInUp 0.3s ease-out'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div 
+              className="modal-header"
+              style={{
+                background: 'linear-gradient(135deg, #f44336 0%, #c62828 100%)',
+                color: '#ffffff',
+                padding: '20px 25px',
+                borderTopLeftRadius: '12px',
+                borderTopRightRadius: '12px',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <i className="fas fa-exclamation-triangle" style={{ fontSize: '24px', marginRight: '12px' }}></i>
+                <h4 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>Withdraw Application</h4>
+              </div>
+            </div>
+            
+            <div 
+              style={{
+                padding: '25px',
+                textAlign: 'center'
+              }}
+            >
+              <p style={{ fontSize: '16px', lineHeight: 1.5, marginBottom: '25px' }}>
+                Are you sure you want to withdraw this application? <br/>
+                <span style={{ fontWeight: 600, color: '#c62828' }}>This action cannot be undone.</span>
+              </p>
+              
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
+                <button 
+                  onClick={cancelWithdraw}
+                  style={{
+                    backgroundColor: '#f5f5f5',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '12px 25px',
+                    fontSize: '15px',
+                    fontWeight: 500,
+                    cursor: 'pointer'
+                  }}
+                  disabled={isWithdrawing}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmWithdraw}
+                  style={{
+                    backgroundColor: '#f44336',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '12px 25px',
+                    fontSize: '15px',
+                    fontWeight: 500,
+                    cursor: isWithdrawing ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: isWithdrawing ? 0.7 : 1
+                  }}
+                  disabled={isWithdrawing}
+                >
+                  {isWithdrawing ? (
+                    <>
+                      <div 
+                        style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          border: '2px solid #ffffff',
+                          borderTopColor: 'transparent',
+                          animation: 'spin 1s linear infinite',
+                          marginRight: '8px'
+                        }}
+                      ></div>
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-trash-alt" style={{ marginRight: '8px' }}></i>
+                      <span>Withdraw Application</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </Layout>
