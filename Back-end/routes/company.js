@@ -11,6 +11,7 @@ router.post("/", verifyToken, companyController.createCompany);
 
 // Public routes
 router.get("/", companyController.getAllCompanies);
+router.get("/hr-contact/:id", companyController.getHRContactInfo);
 
 // Routes with parameters - these must come after specific routes
 router.get("/:id", companyController.getCompanyById);

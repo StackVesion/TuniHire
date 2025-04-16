@@ -975,4 +975,30 @@ router.delete('/:id/skills/:skill', verifyToken, async (req, res) => {
   }
 });
 
+// @route   GET /api/portfolios/user
+// @desc    Get current user's portfolio
+// @access  Private
+router.get('/user', verifyToken, async (req, res) => {
+  try {
+    // Get the user ID from the authenticated user
+    const userId = req.user.id;
+
+    // Find the portfolio for this user
+    const portfolio = await Portfolio.findOne({ userId });
+
+    if (!portfolio) {
+      return res.status(404).json({ success: false, message: 'Portfolio not found for this user' });
+    }
+
+    return res.json(portfolio);
+  } catch (error) {
+    console.error('Error fetching user portfolio:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch portfolio', 
+      error: error.message 
+    });
+  }
+});
+
 module.exports = router;

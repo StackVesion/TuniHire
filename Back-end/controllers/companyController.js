@@ -1,5 +1,6 @@
 const Company = require("../models/Company");
 const User = require("../models/User");
+const mongoose = require("mongoose");
 
 // Get all companies
 exports.getAllCompanies = async (req, res) => {
@@ -199,3 +200,48 @@ exports.getPendingCompanies = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Get HR contact information for a company
+exports.getHRContactInfo = async (req, res) => {
+  try {
+    const companyId = req.params.id;
+    console.log('Fetching HR contact for company ID:', companyId);
+    
+    if (!companyId || !mongoose.Types.ObjectId.isValid(companyId)) {
+      return res.status(400).json({ message: "Invalid company ID format" });
+    }
+    
+    // Find the company
+    const company = await Company.findById(companyId)
+      .populate('createdBy', 'firstName lastName email profilePicture');
+    
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+    
+    console.log('Company found:', company.name);
+    
+    // Format the HR contact information
+    const hrContactInfo = {
+      companyName: company.name,
+      companyLogo: company.logo,
+      hrManager: {
+        name: `${company.createdBy?.firstName || 'HR'} ${company.createdBy?.lastName || 'Manager'}`,
+        email: company.createdBy?.email || company.email || 'hr@company.com',
+        profilePicture: company.createdBy?.profilePicture || '/assets/imgs/page/dashboard/avatar.png',
+        department: "Human Resources",
+        phone: company.phone || "+1 (555) 123-4567"  // Default or company phone if available
+      },
+      companyWebsite: company.website,
+      companyEmail: company.email,
+      numberOfEmployees: company.numberOfEmployees
+    };
+    
+    res.status(200).json({ hrContactInfo });
+  } catch (error) {
+    console.error('Error fetching HR contact info:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = exports;
