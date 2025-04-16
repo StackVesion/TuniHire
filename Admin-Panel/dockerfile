@@ -1,4 +1,4 @@
-FROM node:16-alpine AS builder
+FROM node:18-alpine AS builder
 
 # Create app directory
 WORKDIR /app
@@ -15,7 +15,7 @@ COPY . .
 RUN npm run build
 
 # Production image
-FROM node:16-alpine
+FROM node:18-alpine
 WORKDIR /app
 
 # Copy build artifacts from builder stage

@@ -55,25 +55,25 @@ pipeline {
             }
         }
         
-        stage('Dockerize') {
-            steps {
-                script {
-                    // Build Docker images for each component
-                    dir('Back-end') {
-                        sh 'docker build -t tunihire-backend:${BUILD_NUMBER} .'
-                    }
-                    dir('Front-End') {
-                        sh 'docker build -t tunihire-frontend:${BUILD_NUMBER} .'
-                    }
-                    dir('Admin-Panel') {
-                        sh 'docker build -t tunihire-admin:${BUILD_NUMBER} .'
-                    }
-                    dir('Company-Panel') {
-                        sh 'docker build -t tunihire-company:${BUILD_NUMBER} .'
-                    }
-                }
+stage('Dockerize') {
+    steps {
+        script {
+            // Build Docker images for each component with legacy builder
+            dir('Back-end') {
+                sh 'docker build --builder=default -t tunihire-backend:${BUILD_NUMBER} .'
+            }
+            dir('Front-End') {
+                sh 'docker build --builder=default -t tunihire-frontend:${BUILD_NUMBER} .'
+            }
+            dir('Admin-Panel') {
+                sh 'docker build --builder=default -t tunihire-admin:${BUILD_NUMBER} .'
+            }
+            dir('Company-Panel') {
+                sh 'docker build --builder=default -t tunihire-company:${BUILD_NUMBER} .'
             }
         }
+    }
+}
         
         stage('SonarQube Analysis') {
             steps {
@@ -236,14 +236,11 @@ EOF
         }
         failure {
             echo 'Build failed!'
-            
-            // Send failure notification to email
-            mail to: 'fadi6895@gmail.com',
-                 subject: "FAILED: Pipeline ${currentBuild.fullDisplayName}",
-                 body: "Something went wrong with ${env.BUILD_URL}"
         }
         always {
-            cleanWs()
+            // Commented out workspace cleanup to preserve build artifacts
+            // cleanWs()
+            echo 'Skipping workspace cleanup to preserve artifacts'
         }
     }
 }
