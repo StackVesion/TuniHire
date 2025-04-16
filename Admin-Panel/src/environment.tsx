@@ -17,7 +17,6 @@ const environment = {
     
     // Feature flags
     enableNotifications: true,
-    debugMode: process.env.NODE_ENV === 'development',
 };
 
 export default environment;
