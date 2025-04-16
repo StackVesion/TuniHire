@@ -1,4 +1,7 @@
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
+const PDFDocument = require('pdfkit');
 const { 
   getAllPortfolios,
   getPortfolioById,
@@ -406,34 +409,26 @@ router.delete('/:id/projects/:projectIndex', verifyToken, async (req, res) => {
 // Generate CV endpoint 
 router.post('/generate-cv', verifyToken, async (req, res) => {
   try {
-    const { userId, education, experience, skills, personalInfo, certificates, projects } = req.body;
-    
-    if (!userId) {
-      return res.status(400).json({ success: false, message: 'User ID is required' });
-    }
-    
-    // Find the portfolio by userId
+    const { 
+      userId,
+      personalInfo,
+      education,
+      experience,
+      skills,
+      certificates,
+      projects
+    } = req.body;
+
+    // Find user's portfolio
     const portfolio = await Portfolio.findOne({ userId });
-    
+
     if (!portfolio) {
       return res.status(404).json({ success: false, message: 'Portfolio not found' });
     }
-    
-    // Find user to get profile picture
-    const User = require('../models/User');
-    const user = await User.findById(userId);
-    
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-    
-    // Generate a filename for the CV
-    const timestamp = new Date().getTime();
+
+    // Generate unique filename with timestamp
+    const timestamp = Date.now();
     const cvFileName = `cv_${userId}_${timestamp}.pdf`;
-    
-    // Ensure proper path construction
-    const path = require('path');
-    const fs = require('fs');
     
     // Create paths for public and static access
     const uploadsDir = path.resolve(__dirname, '../public/uploads/resumes');
@@ -441,67 +436,48 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
     
     // Create a relative path for accessing from the web
     const relativePath = `/uploads/resumes/${cvFileName}`;
-    const accessUrl = `http://localhost:5000${relativePath}`;
+    const downloadUrl = `http://localhost:5000${relativePath}`;
     
     console.log(`CV will be generated at: ${cvFilePath}`);
-    console.log(`CV will be accessible at: ${accessUrl}`);
+    console.log(`CV will be accessible at: ${downloadUrl}`);
     
     // Make sure the directory exists
     if (!fs.existsSync(uploadsDir)) {
       console.log(`Creating uploads directory: ${uploadsDir}`);
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
-    
-    // Use a PDF generation library like PDFKit
-    const PDFDocument = require('pdfkit');
-    
-    // Create the PDF with proper configuration
+
+    // Create a PDF document
     const doc = new PDFDocument({
-      margins: { top: 50, bottom: 50, left: 50, right: 50 },
       size: 'A4',
-      bufferPages: true, // Important for page management
+      margin: 50,
       info: {
-        Title: `CV - ${personalInfo.firstName} ${personalInfo.lastName}`,
+        Title: `${personalInfo.firstName} ${personalInfo.lastName} - CV`,
         Author: 'TuniHire',
         Subject: 'Professional CV',
-        Keywords: 'CV, Resume, Professional, TuniHire'
+        Keywords: 'cv, resume, professional'
       }
     });
+
+    // Create write stream
+    const writeStream = fs.createWriteStream(cvFilePath);
+    doc.pipe(writeStream);
+
+    // Define colors and styles
+    const primaryColor = '#1967d2';
+    const secondaryColor = '#444444';
+    const lightGray = '#f5f5f5';
     
-    // Create a write stream for the PDF
-    const stream = fs.createWriteStream(cvFilePath);
-    
-    // Handle stream errors
-    stream.on('error', (error) => {
-      console.error('Error with file stream:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Error creating PDF file stream',
-        error: error.message
-      });
-    });
-    
-    // Pipe the PDF document to the file stream
-    doc.pipe(stream);
-    
-    // Color scheme
-    const colors = {
-      primary: '#1e88e5',   // Blue
-      secondary: '#424242', // Dark gray
-      accent: '#2c3e50',    // Dark blue
-      light: '#f5f5f5',     // Light gray
-      text: '#333333',      // Text color
-      highlight: '#e1f5fe'  // Light blue highlight
-    };
-    
+    // PDF content generation...
+    // [Existing PDF generation code remains unchanged]
     // Add header with name and contact info
-    doc.rect(0, 0, doc.page.width, 150).fill(colors.primary);
+    doc.rect(0, 0, doc.page.width, 150).fill(primaryColor);
     
     // Load and add profile picture if available
     let hasProfilePicture = false;
     try {
-      if (user.profilePicture) {
-        const profilePicPath = user.profilePicture;
+      if (req.user.profilePicture) {
+        const profilePicPath = req.user.profilePicture;
         
         // If it's a URL (including Cloudinary), try to fetch it
         if (profilePicPath.startsWith('http')) {
@@ -558,9 +534,9 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
     doc.text(`${personalInfo.firstName} ${personalInfo.lastName}`, nameX, 50);
     
     // Add profession/role if available
-    if (user.role) {
+    if (req.user.role) {
       doc.font('Helvetica').fontSize(16).fillColor('#ffffff');
-      doc.text(user.role === 'candidate' ? 'Professional Developer' : user.role, nameX, 85);
+      doc.text(req.user.role === 'candidate' ? 'Professional Developer' : req.user.role, nameX, 85);
     }
     
     // Add contact information on the right side
@@ -607,10 +583,10 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
     
     // Helper function to add a section title
     const addSectionTitle = (title) => {
-      doc.font('Helvetica-Bold').fontSize(16).fillColor(colors.primary);
+      doc.font('Helvetica-Bold').fontSize(16).fillColor(primaryColor);
       doc.text(title, 50, yPosition);
       yPosition += 5;
-      doc.moveTo(50, yPosition).lineTo(550, yPosition).stroke(colors.primary);
+      doc.moveTo(50, yPosition).lineTo(550, yPosition).stroke(primaryColor);
       yPosition += 15;
       return yPosition;
     };
@@ -618,7 +594,7 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
     // Add about section if available
     if (portfolio.about) {
       addSectionTitle('ABOUT ME');
-      doc.font('Helvetica').fontSize(11).fillColor(colors.text);
+      doc.font('Helvetica').fontSize(11).fillColor('#333333');
       const aboutText = doc.heightOfString(portfolio.about, { width: 500 });
       doc.text(portfolio.about, 50, yPosition, { width: 500 });
       yPosition += aboutText + 20;
@@ -642,7 +618,7 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
       const skillWidth = 240;
       const skillMargin = 10;
       
-      doc.font('Helvetica').fontSize(10).fillColor(colors.text);
+      doc.font('Helvetica').fontSize(10).fillColor('#333333');
       
       // Group skills into pairs for two-column layout
       for (let i = 0; i < skills.length; i += skillsPerRow) {
@@ -652,10 +628,10 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
           const xPos = 50 + (index * (skillWidth + skillMargin));
           
           // Create a bar for the skill
-          doc.rect(xPos, yPosition, skillWidth, 20).fill(colors.highlight);
+          doc.rect(xPos, yPosition, skillWidth, 20).fill('#e1f5fe');
           
           // Add skill name
-          doc.font('Helvetica-Bold').fontSize(10).fillColor(colors.secondary);
+          doc.font('Helvetica-Bold').fontSize(10).fillColor('#333333');
           doc.text(skill, xPos + 5, yPosition + 5);
         });
         
@@ -671,10 +647,10 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
       addSectionTitle('PROFESSIONAL EXPERIENCE');
       
       experience.forEach(exp => {
-        doc.font('Helvetica-Bold').fontSize(12).fillColor(colors.secondary);
+        doc.font('Helvetica-Bold').fontSize(12).fillColor('#333333');
         doc.text(exp.position || 'Position', 50, yPosition);
         
-        doc.font('Helvetica-Bold').fontSize(11).fillColor(colors.primary);
+        doc.font('Helvetica-Bold').fontSize(11).fillColor(primaryColor);
         const company = exp.company ? `${exp.company}` : '';
         const location = exp.location ? `, ${exp.location}` : '';
         doc.text(company + location, 50, yPosition + 15);
@@ -694,13 +670,13 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
         
         // Add dates on the right
         if (dateText) {
-          doc.font('Helvetica').fontSize(10).fillColor(colors.secondary);
+          doc.font('Helvetica').fontSize(10).fillColor('#333333');
           doc.text(dateText, { align: 'right' }, 50, yPosition, { width: 500 });
         }
         
         // Add description with bullet points if available
         if (exp.description) {
-          doc.font('Helvetica').fontSize(10).fillColor(colors.text);
+          doc.font('Helvetica').fontSize(10).fillColor('#333333');
           const descLines = exp.description.split('\n');
           yPosition += 35;
           
@@ -726,10 +702,10 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
       addSectionTitle('EDUCATION');
       
       education.forEach(edu => {
-        doc.font('Helvetica-Bold').fontSize(12).fillColor(colors.secondary);
+        doc.font('Helvetica-Bold').fontSize(12).fillColor('#333333');
         doc.text(edu.degree || 'Degree', 50, yPosition);
         
-        doc.font('Helvetica-Bold').fontSize(11).fillColor(colors.primary);
+        doc.font('Helvetica-Bold').fontSize(11).fillColor(primaryColor);
         const school = edu.school ? `${edu.school}` : '';
         const fieldOfStudy = edu.fieldOfStudy ? `, ${edu.fieldOfStudy}` : '';
         doc.text(school + fieldOfStudy, 50, yPosition + 15);
@@ -749,13 +725,13 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
         
         // Add dates on the right
         if (dateText) {
-          doc.font('Helvetica').fontSize(10).fillColor(colors.secondary);
+          doc.font('Helvetica').fontSize(10).fillColor('#333333');
           doc.text(dateText, { align: 'right' }, 50, yPosition, { width: 500 });
         }
         
         // Add location and description
         if (edu.location) {
-          doc.font('Helvetica').fontSize(10).fillColor(colors.text);
+          doc.font('Helvetica').fontSize(10).fillColor('#333333');
           yPosition += 35;
           doc.text(`Location: ${edu.location}`, 50, yPosition);
           yPosition += 15;
@@ -764,7 +740,7 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
         }
         
         if (edu.description) {
-          doc.font('Helvetica').fontSize(10).fillColor(colors.text);
+          doc.font('Helvetica').fontSize(10).fillColor('#333333');
           doc.text(edu.description, 50, yPosition);
           const descHeight = doc.heightOfString(edu.description, { width: 500 });
           yPosition += descHeight + 5;
@@ -780,26 +756,26 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
       addSectionTitle('CERTIFICATIONS');
       
       certificates.forEach(cert => {
-        doc.font('Helvetica-Bold').fontSize(12).fillColor(colors.secondary);
+        doc.font('Helvetica-Bold').fontSize(12).fillColor('#333333');
         doc.text(cert.title || 'Certificate', 50, yPosition);
         
         yPosition += 15;
         
         if (cert.issuer) {
-          doc.font('Helvetica').fontSize(10).fillColor(colors.text);
+          doc.font('Helvetica').fontSize(10).fillColor('#333333');
           doc.text(`Issuer: ${cert.issuer}`, 50, yPosition);
           yPosition += 15;
         }
         
         if (cert.date) {
           const certDate = new Date(cert.date);
-          doc.font('Helvetica').fontSize(10).fillColor(colors.secondary);
+          doc.font('Helvetica').fontSize(10).fillColor('#333333');
           doc.text(`Date: ${certDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}`, 50, yPosition);
           yPosition += 15;
         }
         
         if (cert.description) {
-          doc.font('Helvetica').fontSize(10).fillColor(colors.text);
+          doc.font('Helvetica').fontSize(10).fillColor('#333333');
           doc.text(cert.description, 50, yPosition);
           const descHeight = doc.heightOfString(cert.description, { width: 500 });
           yPosition += descHeight + 5;
@@ -808,7 +784,7 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
         if (cert.skills) {
           const certSkills = Array.isArray(cert.skills) ? cert.skills.join(', ') : cert.skills;
           if (certSkills && certSkills.trim()) {
-            doc.font('Helvetica').fontSize(10).fillColor(colors.text);
+            doc.font('Helvetica').fontSize(10).fillColor('#333333');
             doc.text(`Skills: ${certSkills}`, 50, yPosition);
             yPosition += 15;
           }
@@ -824,13 +800,13 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
       addSectionTitle('PROJECTS');
       
       projects.forEach(project => {
-        doc.font('Helvetica-Bold').fontSize(12).fillColor(colors.secondary);
+        doc.font('Helvetica-Bold').fontSize(12).fillColor('#333333');
         doc.text(project.title || 'Project', 50, yPosition);
         
         yPosition += 15;
         
         if (project.description) {
-          doc.font('Helvetica').fontSize(10).fillColor(colors.text);
+          doc.font('Helvetica').fontSize(10).fillColor('#333333');
           doc.text(project.description, 50, yPosition);
           const descHeight = doc.heightOfString(project.description, { width: 500 });
           yPosition += descHeight + 5;
@@ -839,14 +815,14 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
         if (project.technologies) {
           const techs = Array.isArray(project.technologies) ? project.technologies.join(', ') : project.technologies;
           if (techs && techs.trim()) {
-            doc.font('Helvetica').fontSize(10).fillColor(colors.primary);
+            doc.font('Helvetica').fontSize(10).fillColor(primaryColor);
             doc.text(`Technologies: ${techs}`, 50, yPosition);
             yPosition += 15;
           }
         }
         
         if (project.link) {
-          doc.font('Helvetica').fontSize(10).fillColor(colors.text);
+          doc.font('Helvetica').fontSize(10).fillColor('#333333');
           doc.text(`Link: ${project.link}`, 50, yPosition);
           yPosition += 15;
         }
@@ -868,50 +844,30 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
     doc.end();
     
     // When the stream is finished, save CV information to the portfolio
-    stream.on('finish', async () => {
-      try {
-        console.log(`CV file created: ${cvFilePath} - Checking file...`);
-        
-        // Double check that the file exists and has content
-        if (!fs.existsSync(cvFilePath)) {
-          throw new Error(`PDF file was not created at ${cvFilePath}`);
-        }
-        
-        const fileStats = fs.statSync(cvFilePath);
-        if (fileStats.size === 0) {
-          throw new Error('Generated PDF file is empty (0 bytes)');
-        }
-        
-        console.log(`PDF file confirmed: ${fileStats.size} bytes`);
-        
-        // Update portfolio with CV file info - formatted to match the schema
-        portfolio.cvFile = {
-          filename: cvFileName,
-          path: relativePath,
-          uploadDate: new Date(),
-          fileType: 'application/pdf'
-        };
-        
-        await portfolio.save();
-        console.log('Portfolio updated with CV file info');
-        
-        // Return success response with the file URL
-        res.status(200).json({
-          success: true,
-          message: 'CV generated successfully',
-          cvFileName: cvFileName,
-          cvPath: relativePath,
-          downloadUrl: accessUrl,
-          portfolio
-        });
-      } catch (error) {
-        console.error('Error saving CV info:', error);
-        res.status(500).json({
-          success: false,
-          message: 'Failed to save CV information',
-          error: error.message
-        });
-      }
+    await new Promise((resolve, reject) => {
+      writeStream.on('finish', resolve);
+      writeStream.on('error', reject);
+    });
+
+    // Update portfolio with CV file information
+    portfolio.cvFile = {
+      filename: cvFileName,
+      path: relativePath,
+      downloadUrl: downloadUrl,
+      uploadDate: new Date(),
+      fileType: 'application/pdf'
+    };
+
+    await portfolio.save();
+
+    // Return success response with the file URL
+    res.status(200).json({
+      success: true,
+      message: 'CV generated successfully',
+      cvFileName: cvFileName,
+      cvPath: relativePath,
+      downloadUrl: downloadUrl,
+      portfolio
     });
   } catch (error) {
     console.error('Error generating CV:', error);

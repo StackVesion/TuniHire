@@ -12,21 +12,63 @@ const connectDB = require("./config/db");
 const User = require('./models/User');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
+const path = require('path'); // Add this line to require the path module
 require('./config/githubAuth'); // Add this line to require GitHub auth config
 
 // CORS configuration
 const corsOptions = {
   origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 const app = express();
 app.use(cors(corsOptions));
-app.use(helmet());
+
+// Configure Helmet with relaxed CSP for PDF viewing
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "blob:", "https:"],
+        connectSrc: ["'self'", "https:"],
+        frameSrc: ["'self'"],
+        frameAncestors: ["'self'", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+  })
+);
+
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Special route for PDF files with proper headers for iframe embedding
+app.get('/uploads/resumes/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const filePath = path.join(__dirname, 'public', 'uploads', 'resumes', filename);
+  
+  // Set headers to allow iframe embedding
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  
+  // Send the file
+  res.sendFile(filePath);
+});
 
 // Connect to MongoDB
 connectDB();

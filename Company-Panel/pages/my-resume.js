@@ -1451,14 +1451,19 @@ function Portfolio({ user }) {
             const response = await authAxios.post('http://localhost:5000/api/portfolios/generate-cv', payload);
             
             if (response.data.success) {
+                console.log('CV generation successful:', response.data);
+                
                 // Update portfolio with the CV file info
                 setPortfolio(prev => ({ 
                     ...prev, 
                     cvFile: response.data.portfolio.cvFile 
                 }));
                 
-                // Set the URL for the modal preview (uses the downloadUrl from backend)
-                setCvURL(response.data.downloadUrl);
+                // Use the downloadUrl provided directly from the backend
+                const pdfUrl = response.data.downloadUrl;
+                setCvURL(pdfUrl);
+                
+                console.log('PDF URL set to:', pdfUrl);
                 setCvGenerationStep('complete');
                 
                 // Show the CV modal
@@ -3164,41 +3169,65 @@ function Portfolio({ user }) {
             
             {/* CV Generation Modal */}
             {showCVModal && (
-                <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                    <div className="modal-dialog modal-lg modal-dialog-centered">
-                        <div className="modal-content">
-                            <div className="modal-header">
-                                <h5 className="modal-title">Your CV Preview</h5>
-                                <button type="button" className="btn-close" onClick={() => setShowCVModal(false)}></button>
-                            </div>
-                            <div className="modal-body">
-                                <div className="ratio ratio-16x9">
-                                    <iframe
-                                        src={cvURL}
-                                        title="CV Preview"
-                                        className="border-0"
-                                        allowFullScreen
-                                    ></iframe>
-                                </div>
-                            </div>
-                            <div className="modal-footer">
+                <div className="fixed-top vw-100 vh-100" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="card shadow-lg border-0" style={{ maxWidth: '500px', width: '100%', animation: 'fadeIn 0.3s ease-in-out' }}>
+                        <div className="card-header bg-primary text-white py-3">
+                            <div className="d-flex justify-content-between align-items-center">
+                                <h5 className="m-0">
+                                    <i className="fi-rr-file-pdf me-2"></i>
+                                    Your CV is Ready
+                                </h5>
                                 <button 
                                     type="button" 
-                                    className="btn btn-secondary"
+                                    className="btn-close btn-close-white" 
+                                    aria-label="Close"
                                     onClick={() => setShowCVModal(false)}
-                                >
-                                    Close
-                                </button>
+                                ></button>
+                            </div>
+                        </div>
+                        <div className="card-body text-center p-4">
+                            <div className="mb-4">
+                                <div className="cv-success-icon mb-3">
+                                    <i className="fi-rr-check-circle text-success" style={{ fontSize: '4rem' }}></i>
+                                </div>
+                                <h4>CV Generated Successfully!</h4>
+                                <p className="text-secondary mb-4">Your professional CV has been generated and saved to your portfolio.</p>
+                            </div>
+                            
+                            <div className="d-grid gap-3 mb-3">
                                 <a
                                     href={cvURL}
-                                    className="btn btn-primary"
+                                    className="btn btn-primary btn-lg"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    download={`${user.firstName}_${user.lastName}_CV.pdf`}
                                 >
-                                    <i className="fi-rr-download me-1"></i> Download
+                                    <i className="fi-rr-eye me-2"></i>
+                                    View Your CV
+                                </a>
+                                
+                                <a
+                                    href={cvURL}
+                                    className="btn btn-outline-primary"
+                                    download={`${user?.firstName || 'My'}_${user?.lastName || ''}_CV.pdf`}
+                                >
+                                    <i className="fi-rr-download me-2"></i>
+                                    Download CV
                                 </a>
                             </div>
+                            
+                            <p className="text-muted small">
+                                <i className="fi-rr-info-circle me-1"></i>
+                                Your CV is stored locally and can be accessed at any time
+                            </p>
+                        </div>
+                        <div className="card-footer bg-light p-3 text-center">
+                            <button 
+                                type="button" 
+                                className="btn btn-secondary"
+                                onClick={() => setShowCVModal(false)}
+                            >
+                                Close
+                            </button>
                         </div>
                     </div>
                 </div>
