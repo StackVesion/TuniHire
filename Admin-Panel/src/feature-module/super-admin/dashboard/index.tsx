@@ -6,6 +6,8 @@ import ImageWithBasePath from '../../../core/common/imageWithBasePath'
 import ReactApexChart from "react-apexcharts";
 
 const SuperAdminDashboard = () => {
+
+  
     const routes = all_routes
     const [CompanyChart] = React.useState<any>({
         chart: {
