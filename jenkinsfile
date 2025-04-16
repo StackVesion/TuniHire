@@ -30,15 +30,33 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
     
-    tools {
-        nodejs 'NodeJS'
-        jdk 'JDK17'
-    }
-    
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+        
+        // Ensure we have the necessary tools
+        stage('Setup Tools') {
+            steps {
+                script {
+                    // Check if we need to install Node.js
+                    def nodeInstalled = sh(script: 'which node || echo "not found"', returnStdout: true).trim()
+                    if (nodeInstalled == "not found") {
+                        echo "Installing Node.js..."
+                        sh 'curl -fsSL https://deb.nodesource.com/setup_18.x | bash -'
+                        sh 'apt-get install -y nodejs'
+                    }
+                    
+                    // Install SonarScanner for Node.js projects
+                    sh 'npm install -g sonar-scanner'
+                    
+                    // Display versions for logging
+                    sh 'node --version'
+                    sh 'npm --version'
+                    sh 'sonar-scanner --version || echo "SonarScanner installation may have issues"'
+                }
             }
         }
         
@@ -50,19 +68,16 @@ pipeline {
                 stage('Backend Analysis') {
                     steps {
                         dir('Back-end') {
-                            withSonarQubeEnv('SonarQubeServer') {
-                                sh """
-                                    npm install -g sonar-scanner
-                                    sonar-scanner \
-                                      -Dsonar.projectKey=tunihire-backend \
-                                      -Dsonar.projectName='TuniHire Backend' \
-                                      -Dsonar.host.url=${SONAR_HOST_URL} \
-                                      -Dsonar.login=${SONAR_TOKEN} \
-                                      -Dsonar.sources=. \
-                                      -Dsonar.exclusions=node_modules/**,test/**,coverage/** \
-                                      -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-                                """
-                            }
+                            sh """
+                                sonar-scanner \
+                                  -Dsonar.projectKey=tunihire-backend \
+                                  -Dsonar.projectName='TuniHire Backend' \
+                                  -Dsonar.host.url=${SONAR_HOST_URL} \
+                                  -Dsonar.login=${SONAR_TOKEN} \
+                                  -Dsonar.sources=. \
+                                  -Dsonar.exclusions=node_modules/**,test/**,coverage/** \
+                                  -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+                            """
                         }
                     }
                 }
@@ -70,19 +85,16 @@ pipeline {
                 stage('Frontend Analysis') {
                     steps {
                         dir('Front-End') {
-                            withSonarQubeEnv('SonarQubeServer') {
-                                sh """
-                                    npm install -g sonar-scanner
-                                    sonar-scanner \
-                                      -Dsonar.projectKey=tunihire-frontend \
-                                      -Dsonar.projectName='TuniHire Frontend' \
-                                      -Dsonar.host.url=${SONAR_HOST_URL} \
-                                      -Dsonar.login=${SONAR_TOKEN} \
-                                      -Dsonar.sources=. \
-                                      -Dsonar.exclusions=node_modules/**,.next/**,out/**,coverage/** \
-                                      -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-                                """
-                            }
+                            sh """
+                                sonar-scanner \
+                                  -Dsonar.projectKey=tunihire-frontend \
+                                  -Dsonar.projectName='TuniHire Frontend' \
+                                  -Dsonar.host.url=${SONAR_HOST_URL} \
+                                  -Dsonar.login=${SONAR_TOKEN} \
+                                  -Dsonar.sources=. \
+                                  -Dsonar.exclusions=node_modules/**,.next/**,out/**,coverage/** \
+                                  -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+                            """
                         }
                     }
                 }
