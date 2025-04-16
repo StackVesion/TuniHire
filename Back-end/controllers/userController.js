@@ -9,55 +9,89 @@ const fs = require("fs");
 // Get all users
 const getUsers = async (req, res) => {
     try {
-        const { page = 1, limit = 10, role, search, status } = req.query;
+        console.log('Received request:', req.query);
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.max(1, parseInt(req.query.limit) || 12);
+
+        // Build filter based on query parameters
+        let filter = {};
         
-        // Build the filter object
-        const filter = {};
+        // Filtrer les utilisateurs par rôle "candidate" en gérant la casse (majuscule/minuscule)
+        // Utiliser une expression régulière insensible à la casse pour trouver "candidate" ou "Candidate"
+        filter.role = { $regex: new RegExp('^candidate$', 'i') };
+        console.log('Filtering users with role candidate (case insensitive)');
         
-        // Add role filter if provided
-        if (role) {
-            filter.role = role;
-        }
+        console.log('Using filter:', filter);
+
+        // Compter d'abord combien d'utilisateurs existent dans la base de données (total)
+        const totalUsers = await User.countDocuments({});
+        console.log(`Total users in database: ${totalUsers}`);
         
-        // Add status filter if provided
-        if (status) {
-            filter.isActive = status === 'active';
-        }
+        // Compter ensuite le nombre de candidats
+        const totalCandidates = await User.countDocuments({ role: 'candidate' });
+        console.log(`Total users with role 'candidate': ${totalCandidates}`);
         
-        // Add search functionality
-        if (search) {
-            filter.$or = [
-                { firstName: { $regex: search, $options: 'i' } },
-                { lastName: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } }
-            ];
-        }
+        // Récupérer les utilisateurs selon le filtre avec plus de champs
+        const [users, total] = await Promise.all([
+            User.find(filter)
+                .select('firstName lastName email role profilePicture skills location experienceYears title')
+                .sort('-createdAt')
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .lean(),
+            User.countDocuments(filter)
+        ]);
         
-        // Calculate pagination
-        const skip = (parseInt(page) - 1) * parseInt(limit);
+        console.log(`Found ${users.length} users matching the filter`);
+
+        // Log les données brutes des utilisateurs avant transformation
+        console.log('Résultat brut de la requête:', JSON.stringify(users.map(u => ({ _id: u._id.toString(), email: u.email, role: u.role }))));
         
-        // Execute query with pagination
-        const users = await User.find(filter)
-            .select('firstName lastName email role profilePicture isEmailVerified isActive createdAt')
-            .skip(skip)
-            .limit(parseInt(limit))
-            .sort({ createdAt: -1 });
-        
-        // Get total count for pagination
-        const totalUsers = await User.countDocuments(filter);
-        
-        res.status(200).json({
-            users,
-            totalPages: Math.ceil(totalUsers / parseInt(limit)),
-            currentPage: parseInt(page),
-            totalUsers
+        // Transform data to ensure consistent format
+        const processedUsers = users.map(user => {
+            // Log détaillé de chaque utilisateur pour débogage
+            console.log(`---------------------`);
+            console.log(`Processing user: ID=${user._id}, Email=${user.email}, Role=${user.role}`);
+            console.log(`User details: ${JSON.stringify(user)}`);
+            
+            // S'assurer que tous les champs sont correctement formatés même s'ils sont manquants ou invalides
+            const processedUser = {
+                _id: user._id ? user._id.toString() : '',
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                email: user.email || '',
+                role: user.role || 'Undefined',  // Utiliser 'Undefined' si aucun rôle n'est spécifié
+                profilePicture: user.profilePicture || '',
+                googleId: user.googleId || null,
+                skills: Array.isArray(user.skills) ? user.skills : [],
+                location: user.location || '',
+                title: user.title || '',
+                experienceYears: user.experienceYears || 0
+            };
+            
+            console.log(`Processed user: ${JSON.stringify(processedUser)}`);
+            console.log(`---------------------`);
+            
+            return processedUser;
         });
+
+        // Send response with required format
+        return res.status(200).json({
+            success: true,
+            users: processedUsers,
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(total / limit),
+                total: total,
+                limit: limit
+            }
+        });
+
     } catch (error) {
-        console.error('Error fetching users:', error);
-        res.status(500).json({ 
+        console.error('Error:', error);
+        return res.status(500).json({
             success: false,
-            message: 'Error fetching users',
-            error: error.message
+            message: 'Failed to fetch candidates'
         });
     }
 };
@@ -954,55 +988,50 @@ const generateNewVerificationToken = async (req, res) => {
 
 // Define updateUserRole as a regular function instead of using exports.updateUserRole
 const updateUserRole = async (req, res) => {
-  try {
-    console.log("updateUserRole called with params:", req.params);
-    console.log("updateUserRole called with body:", req.body);
-    
-    const userId = req.params.id;
-    const { role } = req.body;
+    try {
+        const { id } = req.params;
+        const { role } = req.body;
 
-    if (!userId) {
-      console.error("Missing userId in request params");
-      return res.status(400).json({ message: "User ID is required" });
+        // Validation du rôle
+        const validRoles = ['candidate', 'recruiter', 'admin'];
+        if (!validRoles.includes(role)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Invalid role specified' 
+            });
+        }
+
+        const user = await User.findByIdAndUpdate(
+            id,
+            { 
+                role,
+                updatedAt: Date.now()
+            },
+            { new: true, runValidators: true }
+        );
+
+        if (!user) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'User not found' 
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            user: {
+                _id: user._id,
+                email: user.email,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: error.message 
+        });
     }
-
-    if (!role) {
-      console.error("Missing role in request body");
-      return res.status(400).json({ message: "Role is required" });
-    }
-
-    console.log(`Attempting to find user with ID: ${userId}`);
-    
-    const user = await User.findById(userId);
-    if (!user) {
-      console.error(`User not found with ID: ${userId}`);
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    console.log(`Found user: ${user.email}. Current role: ${user.role}. New role: ${role}`);
-    
-    user.role = role;
-    await user.save();
-
-    console.log(`Role updated successfully for user: ${user.email} to ${role}`);
-    
-    res.status(200).json({ 
-      success: true,
-      message: "User role updated successfully", 
-      user: {
-        _id: user._id,
-        email: user.email,
-        role: user.role
-      } 
-    });
-  } catch (error) {
-    console.error("Error updating user role:", error);
-    res.status(500).json({ 
-      success: false,
-      message: "Internal server error", 
-      error: error.message 
-    });
-  }
 };
 
 // Keep the main module.exports with all functions
