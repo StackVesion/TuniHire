@@ -8,8 +8,8 @@ const Footer = () => {
             <div className="container">
                 <div className="row">
                     <div className="footer-col-1 col-md-3 col-sm-12">
-                        <Link legacyBehavior href="/"><a><img alt="jobBox" src="assets/imgs/template/jobhub-logo.svg" /></a></Link>
-                        <div className="mt-20 mb-20 font-xs color-text-paragraph-2">JobBox is the heart of the design community and the best resource to discover and connect with designers and jobs worldwide.</div>
+                        <Link legacyBehavior href="/"><a><img alt="TuniHire*" src="assets/imgs/template/jobhub-logo.svg" /></a></Link>
+                        <div className="mt-20 mb-20 font-xs color-text-paragraph-2">TuniHire is the heart of the design community and the best resource to discover and connect with designers and jobs worldwide.</div>
                         <div className="footer-social">
                             <a className="icon-socials icon-facebook" href="#" />
                             <a className="icon-socials icon-twitter" href="#" />
@@ -77,7 +77,7 @@ const Footer = () => {
                 </div>
                 <div className="footer-bottom mt-50">
                     <div className="row">
-                        <div className="col-md-6"><span className="font-xs color-text-paragraph">Copyright © 2022. JobBox all right reserved</span></div>
+                        <div className="col-md-6"><span className="font-xs color-text-paragraph">Copyright © 2022. TuniHire all right reserved</span></div>
                         <div className="col-md-6 text-md-end text-start">
                             <div className="footer-social">
                                 <a className="font-xs color-text-paragraph" href="#">Privacy Policy</a>
