@@ -1452,8 +1452,13 @@ function Portfolio({ user }) {
             
             if (response.data.success) {
                 // Update portfolio with the CV file info
-                setPortfolio(prev => ({ ...prev, cvFile: response.data.cvUrl }));
-                setCvURL(response.data.cvUrl);
+                setPortfolio(prev => ({ 
+                    ...prev, 
+                    cvFile: response.data.portfolio.cvFile 
+                }));
+                
+                // Set the URL for the modal preview (uses the downloadUrl from backend)
+                setCvURL(response.data.downloadUrl);
                 setCvGenerationStep('complete');
                 
                 // Show the CV modal
@@ -1488,24 +1493,16 @@ function Portfolio({ user }) {
             setIsGeneratingCV(true);
             const authAxios = createAuthAxios();
             
-            const response = await authAxios.put(`http://localhost:5000/api/portfolios/update-cv/${portfolio._id}`, {
-                cvFile: cvURL
-            });
+            // No need to update anything as the CV is already saved in the portfolio during generation
+            setShowCVModal(false);
             
-            if (response.data.success) {
-                setPortfolio(response.data.portfolio);
-                setShowCVModal(false);
-                
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success',
-                    text: 'CV saved to your portfolio',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-            } else {
-                throw new Error('Failed to save CV to portfolio');
-            }
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: 'CV saved to your portfolio',
+                timer: 1500,
+                showConfirmButton: false
+            });
         } catch (error) {
             console.error('Error saving CV:', error);
             Swal.fire({
@@ -3114,7 +3111,7 @@ function Portfolio({ user }) {
                     <div className="row">
                         <div className="col-md-8">
                             <div className="card shadow-sm mb-4">
-                                <div className="card-body p-5">
+                                <div className="card-body">
                                     <h4 className="mb-3">Create Your Portfolio</h4>
                                     <p className="mb-4">Create a professional portfolio to showcase your skills and experience to potential employers.</p>
                                     
@@ -3190,24 +3187,17 @@ function Portfolio({ user }) {
                                     className="btn btn-secondary"
                                     onClick={() => setShowCVModal(false)}
                                 >
-                                    Cancel
+                                    Close
                                 </button>
                                 <a
                                     href={cvURL}
-                                    className="btn btn-primary me-2"
+                                    className="btn btn-primary"
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    download={`${user.firstName}_${user.lastName}_CV.pdf`}
                                 >
                                     <i className="fi-rr-download me-1"></i> Download
                                 </a>
-                                <button 
-                                    type="button" 
-                                    className="btn btn-success"
-                                    onClick={saveCVToPortfolio}
-                                    disabled={isGeneratingCV}
-                                >
-                                    <i className="fi-rr-check me-1"></i> Save to Portfolio
-                                </button>
                             </div>
                         </div>
                     </div>

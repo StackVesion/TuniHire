@@ -430,22 +430,36 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
     // Generate a filename for the CV
     const timestamp = new Date().getTime();
     const cvFileName = `cv_${userId}_${timestamp}.pdf`;
-    const cvFilePath = `./public/uploads/cvs/${cvFileName}`;
+    
+    // Ensure proper path construction
+    const path = require('path');
+    const fs = require('fs');
+    
+    // Create paths for public and static access
+    const uploadsDir = path.resolve(__dirname, '../public/uploads/resumes');
+    const cvFilePath = path.join(uploadsDir, cvFileName);
+    
+    // Create a relative path for accessing from the web
+    const relativePath = `/uploads/resumes/${cvFileName}`;
+    const accessUrl = `http://localhost:5000${relativePath}`;
+    
+    console.log(`CV will be generated at: ${cvFilePath}`);
+    console.log(`CV will be accessible at: ${accessUrl}`);
     
     // Make sure the directory exists
-    const fs = require('fs');
-    const path = require('path');
-    const uploadsDir = path.join(__dirname, '../public/uploads/cvs');
-    
     if (!fs.existsSync(uploadsDir)) {
+      console.log(`Creating uploads directory: ${uploadsDir}`);
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
     
     // Use a PDF generation library like PDFKit
     const PDFDocument = require('pdfkit');
+    
+    // Create the PDF with proper configuration
     const doc = new PDFDocument({
       margins: { top: 50, bottom: 50, left: 50, right: 50 },
       size: 'A4',
+      bufferPages: true, // Important for page management
       info: {
         Title: `CV - ${personalInfo.firstName} ${personalInfo.lastName}`,
         Author: 'TuniHire',
@@ -454,8 +468,20 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
       }
     });
     
-    // Pipe the PDF into a file
+    // Create a write stream for the PDF
     const stream = fs.createWriteStream(cvFilePath);
+    
+    // Handle stream errors
+    stream.on('error', (error) => {
+      console.error('Error with file stream:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error creating PDF file stream',
+        error: error.message
+      });
+    });
+    
+    // Pipe the PDF document to the file stream
     doc.pipe(stream);
     
     // Color scheme
@@ -480,22 +506,33 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
         // If it's a URL (including Cloudinary), try to fetch it
         if (profilePicPath.startsWith('http')) {
           const axios = require('axios');
-          const response = await axios.get(profilePicPath, { responseType: 'arraybuffer' });
           
-          // Create a temporary file for the profile picture
-          const tempPicPath = path.join(uploadsDir, `temp_pic_${userId}.jpg`);
-          fs.writeFileSync(tempPicPath, response.data);
-          
-          // Add profile picture as a circular image
-          doc.save();
-          doc.translate(75, 75);
-          doc.circle(0, 0, 40).clip();
-          doc.image(tempPicPath, -40, -40, { width: 80 });
-          doc.restore();
-          
-          // Clean up temp file
-          fs.unlink(tempPicPath, () => {});
-          hasProfilePicture = true;
+          try {
+            const response = await axios.get(profilePicPath, { 
+              responseType: 'arraybuffer',
+              timeout: 5000 // 5 second timeout
+            });
+            
+            // Create a temporary file for the profile picture
+            const tempPicPath = path.join(uploadsDir, `temp_pic_${userId}.jpg`);
+            fs.writeFileSync(tempPicPath, response.data);
+            
+            // Add profile picture as a circular image
+            doc.save();
+            doc.translate(75, 75);
+            doc.circle(0, 0, 40).clip();
+            doc.image(tempPicPath, -40, -40, { width: 80 });
+            doc.restore();
+            
+            // Clean up temp file
+            fs.unlink(tempPicPath, (err) => {
+              if (err) console.error('Error removing temporary profile picture file:', err);
+            });
+            hasProfilePicture = true;
+          } catch (picError) {
+            console.warn('Could not fetch profile picture:', picError.message);
+            // Continue without profile picture
+          }
         } else {
           // Local file path
           const localPicPath = path.join(__dirname, '..', profilePicPath.replace(/^\//, ''));
@@ -768,10 +805,13 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
           yPosition += descHeight + 5;
         }
         
-        if (cert.skills && cert.skills.length > 0) {
-          doc.font('Helvetica').fontSize(10).fillColor(colors.text);
-          doc.text(`Skills: ${cert.skills.join(', ')}`, 50, yPosition);
-          yPosition += 15;
+        if (cert.skills) {
+          const certSkills = Array.isArray(cert.skills) ? cert.skills.join(', ') : cert.skills;
+          if (certSkills && certSkills.trim()) {
+            doc.font('Helvetica').fontSize(10).fillColor(colors.text);
+            doc.text(`Skills: ${certSkills}`, 50, yPosition);
+            yPosition += 15;
+          }
         }
         
         yPosition += 10;
@@ -796,10 +836,13 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
           yPosition += descHeight + 5;
         }
         
-        if (project.technologies && project.technologies.length > 0) {
-          doc.font('Helvetica').fontSize(10).fillColor(colors.primary);
-          doc.text(`Technologies: ${project.technologies.join(', ')}`, 50, yPosition);
-          yPosition += 15;
+        if (project.technologies) {
+          const techs = Array.isArray(project.technologies) ? project.technologies.join(', ') : project.technologies;
+          if (techs && techs.trim()) {
+            doc.font('Helvetica').fontSize(10).fillColor(colors.primary);
+            doc.text(`Technologies: ${techs}`, 50, yPosition);
+            yPosition += 15;
+          }
         }
         
         if (project.link) {
@@ -812,42 +855,8 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
       });
     }
     
-    // Add footer with page numbers
-    const totalPages = doc.bufferedPageRange().count;
-    
-    // Add document finalization code including page numbering
-    doc.on('pageAdded', () => {
-      const currentPage = doc.bufferedPageRange().count;
-      doc.switchToPage(currentPage - 1); // Switch to the newly added page (uses 0-based index)
-      
-      // Add page number to the current page
-      doc.font('Helvetica').fontSize(8).fillColor('#999999');
-      doc.text(
-        `Page ${currentPage} of ${totalPages}`, 
-        50, 
-        doc.page.height - 50, 
-        { align: 'center', width: doc.page.width - 100 }
-      );
-      
-      // Add generation date
-      doc.text(
-        `Generated on ${new Date().toLocaleDateString()}`, 
-        50, 
-        doc.page.height - 35, 
-        { align: 'center', width: doc.page.width - 100 }
-      );
-    });
-    
-    // Add footer to the first page
+    // Add generation date to first page footer
     doc.font('Helvetica').fontSize(8).fillColor('#999999');
-    doc.text(
-      `Page 1 of ${totalPages}`, 
-      50, 
-      doc.page.height - 50, 
-      { align: 'center', width: doc.page.width - 100 }
-    );
-    
-    // Add generation date
     doc.text(
       `Generated on ${new Date().toLocaleDateString()}`, 
       50, 
@@ -855,61 +864,54 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
       { align: 'center', width: doc.page.width - 100 }
     );
     
-    // Finalize PDF
+    // Finalize PDF - this will complete the document and close the stream
     doc.end();
     
-    // Import Cloudinary utilities
-    const { uploadToCloudinary } = require('../utils/cloudinary');
-    
-    // When the stream is finished, upload to Cloudinary and send the response
+    // When the stream is finished, save CV information to the portfolio
     stream.on('finish', async () => {
       try {
-        // Upload the generated PDF to Cloudinary
-        const cloudinaryUpload = await uploadToCloudinary(cvFilePath, {
-          folder: 'cvs',
-          resource_type: 'raw',
-          public_id: `cv_${userId}_${timestamp}`
-        });
+        console.log(`CV file created: ${cvFilePath} - Checking file...`);
         
-        if (!cloudinaryUpload.success) {
-          throw new Error('Failed to upload to Cloudinary');
+        // Double check that the file exists and has content
+        if (!fs.existsSync(cvFilePath)) {
+          throw new Error(`PDF file was not created at ${cvFilePath}`);
         }
         
-        // Update portfolio with CV file info
-        portfolio.cvFile = cloudinaryUpload.result.secure_url;
-        await portfolio.save();
+        const fileStats = fs.statSync(cvFilePath);
+        if (fileStats.size === 0) {
+          throw new Error('Generated PDF file is empty (0 bytes)');
+        }
         
-        // Return the file path to download
+        console.log(`PDF file confirmed: ${fileStats.size} bytes`);
+        
+        // Update portfolio with CV file info - formatted to match the schema
+        portfolio.cvFile = {
+          filename: cvFileName,
+          path: relativePath,
+          uploadDate: new Date(),
+          fileType: 'application/pdf'
+        };
+        
+        await portfolio.save();
+        console.log('Portfolio updated with CV file info');
+        
+        // Return success response with the file URL
         res.status(200).json({
           success: true,
-          message: 'CV generated and uploaded successfully',
-          cvUrl: cloudinaryUpload.result.secure_url,
-          cvPublicId: cloudinaryUpload.result.public_id,
+          message: 'CV generated successfully',
+          cvFileName: cvFileName,
+          cvPath: relativePath,
+          downloadUrl: accessUrl,
           portfolio
         });
-        
-        // Remove the local file after uploading to Cloudinary
-        fs.unlink(cvFilePath, (err) => {
-          if (err) console.error('Error removing temporary CV file:', err);
-        });
       } catch (error) {
-        console.error('Error uploading to Cloudinary:', error);
+        console.error('Error saving CV info:', error);
         res.status(500).json({
           success: false,
-          message: 'Failed to upload CV to Cloudinary',
+          message: 'Failed to save CV information',
           error: error.message
         });
       }
-    });
-    
-    // Handle stream errors
-    stream.on('error', (error) => {
-      console.error('Stream error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Error generating CV file',
-        error: error.message
-      });
     });
   } catch (error) {
     console.error('Error generating CV:', error);
