@@ -12,6 +12,7 @@ function CampanyApplications() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
     const [companyJobs, setCompanyJobs] = useState([])
+    const [portfolios, setPortfolios] = useState({}) // Store portfolios by userId
     
     // Filter states
     const [selectedJob, setSelectedJob] = useState("all")
@@ -96,31 +97,39 @@ function CampanyApplications() {
                 }
             })
             
-            console.log(`Total applications found: ${allApplications.length}`)
-            
+            console.log(`Total applications: ${allApplications.length}`)
             setApplications(allApplications)
-            setFilteredApplications(allApplications)
-            setLoading(false)
             
-        } catch (error) {
-            console.error("Error in application fetch process:", error)
-            
-            let errorMessage = "An error occurred while fetching applications."
-            
-            if (error.response) {
-                const status = error.response.status
-                const message = error.response.data?.message || error.message
+            // Step 4: Fetch portfolios for all applicants
+            if (allApplications.length > 0) {
+                console.log("Fetching portfolios for applicants...")
+                const userIds = [...new Set(allApplications.map(app => app.userId._id))];
+                const portfolioData = {};
                 
-                if (status === 403) {
-                    errorMessage = `Authentication error: ${message}`
-                } else if (status === 404) {
-                    errorMessage = "Resource not found. Please check if your company profile is properly set up."
-                } else {
-                    errorMessage = `Server error (${status}): ${message}`
-                }
+                // Fetch portfolios in parallel
+                const portfolioPromises = userIds.map(userId => 
+                    authAxios.get(`/api/portfolios/user/${userId}`)
+                        .then(response => {
+                            if (response.data) {
+                                portfolioData[userId] = response.data;
+                            }
+                            return response.data;
+                        })
+                        .catch(err => {
+                            console.log(`Error fetching portfolio for user ${userId}:`, err.message);
+                            return null;
+                        })
+                );
+                
+                await Promise.all(portfolioPromises);
+                setPortfolios(portfolioData);
+                console.log(`Fetched ${Object.keys(portfolioData).length} portfolios`);
             }
             
-            setError(errorMessage)
+            setLoading(false)
+        } catch (error) {
+            console.error("Error fetching data:", error)
+            setError("An error occurred while fetching data. Please try again later.")
             setLoading(false)
         }
     }
@@ -207,6 +216,19 @@ function CampanyApplications() {
             })
         }
     }
+    
+    // Function to view candidate's portfolio
+    const viewCandidatePortfolio = (userId, applicationId) => {
+        if (userId) {
+            window.open(`/user-portfolio?userId=${userId}&applicationId=${applicationId}`, '_blank');
+        } else {
+            Swal.fire({
+                title: 'Error',
+                text: 'Could not find user information',
+                icon: 'error'
+            });
+        }
+    };
     
     // Format date for display
     const formatDate = (dateString) => {
@@ -425,203 +447,18 @@ function CampanyApplications() {
                                                                 </span>
                                                             </td>
                                                             <td>
-                                                                <div className="btn-group" role="group">
-                                                                    <button 
-                                                                        type="button" 
-                                                                        className="btn btn-sm btn-outline-primary"
-                                                                        data-bs-toggle="modal"
-                                                                        data-bs-target={`#viewApplicationModal-${application._id}`}
-                                                                    >
-                                                                        <i className="fi-rr-eye me-1"></i> View
-                                                                    </button>
-                                                                    <div className="btn-group" role="group">
-                                                                        <button 
-                                                                            type="button" 
-                                                                            className="btn btn-sm btn-outline-secondary dropdown-toggle"
-                                                                            data-bs-toggle="dropdown"
-                                                                            aria-expanded="false"
-                                                                        >
-                                                                            Status
-                                                                        </button>
-                                                                        <ul className="dropdown-menu">
-                                                                            <li>
-                                                                                <button 
-                                                                                    className="dropdown-item" 
-                                                                                    onClick={() => updateApplicationStatus(application._id, 'Pending')}
-                                                                                >
-                                                                                    <i className="fi-rr-time-forward me-1"></i> Pending
-                                                                                </button>
-                                                                            </li>
-                                                                            <li>
-                                                                                <button 
-                                                                                    className="dropdown-item" 
-                                                                                    onClick={() => updateApplicationStatus(application._id, 'Accepted')}
-                                                                                >
-                                                                                    <i className="fi-rr-check me-1"></i> Accept
-                                                                                </button>
-                                                                            </li>
-                                                                            <li>
-                                                                                <button 
-                                                                                    className="dropdown-item" 
-                                                                                    onClick={() => updateApplicationStatus(application._id, 'Rejected')}
-                                                                                >
-                                                                                    <i className="fi-rr-cross-circle me-1"></i> Reject
-                                                                                </button>
-                                                                            </li>
-                                                                        </ul>
+                                                                <div className="card-grid-2-button mt-10 d-flex justify-content-between">
+                                                                    <div className="d-flex">
+                                                                        <a className="btn btn-grey-small mr-5" href="#">{application.status}</a>
+                                                                        <a className="btn btn-grey-small mr-5">{formatDate(application.createdAt)}</a>
                                                                     </div>
-                                                                </div>
-                                                                
-                                                                {/* Modal for application details - Will be shown when "View" is clicked */}
-                                                                <div className="modal fade" id={`viewApplicationModal-${application._id}`} tabIndex="-1" aria-hidden="true">
-                                                                    <div className="modal-dialog modal-lg">
-                                                                        <div className="modal-content">
-                                                                            <div className="modal-header">
-                                                                                <h5 className="modal-title">Application Details</h5>
-                                                                                <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                                            </div>
-                                                                            <div className="modal-body">
-                                                                                <div className="row mb-4">
-                                                                                    <div className="col-md-3">
-                                                                                        <img 
-                                                                                            src={application.userId.profilePicture || "/assets/imgs/page/dashboard/avatar.png"}
-                                                                                            alt={application.userId.firstName}
-                                                                                            className="img-fluid rounded"
-                                                                                        />
-                                                                                    </div>
-                                                                                    <div className="col-md-9">
-                                                                                        <h4>{application.userId.firstName} {application.userId.lastName}</h4>
-                                                                                        <p className="mb-1"><i className="fi-rr-envelope me-2"></i>{application.userId.email}</p>
-                                                                                        {application.userId.phone && (
-                                                                                            <p className="mb-1"><i className="fi-rr-phone-call me-2"></i>{application.userId.phone}</p>
-                                                                                        )}
-                                                                                        <div className="mt-3">
-                                                                                            <span className={`badge ${getStatusColor(application.status)} me-2`}>
-                                                                                                {application.status}
-                                                                                            </span>
-                                                                                            <span className="text-muted">
-                                                                                                Applied on {formatDate(application.createdAt)}
-                                                                                            </span>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </div>
-                                                                                
-                                                                                <div className="row">
-                                                                                    <div className="col-md-12">
-                                                                                        <div className="card mb-3">
-                                                                                            <div className="card-header bg-light">
-                                                                                                <h6 className="mb-0">Cover Letter</h6>
-                                                                                            </div>
-                                                                                            <div className="card-body">
-                                                                                                <p style={{ whiteSpace: 'pre-line' }}>{application.coverLetter}</p>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    
-                                                                                    <div className="col-md-6">
-                                                                                        <div className="card mb-3">
-                                                                                            <div className="card-header bg-light">
-                                                                                                <h6 className="mb-0">Skills</h6>
-                                                                                            </div>
-                                                                                            <div className="card-body">
-                                                                                                {application.userProfile?.skills?.map((skill, index) => (
-                                                                                                    <span key={index} className="badge bg-light text-dark me-1 mb-1">
-                                                                                                        {skill}
-                                                                                                    </span>
-                                                                                                ))}
-                                                                                                {(!application.userProfile?.skills || application.userProfile.skills.length === 0) && (
-                                                                                                    <p className="text-muted mb-0">No skills listed</p>
-                                                                                                )}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    
-                                                                                    <div className="col-md-6">
-                                                                                        <div className="card mb-3">
-                                                                                            <div className="card-header bg-light">
-                                                                                                <h6 className="mb-0">Applied For</h6>
-                                                                                            </div>
-                                                                                            <div className="card-body">
-                                                                                                <h6>{application.jobId.title}</h6>
-                                                                                                <p className="mb-1">
-                                                                                                    <i className="fi-rr-marker me-1"></i>
-                                                                                                    {application.jobId.location || 'Remote'}
-                                                                                                </p>
-                                                                                                <p className="mb-0">
-                                                                                                    <i className="fi-rr-briefcase me-1"></i>
-                                                                                                    {application.jobId.workplaceType}
-                                                                                                </p>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    
-                                                                                    {application.userProfile?.education && application.userProfile.education.length > 0 && (
-                                                                                        <div className="col-md-12">
-                                                                                            <div className="card mb-3">
-                                                                                                <div className="card-header bg-light">
-                                                                                                    <h6 className="mb-0">Education</h6>
-                                                                                                </div>
-                                                                                                <div className="card-body">
-                                                                                                    <div className="table-responsive">
-                                                                                                        <table className="table table-sm">
-                                                                                                            <thead>
-                                                                                                                <tr>
-                                                                                                                    <th>Degree</th>
-                                                                                                                    <th>Institution</th>
-                                                                                                                    <th>Year</th>
-                                                                                                                </tr>
-                                                                                                            </thead>
-                                                                                                            <tbody>
-                                                                                                                {application.userProfile.education.map((edu, index) => (
-                                                                                                                    <tr key={index}>
-                                                                                                                        <td>{edu.degree}</td>
-                                                                                                                        <td>{edu.institution}</td>
-                                                                                                                        <td>{edu.yearCompleted}</td>
-                                                                                                                    </tr>
-                                                                                                                ))}
-                                                                                                            </tbody>
-                                                                                                        </table>
-                                                                                                    </div>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    )}
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className="modal-footer">
-                                                                                <button 
-                                                                                    type="button" 
-                                                                                    className="btn btn-outline-primary"
-                                                                                    data-bs-dismiss="modal"
-                                                                                >
-                                                                                    Close
-                                                                                </button>
-                                                                                <div className="btn-group">
-                                                                                    <button 
-                                                                                        type="button" 
-                                                                                        className="btn btn-success"
-                                                                                        onClick={() => {
-                                                                                            updateApplicationStatus(application._id, 'Accepted');
-                                                                                            // Close modal after update
-                                                                                            document.querySelector(`#viewApplicationModal-${application._id} .btn-close`).click();
-                                                                                        }}
-                                                                                    >
-                                                                                        <i className="fi-rr-check me-1"></i> Accept
-                                                                                    </button>
-                                                                                    <button 
-                                                                                        type="button" 
-                                                                                        className="btn btn-danger"
-                                                                                        onClick={() => {
-                                                                                            updateApplicationStatus(application._id, 'Rejected');
-                                                                                            // Close modal after update
-                                                                                            document.querySelector(`#viewApplicationModal-${application._id} .btn-close`).click();
-                                                                                        }}
-                                                                                    >
-                                                                                        <i className="fi-rr-cross-circle me-1"></i> Reject
-                                                                                    </button>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
+                                                                    <div>
+                                                                        <a 
+                                                                            className="btn btn-detail-small" 
+                                                                            onClick={() => viewCandidatePortfolio(application.userId._id, application._id)}
+                                                                        >
+                                                                            Details
+                                                                        </a>
                                                                     </div>
                                                                 </div>
                                                             </td>

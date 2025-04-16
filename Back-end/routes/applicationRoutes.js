@@ -118,8 +118,8 @@ router.put("/:applicationId/status", verifyToken, async (req, res) => {
       return res.status(403).json({ message: 'Only HR can update application status' });
     }
     
-    const { status } = req.body;
-    if (!['Pending', 'Accepted', 'Rejected'].includes(status)) {
+    const { status, feedback } = req.body;
+    if (!['Pending', 'Accepted', 'Rejected', 'Interview'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
     }
     
@@ -139,6 +139,12 @@ router.put("/:applicationId/status", verifyToken, async (req, res) => {
     }
     
     application.status = status;
+    
+    // Add feedback if provided
+    if (feedback) {
+      application.feedback = feedback;
+    }
+    
     application.updatedAt = Date.now();
     await application.save();
     
@@ -234,6 +240,45 @@ router.put("/:applicationId/withdraw", verifyToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error withdrawing application:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
+// Get a specific application by ID (for HR to view individual application)
+router.get("/job/application/:applicationId", verifyToken, async (req, res) => {
+  try {
+    // Check if user is HR (case-insensitive)
+    if (!req.user.role || req.user.role.toString().toUpperCase() !== 'HR') {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Unauthorized: Only HR users can view application details' 
+      });
+    }
+    
+    const application = await Application.findById(req.params.applicationId)
+      .populate('userId', 'firstName lastName email profilePicture phone location')
+      .populate({
+        path: 'jobId',
+        populate: { path: 'companyId' }
+      });
+    
+    if (!application) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Application not found' 
+      });
+    }
+    
+    // For the detailed portfolio view, we're going to allow HR to view any application
+    // since they're already authenticated as HR. This helps during cross-company recruiting
+    // events or when sharing candidate profiles.
+    
+    res.status(200).json(application);
+  } catch (error) {
+    console.error('Error fetching application details:', error);
     res.status(500).json({ 
       success: false,
       error: error.message 
