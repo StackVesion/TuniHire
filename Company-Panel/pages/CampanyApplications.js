@@ -23,8 +23,7 @@ function CampanyApplications() {
     const authAxios = createAuthAxios()
     
     useEffect(() => {
-        fetchCompanyApplications()
-        fetchCompanyJobs()
+        fetchCompanyData()
     }, [])
     
     // Apply filters whenever filter parameters change
@@ -32,91 +31,107 @@ function CampanyApplications() {
         applyFilters()
     }, [applications, selectedJob, dateRange, searchTerm, statusFilter, sortBy])
     
-    // Fetch all applications for jobs that belong to the authenticated user's company
-    const fetchCompanyApplications = async () => {
+    // First fetch company, then fetch jobs for the company, then fetch applications for each job
+    const fetchCompanyData = async () => {
         try {
             setLoading(true)
-            const response = await authAxios.get('/api/companies/user/my-company')
+            setError(null)
             
-            if (response.data.success && response.data.company) {
-                const companyId = response.data.company._id
-                
-                // Get all jobs for this company
-                const jobsResponse = await authAxios.get(`/api/jobs/company/${companyId}`)
-                
-                if (!jobsResponse.data || !jobsResponse.data.length) {
-                    setLoading(false)
-                    setError("No jobs found for your company. Post jobs first to receive applications.")
-                    return
-                }
-                
-                // Get applications for all jobs that belong to this company
-                const jobIds = jobsResponse.data.map(job => job._id)
-                
-                // Wait for all requests to complete
-                const applicationPromises = jobIds.map(jobId => 
-                    authAxios.get(`/api/applications/job/${jobId}`)
-                )
-                
-                const applicationResponses = await Promise.all(applicationPromises)
-                
-                // Flatten the array of application arrays and ensure we have all data populated
-                let allApplications = []
-                applicationResponses.forEach(response => {
-                    if (response.data && response.data.length) {
-                        allApplications = [...allApplications, ...response.data]
-                    }
-                })
-                
-                // For each application, fetch the detailed user profile with portfolio
-                const applicationsWithProfiles = await Promise.all(
-                    allApplications.map(async (app) => {
-                        try {
-                            const userResponse = await authAxios.get(`/api/users/${app.userId._id}/profile`)
-                            return {
-                                ...app,
-                                userProfile: userResponse.data
-                            }
-                        } catch (err) {
-                            console.error("Error fetching user profile:", err)
-                            return app
-                        }
-                    })
-                )
-                
-                setApplications(applicationsWithProfiles)
-                setFilteredApplications(applicationsWithProfiles)
-            } else {
-                setError("Unable to retrieve company information. Please ensure you have created a company profile.")
+            // Step 1: Get company info
+            console.log("Getting company data...")
+            const companyResponse = await authAxios.get('/api/companies/user/my-company')
+            
+            if (!companyResponse.data.success || !companyResponse.data.company) {
+                setError("Please set up your company profile first.")
+                setLoading(false)
+                return
             }
-        } catch (err) {
-            console.error("Error fetching applications:", err)
-            setError("Failed to load applications. " + (err.response?.data?.message || err.message))
-        } finally {
+            
+            const companyId = companyResponse.data.company._id
+            console.log(`Company ID: ${companyId}`)
+            
+            // Step 2: Get company jobs
+            console.log("Getting company jobs...")
+            const jobsResponse = await authAxios.get(`/api/jobs/company/${companyId}`)
+            
+            if (!jobsResponse.data || !jobsResponse.data.length) {
+                setCompanyJobs([])
+                setError("Your company doesn't have any job posts yet. Create jobs to receive applications.")
+                setLoading(false)
+                return
+            }
+            
+            setCompanyJobs(jobsResponse.data)
+            const jobs = jobsResponse.data
+            console.log(`Found ${jobs.length} jobs`)
+            
+            // Step 3: Get applications for each job
+            console.log("Getting applications for each job...")
+            let allApplications = []
+            const jobApplicationsPromises = []
+            
+            // For each job, create a promise to fetch its applications
+            for (const job of jobs) {
+                jobApplicationsPromises.push(
+                    authAxios.get(`/api/applications/job/${job._id}`)
+                        .then(response => {
+                            console.log(`Job ${job._id} has ${response.data?.length || 0} applications`)
+                            return response.data || []
+                        })
+                        .catch(err => {
+                            console.log(`Error fetching applications for job ${job._id}:`, err.message)
+                            // Return empty array for failed job application fetch
+                            return []
+                        })
+                )
+            }
+            
+            // Wait for all application fetch promises to resolve
+            const jobApplicationsResults = await Promise.all(jobApplicationsPromises)
+            
+            // Combine all applications
+            jobApplicationsResults.forEach(apps => {
+                if (Array.isArray(apps) && apps.length > 0) {
+                    allApplications = [...allApplications, ...apps]
+                }
+            })
+            
+            console.log(`Total applications found: ${allApplications.length}`)
+            
+            setApplications(allApplications)
+            setFilteredApplications(allApplications)
             setLoading(false)
-        }
-    }
-    
-    // Fetch all jobs for the company for the dropdown filter
-    const fetchCompanyJobs = async () => {
-        try {
-            const response = await authAxios.get('/api/companies/user/my-company')
             
-            if (response.data.success && response.data.company) {
-                const companyId = response.data.company._id
-                const jobsResponse = await authAxios.get(`/api/jobs/company/${companyId}`)
+        } catch (error) {
+            console.error("Error in application fetch process:", error)
+            
+            let errorMessage = "An error occurred while fetching applications."
+            
+            if (error.response) {
+                const status = error.response.status
+                const message = error.response.data?.message || error.message
                 
-                if (jobsResponse.data && jobsResponse.data.length) {
-                    setCompanyJobs(jobsResponse.data)
+                if (status === 403) {
+                    errorMessage = `Authentication error: ${message}`
+                } else if (status === 404) {
+                    errorMessage = "Resource not found. Please check if your company profile is properly set up."
+                } else {
+                    errorMessage = `Server error (${status}): ${message}`
                 }
             }
-        } catch (err) {
-            console.error("Error fetching company jobs:", err)
+            
+            setError(errorMessage)
+            setLoading(false)
         }
     }
     
     // Apply all filters and sorting
     const applyFilters = () => {
+        if (!applications.length) {
+            setFilteredApplications([])
+            return
+        }
+        
         let filtered = [...applications]
         
         // Filter by job
@@ -320,7 +335,7 @@ function CampanyApplications() {
                                         </p>
                                         <button 
                                             className="btn btn-outline-primary btn-sm"
-                                            onClick={fetchCompanyApplications}
+                                            onClick={fetchCompanyData}
                                         >
                                             <i className="fi-rr-refresh me-1"></i> Refresh
                                         </button>
@@ -334,7 +349,18 @@ function CampanyApplications() {
                                                 style={{ height: '120px', marginBottom: '20px', opacity: '0.6' }}
                                             />
                                             <h6>No applications found</h6>
-                                            <p className="text-muted">Try adjusting your filters or search criteria</p>
+                                            <p className="text-muted">
+                                                {applications.length > 0 
+                                                    ? "Try adjusting your filters or search criteria"
+                                                    : "You haven't received any applications yet. Post a job to start receiving applications."}
+                                            </p>
+                                            {applications.length === 0 && (
+                                                <div className="mt-3">
+                                                    <Link href="/post-job" className="btn btn-primary">
+                                                        <i className="fi-rr-briefcase me-2"></i>Post a Job
+                                                    </Link>
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="table-responsive">
@@ -411,7 +437,7 @@ function CampanyApplications() {
                                                                     <div className="btn-group" role="group">
                                                                         <button 
                                                                             type="button" 
-                                                                            className="btn btn-outline-secondary dropdown-toggle"
+                                                                            className="btn btn-sm btn-outline-secondary dropdown-toggle"
                                                                             data-bs-toggle="dropdown"
                                                                             aria-expanded="false"
                                                                         >
