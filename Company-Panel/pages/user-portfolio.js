@@ -5,7 +5,7 @@ import { createAuthAxios } from '../utils/authUtils';
 import { useRouter } from 'next/router';
 import Swal from 'sweetalert2';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Format date helper
 const formatDate = (dateString) => {
@@ -61,6 +61,12 @@ function UserPortfolio() {
   const [application, setApplication] = useState(null);
   const [processingAction, setProcessingAction] = useState(false);
   const [authAxios] = useState(() => createAuthAxios());
+  
+  // AI analysis states
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+  const [analysisError, setAnalysisError] = useState(null);
   
   useEffect(() => {
     if (userId && applicationId) {
@@ -169,6 +175,41 @@ function UserPortfolio() {
     }
   };
   
+  // Function to request AI analysis of the portfolio
+  const analyzeWithAI = async () => {
+    if (!user || !portfolio) {
+      Swal.fire({
+        title: 'Incomplete Data',
+        text: 'User or portfolio data is missing',
+        icon: 'warning'
+      });
+      return;
+    }
+    
+    try {
+      setLoadingAnalysis(true);
+      setAnalysisError(null);
+      setShowAnalysisModal(true);
+      
+      // Send user and portfolio data to the AI analysis endpoint
+      const response = await authAxios.post('/api/ai/analyze-resume', {
+        userData: user,
+        portfolioData: portfolio
+      });
+      
+      if (response.data.success) {
+        setAiAnalysis(response.data.analysis);
+      } else {
+        setAnalysisError('Failed to generate analysis');
+      }
+    } catch (error) {
+      console.error('Error during AI analysis:', error);
+      setAnalysisError(error.response?.data?.message || 'An error occurred during analysis');
+    } finally {
+      setLoadingAnalysis(false);
+    }
+  };
+  
   // Animation variants
   const pageVariants = {
     initial: { opacity: 0 },
@@ -265,20 +306,20 @@ function UserPortfolio() {
               </div>
               
               {application.status === 'Pending' && (
-                <div className="d-flex gap-2">
+                <div className="d-grid gap-2">
                   <button 
-                    className="btn btn-success btn-sm"
+                    className="btn btn-success"
                     onClick={() => updateApplicationStatus('Accepted')}
                     disabled={processingAction}
                   >
-                    <i className="fi-rr-check me-1"></i> Accept
+                    <i className="fi-rr-check me-1"></i> Accept Application
                   </button>
                   <button 
-                    className="btn btn-danger btn-sm"
+                    className="btn btn-outline-danger"
                     onClick={() => updateApplicationStatus('Rejected')}
                     disabled={processingAction}
                   >
-                    <i className="fi-rr-cross-circle me-1"></i> Reject
+                    <i className="fi-rr-cross-circle me-1"></i> Reject Application
                   </button>
                 </div>
               )}
@@ -383,6 +424,15 @@ function UserPortfolio() {
                             <i className="fi-rr-arrow-left me-1"></i> Back to Applications
                           </button>
                         )}
+                        
+                        {/* AI Analysis Button */}
+                        <button 
+                          className="btn btn-outline-secondary mt-2"
+                          onClick={analyzeWithAI}
+                          disabled={loadingAnalysis}
+                        >
+                          <i className="fi-rr-brain me-1"></i> AI Analysis
+                        </button>
                       </div>
                     )}
                   </div>
@@ -693,6 +743,156 @@ function UserPortfolio() {
           </div>
         </div>
       </motion.div>
+      
+      {/* AI Analysis Modal */}
+      <AnimatePresence>
+        {showAnalysisModal && (
+          <div className="modal-backdrop" style={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            backgroundColor: 'rgba(0,0,0,0.5)', 
+            zIndex: 1050,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <motion.div 
+              initial={{ opacity: 0, y: 50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -50, scale: 0.9 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="modal-content bg-white rounded shadow-lg" 
+              style={{ 
+                width: '90%', 
+                maxWidth: '800px', 
+                maxHeight: '90vh', 
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <div className="modal-header border-bottom p-4 d-flex justify-content-between align-items-center">
+                <h3 className="m-0">
+                  <i className="fi-rr-brain me-2 text-primary"></i>
+                  AI Resume Analysis
+                </h3>
+                <button 
+                  className="btn btn-icon btn-sm btn-ghost-secondary rounded-circle" 
+                  onClick={() => setShowAnalysisModal(false)}
+                >
+                  <i className="fi-rr-cross"></i>
+                </button>
+              </div>
+              
+              <div className="modal-body p-4" style={{ overflowY: 'auto' }}>
+                {loadingAnalysis ? (
+                  <div className="text-center py-5">
+                    <div className="spinner-border text-primary mb-3" role="status" style={{ width: '3rem', height: '3rem' }}>
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <h5>Generating comprehensive AI analysis...</h5>
+                    <p className="text-muted">This may take a moment as we analyze the candidate's profile in detail.</p>
+                  </div>
+                ) : analysisError ? (
+                  <div className="text-center py-5">
+                    <div className="text-danger mb-3" style={{ fontSize: '3rem' }}>
+                      <i className="fi-rr-exclamation-triangle"></i>
+                    </div>
+                    <h5>Analysis Error</h5>
+                    <p className="text-muted">{analysisError}</p>
+                    <button 
+                      className="btn btn-primary mt-3" 
+                      onClick={analyzeWithAI}
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                ) : aiAnalysis ? (
+                  <div className="analysis-content">
+                    <div 
+                      className="formatted-analysis" 
+                      style={{ whiteSpace: 'pre-line' }}
+                      dangerouslySetInnerHTML={{ 
+                        __html: aiAnalysis
+                          .replace(/(?:\r\n|\r|\n){2,}/g, '<br><br>')
+                          .replace(/(?:\r\n|\r|\n)/g, '<br>')
+                          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                          .replace(/# (.*?)(\n|$)/g, '<h2 class="mt-4 mb-3">$1</h2>')
+                          .replace(/## (.*?)(\n|$)/g, '<h3 class="mt-3 mb-2">$1</h3>')
+                          .replace(/### (.*?)(\n|$)/g, '<h4 class="mt-2 mb-2">$1</h4>')
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center py-5">
+                    <p>No analysis data available.</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="modal-footer border-top p-3">
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowAnalysisModal(false)}
+                >
+                  Close
+                </button>
+                {aiAnalysis && (
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={() => {
+                      // Print or save the analysis
+                      const printWindow = window.open('', '_blank');
+                      printWindow.document.write(`
+                        <html>
+                          <head>
+                            <title>AI Resume Analysis - ${user?.firstName} ${user?.lastName}</title>
+                            <style>
+                              body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }
+                              h1 { color: #4a6cf7; }
+                              h2, h3, h4 { margin-top: 20px; color: #333; }
+                              .header { margin-bottom: 30px; }
+                              .content { max-width: 800px; margin: 0 auto; }
+                            </style>
+                          </head>
+                          <body>
+                            <div class="content">
+                              <div class="header">
+                                <h1>AI Resume Analysis</h1>
+                                <p>Candidate: ${user?.firstName} ${user?.lastName}</p>
+                                <p>Email: ${user?.email}</p>
+                                <p>Generated on: ${new Date().toLocaleString()}</p>
+                              </div>
+                              <div class="analysis">
+                                ${aiAnalysis
+                                  .replace(/(?:\r\n|\r|\n){2,}/g, '<br><br>')
+                                  .replace(/(?:\r\n|\r|\n)/g, '<br>')
+                                  .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                  .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                  .replace(/# (.*?)(\n|$)/g, '<h2>$1</h2>')
+                                  .replace(/## (.*?)(\n|$)/g, '<h3>$1</h3>')
+                                  .replace(/### (.*?)(\n|$)/g, '<h4>$1</h4>')}
+                              </div>
+                            </div>
+                          </body>
+                        </html>
+                      `);
+                      printWindow.document.close();
+                      printWindow.print();
+                    }}
+                  >
+                    <i className="fi-rr-print me-1"></i> Print Analysis
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </Layout>
   );
 }

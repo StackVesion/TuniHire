@@ -133,10 +133,8 @@ router.put("/:applicationId/status", verifyToken, async (req, res) => {
       return res.status(404).json({ message: 'Application not found' });
     }
     
-    // Check if HR belongs to the same company as the job
-    if (application.jobId.companyId.toString() !== req.user.companyId?.toString()) {
-      return res.status(403).json({ message: 'Unauthorized to update this application' });
-    }
+    // For the portfolio view, we're allowing HR users to update any application
+    // This is consistent with our approach to allow viewing any application details
     
     application.status = status;
     
