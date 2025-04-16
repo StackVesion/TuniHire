@@ -14,11 +14,21 @@ stage('SonarQube Analysis') {
         script {
             def scannerHome = tool 'scanner'
             withSonarQubeEnv {
-                sh "${scannerHome}/bin/sonar-scanner"
+                dir('Back-end') {
+                    sh """
+                        ${scannerHome}/bin/sonar-scanner \
+                        -Dsonar.projectKey=tunihire-backend \
+                        -Dsonar.projectName=TuniHireBackend \
+                        -Dsonar.projectVersion=1.0 \
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=http://localhost:9000
+                    """
+                }
             }
         }
     }
 }
+
 
 
         
