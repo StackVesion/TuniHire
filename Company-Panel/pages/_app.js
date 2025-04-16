@@ -2,6 +2,8 @@ import Preloader from "@/components/elements/Preloader"
 import { useEffect, useState } from "react"
 import { Toaster } from 'react-hot-toast'
 import "@/public/assets/css/style.css"
+import '../styles/job-listings.css'
+import '../styles/pdf-viewer.css'
 
 function MyApp({ Component, pageProps }) {
 
