@@ -96,3 +96,55 @@ exports.getApplicationsByJob = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// Apply for a job
+exports.applyForJob = async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const userId = req.user.id;
+    const { coverLetter } = req.body;
+    
+    // Validate required fields
+    if (!coverLetter) {
+      return res.status(400).json({ message: 'Cover letter is required' });
+    }
+    
+    // Check if user has already applied for this job
+    const existingApplication = await Application.findOne({ 
+      userId: userId,
+      jobId: jobId 
+    });
+    
+    if (existingApplication) {
+      return res.status(400).json({ 
+        message: 'You have already applied for this job',
+        application: existingApplication
+      });
+    }
+    
+    // Create new application
+    const newApplication = new Application({
+      userId: userId,
+      jobId: jobId,
+      coverLetter: coverLetter,
+      status: 'Pending',
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    });
+    
+    const savedApplication = await newApplication.save();
+    
+    // Return the saved application with populated data
+    const populatedApplication = await Application.findById(savedApplication._id)
+      .populate('userId', 'firstName lastName email profilePicture')
+      .populate('jobId', 'title companyId');
+    
+    res.status(201).json({
+      message: 'Application submitted successfully',
+      application: populatedApplication
+    });
+  } catch (error) {
+    console.error('Error applying for job:', error);
+    res.status(500).json({ message: error.message });
+  }
+};

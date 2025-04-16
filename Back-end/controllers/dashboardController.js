@@ -1,6 +1,6 @@
 const User = require('../models/User');
 const Company = require('../models/Company');
-const Job = require('../models/Job');
+const JobPost = require('../models/JobPost');
 const Application = require('../models/Application');
 
 // Get dashboard statistics
@@ -12,8 +12,8 @@ exports.getDashboardStats = async (req, res) => {
     // Count entities from actual MongoDB collections
     const totalCompanies = await Company.countDocuments();
     const pendingCompanies = await Company.countDocuments({ status: 'pending' });
-    const totalJobs = await Job.countDocuments();
-    const activeJobs = await Job.countDocuments({ status: 'active' });
+    const totalJobs = await JobPost.countDocuments();
+    const activeJobs = await JobPost.countDocuments({ status: 'active' });
     const totalApplications = await Application.countDocuments();
     const pendingApplications = await Application.countDocuments({ status: 'pending' });
     const totalUsers = await User.countDocuments();
@@ -45,7 +45,7 @@ exports.getDashboardStats = async (req, res) => {
       : 0;
 
     // Calculate job growth
-    const newJobsLastWeek = await Job.countDocuments({
+    const newJobsLastWeek = await JobPost.countDocuments({
       createdAt: { $gte: oneWeekAgo }
     });
     
@@ -263,7 +263,7 @@ exports.getSalesOverview = async (req, res) => {
     const currentYear = new Date().getFullYear();
     const startOfYear = new Date(currentYear, 0, 1);
     
-    const jobsThisYear = await Job.find({
+    const jobsThisYear = await JobPost.find({
       createdAt: { $gte: startOfYear }
     });
     
@@ -400,7 +400,7 @@ exports.getRecentActivities = async (req, res) => {
       .limit(2)
       .select('name createdAt');
     
-    const recentJobs = await Job.find()
+    const recentJobs = await JobPost.find()
       .sort({ createdAt: -1 })
       .limit(2)
       .select('title createdAt')

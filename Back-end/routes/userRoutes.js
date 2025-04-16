@@ -4,6 +4,7 @@ const User = require("../models/User"); // Add this line to import the User mode
 const multer = require("multer");
 const path = require("path");
 const crypto = require("crypto");
+const jwt = require('jsonwebtoken'); // Add this line to import jwt
 const { sendVerificationEmail } = require('../config/emailService');
 const { getUsers, createUser, signIn, signInn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, updateUser, deleteUser, validateToken, generateNewVerificationToken, updateUserRole } = require("../controllers/userController");
 
@@ -14,8 +15,8 @@ router.get("/test-auth", authMiddleware, (req, res) => {
     return res.status(200).json({ message: "Authentication successful", user: req.user });
 });
 
-// Route pour valider un token JWT
-router.get("/validate-token", authMiddleware, validateToken);
+// Route pour valider un token JWT - updated to handle validation internally
+router.get("/validate-token", validateToken);
 
 // Nouvelle implémentation directe de vérification d'email pour contourner les problèmes
 router.get("/verify-email/:token", async (req, res) => {
@@ -225,6 +226,39 @@ router.get("/profile", authMiddleware, async (req, res) => {
             error: error.message 
         });
     }
+});
+
+// Refresh token endpoint
+router.post('/refresh-token', async (req, res) => {
+  const { refreshToken } = req.body;
+  
+  if (!refreshToken) {
+    return res.status(401).json({ message: 'Refresh token required' });
+  }
+  
+  try {
+    // Verify the refresh token
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || 'your-refresh-secret');
+    
+    // Get user
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+    
+    // Generate new access token
+    const accessToken = jwt.sign(
+      { userId: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'your-jwt-secret',
+      { expiresIn: '1h' } // You can adjust expiration time
+    );
+    
+    // Return new access token
+    res.status(200).json({ accessToken });
+  } catch (error) {
+    console.error('Error refreshing token:', error);
+    return res.status(401).json({ message: 'Invalid refresh token' });
+  }
 });
 
 module.exports = router;

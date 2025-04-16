@@ -12,6 +12,7 @@ router.post("/", verifyToken, upload.single('logo'), companyController.createCom
 
 // Public routes
 router.get("/", companyController.getAllCompanies);
+router.get("/hr-contact/:id", companyController.getHRContactInfo);
 
 // Admin only routes
 router.get("/admin/analytics", verifyToken, isAdmin, companyController.getAnalytics);

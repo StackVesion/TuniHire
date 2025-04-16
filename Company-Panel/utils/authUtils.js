@@ -2,6 +2,7 @@
  * Authentication utilities for TuniHire
  * Provides consistent auth functions across applications
  */
+import axios from 'axios';
 
 // Get the current user from localStorage with validation
 export const getCurrentUser = () => {
@@ -45,10 +46,33 @@ export const saveUserData = (userData, token) => {
   }
 };
 
+// Add refresh token handling
+export const storeRefreshToken = (refreshToken) => {
+  try {
+    if (typeof window === 'undefined' || !refreshToken) return false;
+    localStorage.setItem('refreshToken', refreshToken);
+    return true;
+  } catch (error) {
+    console.error('Error storing refresh token:', error);
+    return false;
+  }
+};
+
+export const getRefreshToken = () => {
+  try {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('refreshToken');
+  } catch (error) {
+    console.error('Error getting refresh token:', error);
+    return null;
+  }
+};
+
 // Clear user data from localStorage
 export const clearUserData = () => {
   try {
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     return true;
   } catch (error) {
@@ -79,4 +103,74 @@ export const getToken = () => {
     console.error('Error getting token:', error);
     return null;
   }
+};
+
+// Create authenticated axios instance with token refresh
+export const createAuthAxios = () => {
+  const axiosInstance = axios.create({
+    baseURL: 'http://localhost:5000',
+  });
+
+  // Request interceptor to add token to all requests
+  axiosInstance.interceptors.request.use(
+    (config) => {
+      const token = getToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+
+  // Response interceptor to handle token expiration
+  axiosInstance.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const originalRequest = error.config;
+      
+      // If error is 401 and not already retrying
+      if (error.response?.status === 401 && 
+          error.response?.data?.message === 'Token expired.' && 
+          !originalRequest._retry) {
+        originalRequest._retry = true;
+        
+        try {
+          const refreshToken = getRefreshToken();
+          
+          if (!refreshToken) {
+            // No refresh token available, redirect to login
+            clearUserData();
+            window.location.href = 'http://localhost:3000/page-signin';
+            return Promise.reject(error);
+          }
+          
+          // Call token refresh endpoint
+          const response = await axios.post('http://localhost:5000/api/users/refresh-token', {
+            refreshToken
+          });
+          
+          const { accessToken } = response.data;
+          
+          // Update token in localStorage
+          localStorage.setItem('token', accessToken);
+          
+          // Update authorization header and retry request
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          return axios(originalRequest);
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+          
+          // Clear user data and redirect to login
+          clearUserData();
+          window.location.href = 'http://localhost:3000/page-signin';
+          return Promise.reject(refreshError);
+        }
+      }
+      
+      return Promise.reject(error);
+    }
+  );
+  
+  return axiosInstance;
 };

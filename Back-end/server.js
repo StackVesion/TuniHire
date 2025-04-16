@@ -12,14 +12,16 @@ const connectDB = require("./config/db");
 const User = require('./models/User');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
+const path = require('path');
 require('./config/githubAuth');
 const upload = require('./utils/fileUpload');
 
 // Express app
 const app = express();
+
 // Update CORS configuration
 app.use(cors({
-  origin: ['http://localhost:3000','http://localhost:3001','http://localhost:3002'],
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true,
@@ -29,10 +31,25 @@ app.use(cors({
 // Add preflight OPTIONS handler
 app.options('*', cors());
 
-// Security and logging middlewares - configure helmet to allow cross-origin images
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+// Configure Helmet with relaxed CSP for PDF viewing
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "blob:", "https:"],
+        connectSrc: ["'self'", "https:"],
+        frameSrc: ["'self'"],
+        frameAncestors: ["'self'", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+  })
+);
+
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -46,6 +63,26 @@ app.use('/uploads', express.static('uploads', {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   }
 }));
+
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Special route for PDF files with proper headers for iframe embedding
+app.get('/uploads/resumes/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const filePath = path.join(__dirname, 'public', 'uploads', 'resumes', filename);
+  
+  // Set headers to allow iframe embedding
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  
+  // Send the file
+  res.sendFile(filePath);
+});
 
 // Connect to MongoDB
 connectDB();
@@ -79,22 +116,17 @@ global.verificationEmailTransporter = verificationEmailTransporter;
 global.otpEmailTransporter = otpEmailTransporter;
 
 // Test email configs
-const testEmailConfigs = async () => {
+async function testEmailConfigs() {
   try {
-    console.log("Testing verification email configuration...");
     await verificationEmailTransporter.verify();
-    console.log("Verification email configuration is valid (EMAIL_APP_USER)");
+    console.log('Verification email server connection OK');
     
-    console.log("Testing OTP email configuration...");
     await otpEmailTransporter.verify();
-    console.log("OTP email configuration is valid (EMAIL_USER)");
-    
-    return true;
+    console.log('OTP email server connection OK');
   } catch (error) {
-    console.error("Email configuration test failed:", error);
-    return false;
+    console.error('Email server connection failed:', error);
   }
-};
+}
 
 testEmailConfigs();
     
@@ -107,7 +139,6 @@ app.use(
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000
     },
   })
@@ -132,25 +163,20 @@ async (accessToken, refreshToken, profile, done) => {
       user = new User({
         googleId: profile.id,
         email: profile.emails[0].value,
-        firstName: profile.name.givenName || '',
-        lastName: profile.name.familyName || '',
-        profilePicture: profile.photos[0]?.value || '',
-        role: "candidate"
+        firstName: profile.name.givenName,
+        lastName: profile.name.familyName,
+        profilePicture: profile.photos[0].value,
+        role: 'CANDIDATE', // default role
+        isVerified: true // verified by Google
       });
       await user.save();
-      console.log("New user created via Google Auth:", user.email);
     } else if (!user.googleId) {
+      // If user exists by email but doesn't have googleId
       user.googleId = profile.id;
-      if (!user.firstName) user.firstName = profile.name.givenName || '';
-      if (!user.lastName) user.lastName = profile.name.familyName || '';
-      if (!user.profilePicture) user.profilePicture = profile.photos[0]?.value || '';
       await user.save();
-      console.log("Existing user updated with Google ID:", user.email);
     }
-    
     return done(null, user);
   } catch (error) {
-    console.error("Google auth error:", error);
     return done(error, null);
   }
 }));
@@ -176,17 +202,29 @@ app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/companies", require("./routes/company"));
 app.use("/api/jobs", require("./routes/jobRoutes"));
 app.use("/api/contact", require("./routes/contactRoutes"));
+app.use("/api/applications", require("./routes/applicationRoutes"));
+app.use("/api/portfolios", require("./routes/portfolioRoutes"));
+app.use("/api/dashboard", require("./routes/dashboard"));
+app.use("/health", require("./routes/health"));
 
-// Debug route
-app.get('/api/debug/routes', (req, res) => {
+// API route list
+app.get('/api/routes', (req, res) => {
     const routes = [];
     app._router.stack.forEach(middleware => {
         if(middleware.route) {
-            routes.push(`${Object.keys(middleware.route.methods)} ${middleware.route.path}`);
+            // Routes registered directly on the app
+            routes.push({
+                path: middleware.route.path,
+                methods: Object.keys(middleware.route.methods)
+            });
         } else if(middleware.name === 'router') {
+            // Router middleware
             middleware.handle.stack.forEach(handler => {
                 if(handler.route) {
-                    routes.push(`${Object.keys(handler.route.methods)} ${middleware.regexp} ${handler.route.path}`);
+                    routes.push({
+                        path: middleware.regexp.toString() + handler.route.path,
+                        methods: Object.keys(handler.route.methods)
+                    });
                 }
             });
         }

@@ -99,8 +99,13 @@ const TwoStepVerification = () => {
         otp
       });
 
+      console.log("OTP verification response:", response.data);
+
+      // Get user info from response - handle both direct and nested user objects
+      const userData = response.data.user || response.data;
+      
       // Check if user is admin
-      if (response.data.role !== "admin") {
+      if (userData.role !== "admin") {
         dispatch(loginFailure("Access denied. Admin privileges required."));
         return;
       }
@@ -109,11 +114,11 @@ const TwoStepVerification = () => {
       dispatch(loginSuccess({
         token: response.data.token,
         user: {
-          id: response.data.userId,
-          email: response.data.email,
-          firstName: response.data.firstName,
-          lastName: response.data.lastName,
-          role: response.data.role
+          id: userData.userId || userData.id,
+          email: userData.email,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          role: userData.role
         }
       }));
 
@@ -124,14 +129,15 @@ const TwoStepVerification = () => {
         timer: 1500,
         showConfirmButton: false
       });
+
+      // Navigate to admin dashboard
       navigate(routes.adminDashboard, { replace: true });
-    } catch (error: any) {
-      let errorMessage = "Verification failed";
+    } catch (error) {
+      console.error("OTP verification error:", error);
+      let errorMessage = "Verification failed. Please try again.";
       
-      if (error.response) {
+      if (axios.isAxiosError(error) && error.response) {
         errorMessage = error.response.data.message || errorMessage;
-      } else if (error.message) {
-        errorMessage = error.message;
       }
       
       dispatch(loginFailure(errorMessage));
@@ -156,13 +162,12 @@ const TwoStepVerification = () => {
         icon: "success",
         confirmButtonText: "OK"
       });
-    } catch (error: any) {
+    } catch (error) {
+      console.error("Resend OTP error:", error);
       let errorMessage = "Failed to resend verification code";
       
-      if (error.response) {
+      if (axios.isAxiosError(error) && error.response) {
         errorMessage = error.response.data.message || errorMessage;
-      } else if (error.message) {
-        errorMessage = error.message;
       }
       
       Swal.fire({
