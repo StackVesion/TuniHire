@@ -7,11 +7,30 @@ const applicationController = require("../controllers/applicationController");
 const User = require("../models/User");
 const Company = require("../models/Company");
 
-// Get all applications for current user
+// Get all applications for current user (both endpoints for compatibility)
 router.get("/my-applications", verifyToken, async (req, res) => {
   try {
     const applications = await Application.find({ userId: req.user.id })
-      .populate('jobId')
+      .populate({
+        path: 'jobId',
+        populate: { path: 'companyId' }
+      })
+      .sort({ createdAt: -1 });
+    
+    res.status(200).json(applications);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add an alias endpoint for '/user' that the frontend is trying to use
+router.get("/user", verifyToken, async (req, res) => {
+  try {
+    const applications = await Application.find({ userId: req.user.id })
+      .populate({
+        path: 'jobId',
+        populate: { path: 'companyId' }
+      })
       .sort({ createdAt: -1 });
     
     res.status(200).json(applications);

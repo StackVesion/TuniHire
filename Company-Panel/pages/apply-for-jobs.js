@@ -27,9 +27,11 @@ function ApplyForJobs({ user }) {
   const [showApplicationDialog, setShowApplicationDialog] = useState(false)
   const [hrContact, setHrContact] = useState(null)
   const [loadingHrContact, setLoadingHrContact] = useState(false)
+  const [userApplications, setUserApplications] = useState({})
 
   useEffect(() => {
     fetchJobs()
+    fetchUserApplications()
   }, [])
 
   useEffect(() => {
@@ -81,6 +83,20 @@ function ApplyForJobs({ user }) {
     }
   };
 
+  const fetchUserApplications = async () => {
+    try {
+      const response = await authAxios.get('/api/applications/user')
+      // Create a mapping of jobId -> application for quick lookup
+      const applications = {}
+      response.data.forEach(app => {
+        applications[app.jobId._id || app.jobId] = app
+      })
+      setUserApplications(applications)
+    } catch (err) {
+      console.error('Error fetching user applications:', err)
+    }
+  }
+
   const handleShowJobDetail = (job) => {
     setSelectedJob(job)
     setShowJobDetail(true)
@@ -112,10 +128,32 @@ function ApplyForJobs({ user }) {
         
         const response = await authAxios.post('/api/applications/apply/' + formData.jobId, payload);
         toast.success('Application submitted successfully!');
+        
+        // Update the userApplications state with the new application
+        setUserApplications(prev => ({
+          ...prev,
+          [formData.jobId]: response.data.application
+        }));
+        
         return response.data;
       } catch (error) {
         console.error('Error submitting application:', error);
-        toast.error(error.response?.data?.message || 'Failed to submit application');
+        
+        if (error.response?.data?.message === "You have already applied for this job") {
+          // Show SweetAlert for duplicate application
+          toast.error('You have already applied for this job');
+          
+          // If there's an application returned, add it to userApplications if not already there
+          if (error.response?.data?.application) {
+            setUserApplications(prev => ({
+              ...prev,
+              [error.response.data.application.jobId]: error.response.data.application
+            }));
+          }
+        } else {
+          toast.error('Failed to submit application: ' + (error.response?.data?.message || error.message));
+        }
+        
         throw error;
       }
     }
@@ -722,13 +760,23 @@ function ApplyForJobs({ user }) {
                       damping: 25 
                     }}
                   >
-                    <button 
-                      className="btn btn-primary w-100 py-3"
-                      onClick={handleApply}
-                    >
-                      <i className="fas fa-paper-plane me-2"></i>
-                      Apply Now
-                    </button>
+                    {userApplications[selectedJob._id] ? (
+                      <button 
+                        className="btn btn-success w-100 py-3"
+                        disabled
+                      >
+                        <i className="fas fa-check-circle me-2"></i>
+                        Applied
+                      </button>
+                    ) : (
+                      <button 
+                        className="btn btn-primary w-100 py-3"
+                        onClick={handleApply}
+                      >
+                        <i className="fas fa-paper-plane me-2"></i>
+                        Apply Now
+                      </button>
+                    )}
                   </motion.div>
                 </div>
               </motion.div>
