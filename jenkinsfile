@@ -43,90 +43,15 @@ pipeline {
                 script {
                     // Check if we need to install Node.js
                     def nodeInstalled = sh(script: 'which node || echo "not found"', returnStdout: true).trim()
-                    if (nodeInstalled == "not found") {post {
-                        success {
-                            node {  // Added node block
-                                echo 'Pipeline completed successfully!'
-                                sh '...'
-                            }
-                        }
-                        failure {
-                            node {  // Added node block
-                                echo 'Pipeline failed!'
-                                sh '...'
-                            }
-                        }
-                        always {
-                            node {  // Added node block
-                                echo 'Cleaning up workspace...'
-                                cleanWs()
-                            }
-                        }
-                    }
+                    if (nodeInstalled == "not found") {
                         echo "Installing Node.js..."
                         sh 'curl -fsSL https://deb.nodesource.com/setup_18.x | bash -'
                         sh 'apt-get install -y nodejs'
                     }
+                    }
                     
                     // Install SonarScanner for Node.js projects
-                    sh 'npm install -post {
-                        success {
-                            node {  // Added node block
-                                echo 'Pipeline completed successfully!'
-                                sh '...'
-                            }
-                        }
-                        failure {
-                            node {  // Added node block
-                                echo 'Pipeline failed!'
-                                sh '...'
-                            }
-                        }
-                        always {
-                            node {  // Added node block
-                                echo 'Cleaning up workspace...'
-                                cleanWs()
-                            }
-                        }
-                    }post {
-                        success {
-                            node {  // Added node block
-                                echo 'Pipeline completed successfully!'
-                                sh '...'
-                            }
-                        }
-                        failure {
-                            node {  // Added node block
-                                echo 'Pipeline failed!'
-                                sh '...'
-                            }
-                        }
-                        always {
-                            node {  // Added node block
-                                echo 'Cleaning up workspace...'
-                                cleanWs()
-                            }
-                        }
-                    }post {
-                        success {
-                            node {  // Added node block
-                                echo 'Pipeline completed successfully!'
-                                sh '...'
-                            }
-                        }
-                        failure {
-                            node {  // Added node block
-                                echo 'Pipeline failed!'
-                                sh '...'
-                            }
-                        }
-                        always {
-                            node {  // Added node block
-                                echo 'Cleaning up workspace...'
-                                cleanWs()
-                            }
-                        }
-                    }g sonar-scanner'
+                    sh 'npm install -g sonar-scanner'
                     
                     // Display versions for logging
                     sh 'node --version'
