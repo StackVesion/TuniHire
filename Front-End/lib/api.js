@@ -87,11 +87,11 @@ export const getCompanyById = async (id) => {
 };
 
 // Jobs API - simplified to use the confirmed working endpoint
-// In api.js
 export const getJobs = async (filters = {}) => {
   try {
     const params = new URLSearchParams();
     
+    if (filters.company) params.append('company', filters.company);
     if (filters.keyword) params.append('keyword', filters.keyword);
     if (filters.location) params.append('location', filters.location);
     if (filters.category && filters.category !== 'all') params.append('category', filters.category);
@@ -105,6 +105,7 @@ export const getJobs = async (filters = {}) => {
     if (filters.limit) params.append('limit', filters.limit);
     
     const url = `/jobs${params.toString() ? `?${params.toString()}` : ''}`;
+    console.log(`Fetching jobs from endpoint: ${url}`);
     const response = await api.get(url);
     return response.data;
   } catch (error) {
@@ -117,15 +118,23 @@ export const getJobs = async (filters = {}) => {
 export const getJobsByCompany = async (companyId) => {
   try {
     if (!companyId) {
-      throw new Error('Company ID is required');
+      console.warn('Company ID is missing when fetching jobs');
+      return { jobs: [], success: false };
     }
-    const response = await api.get(`/jobs/company/${companyId}`);
-    console.log('Jobs API response:', response.data);
     
-    // The backend returns a direct array of jobs, not wrapped in a 'jobs' property
-    // We need to format it to match our expected interface
+    console.log(`Fetching jobs for company: ${companyId}`);
+    const response = await api.get(`/jobs/company/${companyId}`);
+    
+    // Handle different response formats
+    let jobs = [];
+    if (Array.isArray(response.data)) {
+      jobs = response.data;
+    } else if (response.data.jobs) {
+      jobs = response.data.jobs;
+    }
+    
     return { 
-      jobs: Array.isArray(response.data) ? response.data : [],
+      jobs,
       success: true 
     };
   } catch (error) {

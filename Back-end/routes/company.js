@@ -13,14 +13,11 @@ router.post("/", verifyToken, upload.single('logo'), companyController.createCom
 // Public routes
 router.get("/", companyController.getAllCompanies);
 
-<<<<<<< Updated upstream
 // Routes with parameters - these must come after specific routes
 router.get("/:id", companyController.getCompanyById);
 router.put("/:id", verifyToken, upload.single('logo'), companyController.updateCompany);
 router.delete("/:id", verifyToken, companyController.deleteCompany);
 
-=======
->>>>>>> Stashed changes
 // Admin only routes
 router.get("/admin/analytics", verifyToken, isAdmin, companyController.getAnalytics);
 router.get("/admin/pending", verifyToken, isAdmin, companyController.getPendingCompanies);

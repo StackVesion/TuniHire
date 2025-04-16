@@ -381,9 +381,6 @@ exports.rejectCompany = async (req, res) => {
     });
   }
 };
-<<<<<<< Updated upstream
-=======
-
 // Add the getAnalytics method to the exports
 exports.getAnalytics = async (req, res) => {
   try {
@@ -460,6 +457,3 @@ exports.getAnalytics = async (req, res) => {
     });
   }
 };
-
-
->>>>>>> Stashed changes

@@ -27,20 +27,21 @@ export default function CompaniesGrid() {
         fetchCompanies();
     }, [filters, currentPage, itemsPerPage]);
     
+    // Update the fetchCompanies function to properly handle job counts
     const fetchCompanies = async () => {
         try {
             setLoading(true);
             
-            // Fetch companies from the API
-            const result = await getCompanies();
+            // Fetch companies from the API - this already includes job counts from our enhanced API client
+            const result = await getCompanies(filters);
             let filteredCompanies = result.companies || [];
             
             // Filter out companies with 'Pending' status - only show Approved
             filteredCompanies = filteredCompanies.filter(company => 
-                company.status !== "Pending"
+                company.status === "Approved"
             );
             
-            // Apply client-side filters
+            // Apply client-side filters if needed
             if (filters.location && filters.location !== "all") {
                 filteredCompanies = filteredCompanies.filter(company => 
                     company.location && company.location.toLowerCase().includes(filters.location.toLowerCase())
@@ -70,7 +71,7 @@ export default function CompaniesGrid() {
                 filteredCompanies.sort((a, b) => (b.rating || 0) - (a.rating || 0));
             }
             
-            console.log('Displaying only approved companies:', filteredCompanies.length);
+            console.log('Companies with job counts:', filteredCompanies);
             setCompanies(filteredCompanies);
             setTotalCompanies(filteredCompanies.length);
             

@@ -5,7 +5,9 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "seed": "node scripts/seedDB.js"
+    "seed": "node scripts/seedDB.js",
+    "test": "NODE_ENV=test mocha --recursive './test/**/*.test.js' --timeout 10000",
+    "test:coverage": "NODE_ENV=test nyc --reporter=html --reporter=text mocha --recursive './test/**/*.test.js' --timeout 10000"
   },
   "keywords": [],
   "author": "",
@@ -33,6 +35,13 @@
     "uuid": "^11.0.5"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9"
+    "chai": "^4.3.8",
+    "chai-http": "^4.4.0",
+    "mocha": "^10.2.0",
+    "mongodb-memory-server": "^9.1.4",
+    "nodemon": "^3.1.9",
+    "nyc": "^15.1.0",
+    "sinon": "^17.0.1",
+    "supertest": "^6.3.4"
   }
 }
