@@ -199,6 +199,7 @@ app.use(passport.session());
 
 // Routes
 app.use("/api/users", require("./routes/userRoutes"));
+app.use("/api/subscriptions", require("./routes/subscriptionRoutes"));
 app.use("/api/companies", require("./routes/company"));
 app.use("/api/jobs", require("./routes/jobRoutes"));
 app.use("/api/contact", require("./routes/contactRoutes"));

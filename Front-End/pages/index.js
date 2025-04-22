@@ -53,6 +53,7 @@ export default function Home() {
                     </div>
                 )}
                 <div className="bg-homepage1" />
+                <br></br>
                 <section className="section-box">
                     <div className="banner-hero hero-1">
                         <div className="banner-inner">

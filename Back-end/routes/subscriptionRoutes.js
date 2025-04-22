@@ -1,0 +1,21 @@
+const express = require("express");
+const router = express.Router();
+const subscriptionPlanController = require("../controllers/subscriptionPlanController");
+const { verifyToken, isAdmin } = require("../middleware/auth");
+
+// Public routes - Get all available subscription plans
+router.get("/plans", subscriptionPlanController.getAllSubscriptionPlans);
+router.get("/plans/:id", subscriptionPlanController.getSubscriptionPlanById);
+
+// User subscription routes
+router.get("/user-subscription", verifyToken, subscriptionPlanController.getUserSubscription);
+router.post("/subscribe/:planId", verifyToken, subscriptionPlanController.subscribeUser);
+router.post("/payment-intent", verifyToken, subscriptionPlanController.createPaymentIntent);
+router.post("/confirm-payment", verifyToken, subscriptionPlanController.confirmPayment);
+
+// Admin only routes - Manage subscription plans
+router.post("/plans", verifyToken, isAdmin, subscriptionPlanController.createSubscriptionPlan);
+router.put("/plans/:id", verifyToken, isAdmin, subscriptionPlanController.updateSubscriptionPlan);
+router.delete("/plans/:id", verifyToken, isAdmin, subscriptionPlanController.deleteSubscriptionPlan);
+
+module.exports = router;
