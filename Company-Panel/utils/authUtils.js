@@ -108,7 +108,7 @@ export const getToken = () => {
 // Create authenticated axios instance with token refresh
 export const createAuthAxios = () => {
   const axiosInstance = axios.create({
-    baseURL: 'http://localhost:5000',
+    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
   });
 
   // Request interceptor to add token to all requests

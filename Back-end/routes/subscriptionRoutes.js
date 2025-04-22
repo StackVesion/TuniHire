@@ -18,4 +18,18 @@ router.post("/plans", verifyToken, isAdmin, subscriptionPlanController.createSub
 router.put("/plans/:id", verifyToken, isAdmin, subscriptionPlanController.updateSubscriptionPlan);
 router.delete("/plans/:id", verifyToken, isAdmin, subscriptionPlanController.deleteSubscriptionPlan);
 
+// Add debug endpoints
+router.get("/debug", (req, res) => {
+  res.status(200).json({ message: "Subscription routes are working!" });
+});
+
+router.get("/debug/auth", verifyToken, (req, res) => {
+  res.status(200).json({ 
+    message: "Auth middleware is working!", 
+    user: req.user 
+  });
+});
+
+console.log("Subscription routes loaded");
+
 module.exports = router;
