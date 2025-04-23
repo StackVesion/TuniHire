@@ -1,9 +1,15 @@
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
 const app = express();
+require('dotenv').config();
 
 // Enable CORS for front-end communication
 app.use(cors());
+
+// JSON parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
@@ -12,6 +18,17 @@ const jobRoutes = require('./routes/jobRoutes');
 const companyRoutes = require('./routes/companyRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const dashboardRoutes = require('./routes/dashboard');
+const courseRoutes = require('./routes/courseRoutes');
+
+// Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/tunihire', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => {
+  console.log('Connected to MongoDB');
+}).catch(err => {
+  console.error('Failed to connect to MongoDB', err);
+});
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -20,6 +37,7 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/courses', courseRoutes);
 
 // ...existing code...
 

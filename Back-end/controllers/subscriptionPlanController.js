@@ -3,7 +3,7 @@ const User = require('../models/User');
 const PaymentTransaction = require('../models/PaymentTransaction');
 
 // Initialize Stripe with a test key if environment variable is not available
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY || 'sk_test_51OnMDTUE4HnhJJRiKOipRXBg7hYTsAmmkPCtwVmhLmUHUK1QEGpNDkzCp6sOhx54hXnQ2LuE2bZHrXPpNZIgA2PZ00aM8uZfyV';
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 let stripe;
 
 try {
