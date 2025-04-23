@@ -66,26 +66,42 @@ export default function CoursePage() {
                 search: searchTerm
             });
             
-            console.log(`Fetching courses from ${API_BASE_URL}/api/courses?${queryParams}`);
+            console.log(`Attempting to fetch courses from ${API_BASE_URL}/api/courses?${queryParams}`);
             
-            // Make API request
-            const response = await authAxios.get(`${API_BASE_URL}/api/courses?${queryParams}`);
-            
-            if (response.data) {
-                setCourses(response.data.courses || []);
-                setTotalPages(response.data.pagination?.pages || 1);
+            // Try calling the API, but be ready to fall back to mock data
+            try {
+                const response = await authAxios.get(`${API_BASE_URL}/api/courses?${queryParams}`);
+                
+                if (response.data) {
+                    console.log('Successfully fetched courses from API');
+                    setCourses(response.data.courses || []);
+                    setTotalPages(response.data.pagination?.pages || 1);
+                    
+                    // Create pagination array
+                    const paginationArray = new Array(response.data.pagination?.pages || 1)
+                        .fill()
+                        .map((_, idx) => idx + 1);
+                    setPagination(paginationArray);
+                }
+            } catch (apiError) {
+                console.warn('API not available, using mock data', apiError);
+                
+                // Use mock data since API is not responding
+                const mockCourses = generateMockCourses();
+                setCourses(mockCourses);
+                setTotalPages(Math.ceil(mockCourses.length / limit));
                 
                 // Create pagination array
-                const paginationArray = new Array(response.data.pagination?.pages || 1)
+                const paginationArray = new Array(Math.ceil(mockCourses.length / limit))
                     .fill()
                     .map((_, idx) => idx + 1);
                 setPagination(paginationArray);
             }
         } catch (error) {
-            console.error('Error fetching courses:', error);
-            setError('Failed to load courses. Please try again later.');
+            console.error('Error in fetchCourses:', error);
+            setError('Failed to load courses. Using sample data instead.');
             
-            // Use mock data as fallback if API fails
+            // Use mock data as fallback
             const mockCourses = generateMockCourses();
             setCourses(mockCourses);
             setTotalPages(Math.ceil(mockCourses.length / limit));
@@ -354,77 +370,118 @@ export default function CoursePage() {
                                         </div>
                                     </div>
                                 ) : (
-                                    courses.map(course => (
-                                        <div className="col-xl-3 col-lg-4 col-md-6 mb-4" key={course._id}>
-                                            <div className="course-card" onClick={() => handleCourseClick(course)}>
-                                                <div className="course-card-image">
-                                                    <img src={course.thumbnail || "/images/courses/default.jpg"} alt={course.title} />
-                                                    {/* Subscription badge */}
-                                                    <div className={`course-subscription-badge ${course.subscriptionRequired.toLowerCase()}`}>
-                                                        {course.subscriptionRequired}
-                                                    </div>
-                                                </div>
-                                                <div className="course-card-content">
-                                                    <div className="d-flex justify-content-between mb-2">
-                                                        <span className="course-category">{course.category}</span>
-                                                        <span className={`course-difficulty ${course.difficulty}`}>
-                                                            {course.difficulty.charAt(0).toUpperCase() + course.difficulty.slice(1)}
-                                                        </span>
-                                                    </div>
-                                                    <h5 className="course-title">{course.title}</h5>
-                                                    <p className="course-description">{course.shortDescription || course.description.substring(0, 100) + '...'}</p>
-                                                    <div className="course-meta">
-                                                        <div className="course-instructor">
-                                                            <i className="fas fa-user-tie"></i> {course.instructor.name}
+                                    courses.map(course => {
+                                        // Check if course is locked based on subscription level
+                                        const subscriptionLevels = {
+                                            'Free': 0,
+                                            'Golden': 1,
+                                            'Platinum': 2,
+                                            'Master': 3
+                                        };
+                                        
+                                        const userLevel = subscriptionLevels[userSubscription] || 0;
+                                        const requiredLevel = subscriptionLevels[course.subscriptionRequired] || 0;
+                                        const isLocked = userLevel < requiredLevel;
+                                        
+                                        return (
+                                            <div className="col-xl-3 col-lg-4 col-md-6 mb-4" key={course._id}>
+                                                <div 
+                                                    className={`course-card ${isLocked ? 'course-locked' : ''}`} 
+                                                    onClick={() => !isLocked && handleCourseClick(course)}
+                                                >
+                                                    <div className="course-card-image">
+                                                        <img 
+                                                            src={course.thumbnail || "/images/courses/default.jpg"} 
+                                                            alt={course.title}
+                                                            className={isLocked ? 'locked-image' : ''}
+                                                        />
+                                                        
+                                                        {/* Subscription badge */}
+                                                        <div className={`course-subscription-badge ${course.subscriptionRequired.toLowerCase()}`}>
+                                                            {course.subscriptionRequired}
                                                         </div>
-                                                        <div className="course-duration">
-                                                            <i className="fas fa-clock"></i> {Math.floor(course.duration / 60)} hrs
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    {/* Progress bar */}
-                                                    {course.progress !== undefined && (
-                                                        <div className="course-progress mt-3">
-                                                            <div className="progress">
-                                                                <div 
-                                                                    className="progress-bar" 
-                                                                    role="progressbar" 
-                                                                    style={{width: `${course.progress}%`}}
-                                                                    aria-valuenow={course.progress} 
-                                                                    aria-valuemin="0" 
-                                                                    aria-valuemax="100">
-                                                                    {course.progress}%
+                                                        
+                                                        {/* Lock overlay for locked courses */}
+                                                        {isLocked && (
+                                                            <div className="course-lock-overlay">
+                                                                <div className="lock-icon">
+                                                                    <i className="fas fa-lock fa-3x"></i>
+                                                                    <p className="mt-2">Requires {course.subscriptionRequired} Subscription</p>
+                                                                    <button 
+                                                                        className="btn btn-sm btn-light mt-2"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            router.push('/pricing');
+                                                                        }}
+                                                                    >
+                                                                        Upgrade Now
+                                                                    </button>
                                                                 </div>
                                                             </div>
-                                                            <div className="d-flex justify-content-between">
-                                                                <small>{course.progress === 0 ? 'Not started' : 
-                                                                       course.progress === 100 ? 'Completed' : 'In progress'}</small>
-                                                                {course.progress === 100 && (
-                                                                    <small className="text-success">
-                                                                        <i className="fas fa-certificate"></i> Certificate earned
-                                                                    </small>
-                                                                )}
+                                                        )}
+                                                    </div>
+                                                    <div className="course-card-content">
+                                                        <div className="d-flex justify-content-between mb-2">
+                                                            <span className="course-category">{course.category}</span>
+                                                            <span className={`course-difficulty ${course.difficulty}`}>
+                                                                {course.difficulty.charAt(0).toUpperCase() + course.difficulty.slice(1)}
+                                                            </span>
+                                                        </div>
+                                                        <h5 className="course-title">{course.title}</h5>
+                                                        <p className="course-description">{course.shortDescription || course.description.substring(0, 100) + '...'}</p>
+                                                        <div className="course-meta">
+                                                            <div className="course-instructor">
+                                                                <i className="fas fa-user-tie"></i> {course.instructor.name}
+                                                            </div>
+                                                            <div className="course-duration">
+                                                                <i className="fas fa-clock"></i> {Math.floor(course.duration / 60)} hrs
                                                             </div>
                                                         </div>
-                                                    )}
-                                                    
-                                                    {/* Skills */}
-                                                    <div className="course-skills mt-3">
-                                                        {course.skills.slice(0, 3).map((skill, index) => (
-                                                            <span key={index} className="course-skill-badge">
-                                                                {skill}
-                                                            </span>
-                                                        ))}
-                                                        {course.skills.length > 3 && (
-                                                            <span className="course-skill-badge more">
-                                                                +{course.skills.length - 3}
-                                                            </span>
+                                                        
+                                                        {/* Progress bar */}
+                                                        {course.progress !== undefined && !isLocked && (
+                                                            <div className="course-progress mt-3">
+                                                                <div className="progress">
+                                                                    <div 
+                                                                        className="progress-bar" 
+                                                                        role="progressbar" 
+                                                                        style={{width: `${course.progress}%`}}
+                                                                        aria-valuenow={course.progress} 
+                                                                        aria-valuemin="0" 
+                                                                        aria-valuemax="100">
+                                                                        {course.progress}%
+                                                                    </div>
+                                                                </div>
+                                                                <div className="d-flex justify-content-between">
+                                                                    <small>{course.progress === 0 ? 'Not started' : 
+                                                                           course.progress === 100 ? 'Completed' : 'In progress'}</small>
+                                                                    {course.progress === 100 && (
+                                                                        <small className="text-success">
+                                                                            <i className="fas fa-certificate"></i> Certificate earned
+                                                                        </small>
+                                                                    )}
+                                                                </div>
+                                                            </div>
                                                         )}
+                                                        
+                                                        {/* Skills */}
+                                                        <div className="course-skills mt-3">
+                                                            {course.skills.slice(0, 3).map((skill, index) => (
+                                                                <span key={index} className="course-skill-badge">
+                                                                    {skill}
+                                                                </span>
+                                                            ))}
+                                                            {course.skills.length > 3 && (
+                                                                <span className="course-skill-badge more">
+                                                                    +{course.skills.length - 3}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 )}
                             </div>
                             
@@ -617,6 +674,31 @@ export default function CoursePage() {
                 
                 .progress-bar {
                     background-color: #4CAF50;
+                }
+                
+                .course-lock-overlay {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: rgba(0,0,0,0.5);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    color: white;
+                }
+                
+                .lock-icon {
+                    text-align: center;
+                }
+                
+                .locked-image {
+                    filter: grayscale(100%) brightness(50%);
+                }
+                
+                .course-locked {
+                    cursor: not-allowed;
                 }
             `}</style>
         </Layout>
