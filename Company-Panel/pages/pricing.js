@@ -11,13 +11,28 @@ export default function Pricing() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [currentSubscription, setCurrentSubscription] = useState(null);
+    const [userRole, setUserRole] = useState(null);
     
     useEffect(() => {
-        // Get current user's subscription data from localStorage
+        // Get current user's data from localStorage
         try {
             const userData = JSON.parse(localStorage.getItem('user') || '{}');
+            
+            // Set current subscription
             if (userData.subscription) {
                 setCurrentSubscription(userData.subscription);
+            }
+            
+            // Set user role
+            if (userData.role) {
+                setUserRole(userData.role);
+                
+                // Automatically set userType based on role
+                if (userData.role === 'candidate') {
+                    setUserType('candidate');
+                } else if (['company', 'HR', 'hr', 'recruiter'].includes(userData.role)) {
+                    setUserType('company');
+                }
             }
         } catch (e) {
             console.error('Error reading from localStorage:', e);
@@ -208,6 +223,27 @@ export default function Pricing() {
     // Function to toggle between company and candidate pricing
     const toggleUserType = (type) => {
         if (type !== userType) {
+            // Check user role restrictions
+            if (type === 'company' && userRole === 'candidate') {
+                Swal.fire({
+                    title: 'Access Restricted',
+                    text: 'You must apply for a company account to access company plans.',
+                    icon: 'warning',
+                    confirmButtonColor: '#3085d6'
+                });
+                return;
+            }
+            
+            if (type === 'candidate' && ['company', 'HR', 'hr', 'recruiter'].includes(userRole)) {
+                Swal.fire({
+                    title: 'Access Restricted',
+                    text: 'Company accounts can only access company plans.',
+                    icon: 'info',
+                    confirmButtonColor: '#3085d6'
+                });
+                return;
+            }
+            
             setUserType(type);
         }
     };
@@ -215,6 +251,28 @@ export default function Pricing() {
     // Function to check if a plan is the user's current plan
     const isCurrentPlan = (planName) => {
         return currentSubscription === planName;
+    };
+    
+    // Function to determine if a plan can be upgraded to
+    // Returns: -1 if plan is lower than current, 0 if current plan, 1 if upgrade possible
+    const getPlanStatus = (planName) => {
+        const planValues = {
+            'Free': 0,
+            'Golden': 1,
+            'Platinum': 2,
+            'Master': 3
+        };
+        
+        if (!currentSubscription || currentSubscription === 'Free') {
+            return planName === 'Free' ? 0 : 1;
+        }
+        
+        const currentValue = planValues[currentSubscription] || 0;
+        const planValue = planValues[planName] || 0;
+        
+        if (planValue < currentValue) return -1;
+        if (planValue === currentValue) return 0;
+        return 1;
     };
     
     // Function to get the appropriate CSS class for plan card background
@@ -361,17 +419,41 @@ export default function Pricing() {
                                                     </div>
                                                     
                                                     <div className="plan-action-buttons">
-                                                        {isCurrentPlan(plan.name) ? (
-                                                            <button className="btn btn-success w-100" disabled>
-                                                                Current Plan
-                                                            </button>
-                                                        ) : (
-                                                            <Link href={`/payment?planId=${plan._id}&userType=${userType}`}>
-                                                                <button className="btn btn-light w-100">
-                                                                    Upgrade Now
-                                                                </button>
-                                                            </Link>
-                                                        )}
+                                                        {(() => {
+                                                            const planStatus = getPlanStatus(plan.name);
+                                                            
+                                                            if (planStatus === 0) {
+                                                                // Current plan
+                                                                return (
+                                                                    <div className="current-plan-badge">
+                                                                        <div className="ribbon">
+                                                                            <span>Current</span>
+                                                                        </div>
+                                                                        <button className="btn btn-outline-light w-100 glow-button" disabled>
+                                                                            Active Plan
+                                                                        </button>
+                                                                    </div>
+                                                                );
+                                                            } else if (planStatus === -1) {
+                                                                // Lower tier plan
+                                                                return (
+                                                                    <button className="btn btn-secondary w-100" disabled>
+                                                                        <i className="fas fa-level-down-alt mr-2"></i>
+                                                                        Lower Tier
+                                                                    </button>
+                                                                );
+                                                            } else {
+                                                                // Upgrade possible
+                                                                return (
+                                                                    <Link href={`/payment?planId=${plan._id}&userType=${userType}`}>
+                                                                        <button className="btn btn-light w-100 upgrade-button">
+                                                                            <i className="fas fa-level-up-alt mr-2"></i>
+                                                                            Upgrade Now
+                                                                        </button>
+                                                                    </Link>
+                                                                );
+                                                            }
+                                                        })()}
                                                         
                                                         <button className="btn btn-link text-light mt-2" onClick={(e) => {
                                                             // Prevent parent link from being clicked
@@ -724,6 +806,107 @@ export default function Pricing() {
                 
                 .animate__delay-1s {
                     animation-delay: 0.3s;
+                }
+                
+                /* Enhanced Current Plan Badge */
+                .current-plan-badge {
+                    position: relative;
+                    width: 100%;
+                    margin-bottom: 10px;
+                }
+                
+                .ribbon {
+                    position: absolute;
+                    right: -5px;
+                    top: -5px;
+                    z-index: 1;
+                    overflow: hidden;
+                    width: 75px;
+                    height: 75px;
+                    text-align: right;
+                }
+                
+                .ribbon span {
+                    font-size: 10px;
+                    font-weight: bold;
+                    color: #FFF;
+                    text-transform: uppercase;
+                    text-align: center;
+                    line-height: 20px;
+                    transform: rotate(45deg);
+                    -webkit-transform: rotate(45deg);
+                    width: 100px;
+                    display: block;
+                    background: #79A70A;
+                    background: linear-gradient(#9BC90D 0%, #79A70A 100%);
+                    box-shadow: 0 3px 10px -5px rgba(0, 0, 0, 1);
+                    position: absolute;
+                    top: 19px;
+                    right: -21px;
+                }
+                
+                .ribbon span::before {
+                    content: "";
+                    position: absolute;
+                    left: 0px;
+                    top: 100%;
+                    z-index: -1;
+                    border-left: 3px solid #79A70A;
+                    border-right: 3px solid transparent;
+                    border-bottom: 3px solid transparent;
+                    border-top: 3px solid #79A70A;
+                }
+                
+                .ribbon span::after {
+                    content: "";
+                    position: absolute;
+                    right: 0px;
+                    top: 100%;
+                    z-index: -1;
+                    border-left: 3px solid transparent;
+                    border-right: 3px solid #79A70A;
+                    border-bottom: 3px solid transparent;
+                    border-top: 3px solid #79A70A;
+                }
+                
+                .glow-button {
+                    animation: glow 2s infinite alternate;
+                    border: 2px solid #fff;
+                }
+                
+                .upgrade-button {
+                    transition: all 0.3s ease;
+                    position: relative;
+                    overflow: hidden;
+                }
+                
+                .upgrade-button:hover {
+                    transform: translateY(-3px);
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                }
+                
+                .upgrade-button::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: -100%;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+                    transition: 0.5s;
+                }
+                
+                .upgrade-button:hover::before {
+                    left: 100%;
+                }
+                
+                @keyframes glow {
+                    from {
+                        box-shadow: 0 0 10px -10px #79A70A;
+                    }
+                    to {
+                        box-shadow: 0 0 10px 5px #79A70A;
+                    }
                 }
             `}</style>
         </Layout>
