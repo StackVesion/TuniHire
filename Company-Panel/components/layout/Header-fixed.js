@@ -118,16 +118,11 @@ export default function Header() {
             }
         } catch (error) {
             console.error('Error fetching user subscription:', error);
-            if (error.response && error.response.status === 401) {
-                // Handle 401 error by logging out the user and redirecting to login page
-                handleLogout();
-            } else {
-                // For development: Set a default subscription if API fails
-                setSubscription({
-                    subscription: 'Free',
-                    subscriptionExpiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-                });
-            }
+            // For development: Set a default subscription if API fails
+            setSubscription({
+                subscription: 'Free',
+                subscriptionExpiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+            });
         }
     };
     
@@ -150,70 +145,29 @@ export default function Header() {
     // Function to get subscription button style based on plan
     const getSubscriptionButtonStyle = (planName) => {
         const baseStyle = {
-            padding: '8px 15px',
-            borderRadius: '25px',
+            padding: '8px 12px',
+            borderRadius: '20px',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            marginRight: '15px',
+            gap: '5px',
+            marginRight: '10px',
             transition: 'all 0.3s ease',
             fontSize: '13px',
             fontWeight: '600',
             cursor: 'pointer',
-            boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
-            transform: 'translateY(0)',
-            border: 'none',
         };
         
-        // Get style based on plan type
-        switch(planName) {
-            case 'Free':
-                return {
-                    ...baseStyle,
-                    background: 'linear-gradient(145deg, #f5f5f5, #e0e0e0)',
-                    color: '#555',
-                    border: '1px solid #ddd',
-                    '&:hover': {
-                        transform: 'translateY(-3px)',
-                        boxShadow: '0 7px 15px rgba(0,0,0,0.15)',
-                    }
-                };
-            case 'Golden':
-                return {
-                    ...baseStyle,
-                    background: 'linear-gradient(145deg, #ffd700, #ffb347)',
-                    color: '#fff',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                    '&:hover': {
-                        transform: 'translateY(-3px)',
-                        boxShadow: '0 7px 20px rgba(255,215,0,0.4)',
-                    }
-                };
-            case 'Platinum':
-                return {
-                    ...baseStyle,
-                    background: 'linear-gradient(145deg, #e5e4e2, #a9a9a9)',
-                    color: '#fff',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                    '&:hover': {
-                        transform: 'translateY(-3px)',
-                        boxShadow: '0 7px 20px rgba(192,192,192,0.4)',
-                    }
-                };
-            case 'Master':
-                return {
-                    ...baseStyle,
-                    background: 'linear-gradient(145deg, #ff4500, #ff8c00)',
-                    color: '#fff',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                    '&:hover': {
-                        transform: 'translateY(-3px)',
-                        boxShadow: '0 7px 20px rgba(255,69,0,0.4)',
-                    }
-                };
-            default:
-                return baseStyle;
-        }
+        // Current subscription button style
+        return {
+            ...baseStyle,
+            background: planName === 'Free' ? '#e0e0e0' : 
+                        planName === 'Golden' ? 'linear-gradient(145deg, #ffd700, #ffb347)' : 
+                        planName === 'Platinum' ? 'linear-gradient(145deg, #e5e4e2, #c0c0c0)' :
+                        'linear-gradient(145deg, #ff4500, #ff8c00)',
+            color: planName === 'Free' ? '#555' : '#fff',
+            boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+            border: 'none',
+        };
     };
     
     // Function to render subscription icon based on plan
@@ -222,11 +176,11 @@ export default function Header() {
             case 'Free':
                 return null;
             case 'Golden':
-                return <HiStar className="animate-pulse" style={{ fontSize: '18px' }} />;
+                return <HiStar className="animate-pulse" />;
             case 'Platinum':
-                return <HiOutlineSparkles className="animate-spin" style={{ animationDuration: '3s', fontSize: '18px' }} />;
+                return <HiOutlineSparkles className="animate-spin" style={{ animationDuration: '3s' }} />;
             case 'Master':
-                return <HiOutlineCrown className="animate-bounce" style={{ animationDuration: '2s', fontSize: '18px' }} />;
+                return <HiOutlineCrown className="animate-bounce" style={{ animationDuration: '2s' }} />;
             default:
                 return null;
         }
@@ -256,7 +210,7 @@ export default function Header() {
                         </div>
                         
                         <div className="header-right">
-                            <div className="block-signin d-flex align-items-center">
+                            <div className="block-signin">
                                 {user ? (
                                     <>
                                         {/* HR ROLE: Show Post New Job button if user is HR */}
@@ -281,101 +235,43 @@ export default function Header() {
                                         )}
                                         
                                         {/* Subscription Plan Badge */}
-                                        <div className="subscription-buttons d-flex mr-15" style={{ marginLeft: 'auto' }}>
+                                        <div className="subscription-buttons d-flex mr-15">
                                             {/* Current subscription badge, clickable to redirect to pricing page */}
                                             {subscription && (
                                                 <div 
                                                     className="subscription-badge"
-                                                    style={{
-                                                        ...getSubscriptionButtonStyle(subscription.subscription),
-                                                        animation: 'fadeIn 0.5s ease-in-out',
-                                                    }}
+                                                    style={getSubscriptionButtonStyle(subscription.subscription)}
                                                     onClick={handleGoToPricing}
-                                                    title="Click to upgrade your subscription"
+                                                    title="Click to view subscription plans"
                                                 >
                                                     {renderSubscriptionIcon(subscription.subscription)}
-                                                    <span>{subscription.subscription} Plan</span>
+                                                    {subscription.subscription}
                                                 </div>
                                             )}
                                         </div>
                                         
                                         <div className="member-login d-flex align-items-center">
-                                            <div 
-                                                className="user-avatar"
-                                                style={{
-                                                    width: '40px',
-                                                    height: '40px',
-                                                    borderRadius: '50%',
-                                                    overflow: 'hidden',
-                                                    border: '2px solid #3c65f5',
-                                                    boxShadow: '0 4px 10px rgba(60,101,245,0.2)',
-                                                    transition: 'all 0.3s ease',
-                                                }}
-                                            >
-                                                <img 
-                                                    alt="User profile" 
-                                                    src={user.profilePicture || "/assets/imgs/page/dashboard/profile.png"} 
-                                                    style={{ 
-                                                        objectFit: 'cover',
-                                                        width: '100%',
-                                                        height: '100%'
-                                                    }}
-                                                />
-                                            </div>
-                                            <div className="info-member ml-10"> 
-                                                <strong className="color-brand-1 font-sm d-block">{user.firstName} {user.lastName}</strong>
+                                            <img 
+                                                alt="User profile" 
+                                                src={user.profilePicture || "/assets/imgs/page/dashboard/profile.png"} 
+                                                style={{ objectFit: 'cover', borderRadius: '50%', width: '40px', height: '40px' }}
+                                            />
+                                            <div className="info-member"> 
+                                                <strong className="color-brand-1">{user.firstName} {user.lastName}</strong>
                                                 <Menu as="div" className="dropdown">
                                                     <Menu.Button as="a" className="font-xs color-text-paragraph-2 icon-down">{user.email}</Menu.Button>
-                                                    <Menu.Items as="ul" className="dropdown-menu dropdown-menu-light dropdown-menu-end" style={{ 
-                                                        right: "0", 
-                                                        left: "auto",
-                                                        minWidth: '200px',
-                                                        padding: '10px 0',
-                                                        border: 'none',
-                                                        borderRadius: '10px',
-                                                        boxShadow: '0 5px 30px rgba(0,0,0,0.1)',
-                                                    }}>
-                                                        <li>
-                                                            <Link className="dropdown-item" href="/profile" style={{
-                                                                padding: '10px 20px',
-                                                                fontSize: '14px',
-                                                                transition: 'all 0.2s ease'
-                                                            }}>
-                                                                <i className="fi-rr-user mr-10"></i> My Profile
-                                                            </Link>
-                                                        </li>
-                                                        <li>
-                                                            <Link className="dropdown-item" href="/settings" style={{
-                                                                padding: '10px 20px',
-                                                                fontSize: '14px',
-                                                                transition: 'all 0.2s ease'
-                                                            }}>
-                                                                <i className="fi-rr-settings mr-10"></i> Settings
-                                                            </Link>
-                                                        </li>
-                                                        <li style={{ borderTop: '1px solid #eee', marginTop: '5px' }}>
-                                                            <a 
-                                                                className="dropdown-item" 
-                                                                onClick={handleLogout} 
-                                                                style={{
-                                                                    cursor: 'pointer',
-                                                                    padding: '10px 20px',
-                                                                    fontSize: '14px',
-                                                                    transition: 'all 0.2s ease',
-                                                                    color: '#dc3545'
-                                                                }}
-                                                            >
-                                                                <i className="fi-rr-sign-out mr-10"></i> Logout
-                                                            </a>
-                                                        </li>
+                                                    <Menu.Items as="ul" className="dropdown-menu dropdown-menu-light dropdown-menu-end show" style={{ right: "0", left: "auto" }}>
+                                                        <li><Link className="dropdown-item" href="/profile">My Profile</Link></li>
+                                                        <li><Link className="dropdown-item" href="/settings">Settings</Link></li>
+                                                        <li><a className="dropdown-item" onClick={handleLogout} style={{cursor: 'pointer'}}>Logout</a></li>
                                                     </Menu.Items>
                                                 </Menu>
                                             </div>
                                         </div>
                                     </>
                                 ) : (
-                                    <Link href="/login" className="btn btn-default btn-md hover-up ml-20">
-                                        <i className="fi-rr-user mr-5"></i> Login
+                                    <Link href="/login" className="btn btn-default ml-20">
+                                        Login
                                     </Link>
                                 )}
                             </div>

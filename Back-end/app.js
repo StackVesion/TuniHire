@@ -5,8 +5,21 @@ const app = express();
 // Enable CORS for front-end communication
 app.use(cors());
 
-// Register dashboard routes
-app.use('/api/dashboard', require('./routes/dashboard'));
+// Import routes
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const jobRoutes = require('./routes/jobRoutes');
+const companyRoutes = require('./routes/companyRoutes');
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
+const dashboardRoutes = require('./routes/dashboard');
+
+// Use routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/companies', companyRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // ...existing code...
 

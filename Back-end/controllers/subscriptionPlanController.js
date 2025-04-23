@@ -87,14 +87,25 @@ exports.deleteSubscriptionPlan = async (req, res) => {
 // Get user current subscription
 exports.getUserSubscription = async (req, res) => {
   try {
+    console.log('getUserSubscription called with user:', req.user);
+    
+    if (!req.user || !req.user.id) {
+      console.log('Auth error: User not found in request object');
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    
     const user = await User.findById(req.user.id).populate('subscriptionId');
     
     if (!user) {
+      console.log('User not found with id:', req.user.id);
       return res.status(404).json({ message: 'User not found' });
     }
     
+    console.log('Found user:', user.email, '- subscription:', user.subscription);
+    
     // Check if subscription has expired
     if (user.subscriptionExpiryDate && new Date(user.subscriptionExpiryDate) < new Date()) {
+      console.log('Subscription expired for user:', user.email);
       // Reset to free plan if expired
       user.subscription = 'Free';
       user.subscriptionId = null;
@@ -102,12 +113,19 @@ exports.getUserSubscription = async (req, res) => {
       await user.save();
     }
     
+    console.log('Returning subscription data:', {
+      subscription: user.subscription,
+      details: user.subscriptionId,
+      expiryDate: user.subscriptionExpiryDate
+    });
+    
     res.status(200).json({
       subscription: user.subscription,
       details: user.subscriptionId,
       expiryDate: user.subscriptionExpiryDate
     });
   } catch (error) {
+    console.error('Error in getUserSubscription:', error.message);
     res.status(500).json({ error: error.message });
   }
 };

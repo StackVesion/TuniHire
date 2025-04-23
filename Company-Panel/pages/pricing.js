@@ -156,6 +156,8 @@ export default function Pricing() {
 
     // Helper function to get icon based on plan name
     const getPlanIcon = (planName) => {
+        if (!planName) return null;
+        
         switch(planName) {
             case 'Golden':
                 return <HiStar className="text-yellow-500 text-xl" />;
@@ -163,8 +165,9 @@ export default function Pricing() {
                 return <HiOutlineSparkles className="text-gray-300 text-xl" />;
             case 'Master':
                 return <HiOutlineCrown className="text-orange-500 text-xl" />;
+            case 'Free':
             default:
-                return null;
+                return <span className="text-xl">🔄</span>; // Default emoji for Free plan
         }
     };
 
