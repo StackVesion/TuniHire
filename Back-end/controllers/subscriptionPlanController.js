@@ -1,5 +1,6 @@
 const SubscriptionPlan = require('../models/SubscriptionPlan');
 const User = require('../models/User');
+const PaymentTransaction = require('../models/PaymentTransaction');
 
 // Initialize Stripe with a test key if environment variable is not available
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || 'sk_test_51OnMDTUE4HnhJJRiKOipRXBg7hYTsAmmkPCtwVmhLmUHUK1QEGpNDkzCp6sOhx54hXnQ2LuE2bZHrXPpNZIgA2PZ00aM8uZfyV';
@@ -186,7 +187,7 @@ exports.createPaymentIntent = async (req, res) => {
     
     // Create a payment intent
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: plan.price * 100, // Stripe uses cents
+      amount: Math.round(plan.price * 100), // Stripe uses cents, ensure it's an integer
       currency: 'usd',
       metadata: {
         userId: userId,
@@ -195,11 +196,29 @@ exports.createPaymentIntent = async (req, res) => {
       }
     });
     
+    // Create a payment transaction record
+    const transaction = new PaymentTransaction({
+      userId: userId,
+      planId: planId,
+      amount: plan.price,
+      paymentIntentId: paymentIntent.id,
+      status: 'pending',
+      description: `Subscription to ${plan.name} plan`,
+      metadata: {
+        planName: plan.name,
+        planDuration: plan.duration
+      }
+    });
+    
+    await transaction.save();
+    console.log(`Created payment transaction record: ${transaction._id}`);
+    
     res.status(200).json({
       clientSecret: paymentIntent.client_secret,
       planDetails: plan
     });
   } catch (error) {
+    console.error('Error creating payment intent:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -214,6 +233,15 @@ exports.confirmPayment = async (req, res) => {
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
     
     if (paymentIntent.status !== 'succeeded') {
+      // Find and update transaction record
+      await PaymentTransaction.findOneAndUpdate(
+        { paymentIntentId: paymentIntentId },
+        { 
+          status: 'failed',
+          updatedAt: Date.now()
+        }
+      );
+      
       return res.status(400).json({ message: 'Payment has not been completed' });
     }
     
@@ -240,12 +268,132 @@ exports.confirmPayment = async (req, res) => {
     
     await user.save();
     
+    // Update transaction record
+    const transaction = await PaymentTransaction.findOneAndUpdate(
+      { paymentIntentId: paymentIntentId },
+      { 
+        status: 'succeeded',
+        receiptUrl: paymentIntent.charges?.data[0]?.receipt_url || '',
+        updatedAt: Date.now()
+      },
+      { new: true }
+    );
+    
+    if (!transaction) {
+      // If the transaction doesn't exist, create it
+      const newTransaction = new PaymentTransaction({
+        userId: userId,
+        planId: planId,
+        amount: plan.price,
+        paymentIntentId: paymentIntentId,
+        status: 'succeeded',
+        description: `Subscription to ${plan.name} plan`,
+        receiptUrl: paymentIntent.charges?.data[0]?.receipt_url || '',
+        metadata: {
+          planName: plan.name,
+          planDuration: plan.duration
+        }
+      });
+      
+      await newTransaction.save();
+      console.log(`Created payment transaction record after confirmation: ${newTransaction._id}`);
+    } else {
+      console.log(`Updated payment transaction record: ${transaction._id}`);
+    }
+    
     res.status(200).json({
       message: `Successfully subscribed to ${plan.name} plan`,
       subscription: user.subscription,
-      expiryDate: user.subscriptionExpiryDate
+      expiryDate: user.subscriptionExpiryDate,
+      transactionId: transaction?._id
     });
   } catch (error) {
+    console.error('Error confirming payment:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get all payment transactions (admin only)
+exports.getAllTransactions = async (req, res) => {
+  try {
+    // Add pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    
+    // Get total count for pagination
+    const total = await PaymentTransaction.countDocuments();
+    
+    // Find transactions with pagination and populate references
+    const transactions = await PaymentTransaction.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('userId', 'name email')
+      .populate('planId', 'name price duration');
+    
+    res.status(200).json({
+      transactions,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching transactions:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get a single transaction by ID
+exports.getTransactionById = async (req, res) => {
+  try {
+    const transaction = await PaymentTransaction.findById(req.params.id)
+      .populate('userId', 'name email')
+      .populate('planId', 'name price duration');
+    
+    if (!transaction) {
+      return res.status(404).json({ message: 'Transaction not found' });
+    }
+    
+    res.status(200).json(transaction);
+  } catch (error) {
+    console.error('Error fetching transaction:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get current user's transactions
+exports.getUserTransactions = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Add pagination
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    
+    // Get total count for pagination
+    const total = await PaymentTransaction.countDocuments({ userId });
+    
+    // Find user's transactions with pagination
+    const transactions = await PaymentTransaction.find({ userId })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('planId', 'name price duration');
+    
+    res.status(200).json({
+      transactions,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user transactions:', error);
     res.status(500).json({ error: error.message });
   }
 };

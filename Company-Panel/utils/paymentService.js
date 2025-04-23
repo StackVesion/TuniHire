@@ -4,6 +4,9 @@ import { createAuthAxios } from './authUtils';
 // Create authenticated axios instance
 const authAxios = createAuthAxios();
 
+// API Base URL - change this to match your backend
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 /**
  * Create a payment intent for subscription
  * @param {string} planId - The subscription plan ID
@@ -12,42 +15,63 @@ const authAxios = createAuthAxios();
  */
 export const createPaymentIntent = async (planId, userType = 'company') => {
   try {
-    const response = await authAxios.post('/api/subscriptions/payment-intent', {
+    console.log(`Sending payment-intent request to ${API_BASE_URL}/api/subscriptions/payment-intent`);
+    console.log(`Plan ID: ${planId}, User Type: ${userType}`);
+    
+    const response = await authAxios.post(`${API_BASE_URL}/api/subscriptions/payment-intent`, {
       planId,
       userType
     });
+    
+    console.log('Payment intent created successfully:', response.data);
     return response.data;
   } catch (error) {
-    console.error('Error creating payment intent:', error);
-    // Mock response for development if API fails
-    return { 
-      clientSecret: 'mock_client_secret', 
-      planDetails: { name: 'Mock Plan', price: 29.99 } 
-    };
+    const errorStatus = error.response?.status;
+    const errorMessage = error.response?.data?.message || error.message;
+    console.error(`Error creating payment intent (${errorStatus}): ${errorMessage}`, error);
+    throw new Error(`Payment setup failed: ${errorMessage}`);
   }
 };
 
 /**
- * Confirm payment and update user subscription
- * @param {string} paymentIntentId - The Stripe payment intent ID
+ * Confirm the payment intent and update subscription
+ * @param {string} paymentIntentId - The payment intent ID from Stripe
  * @param {string} planId - The subscription plan ID
- * @returns {Promise<{message: string, subscription: string, expiryDate: Date}>}
+ * @returns {Promise<Object>}
  */
 export const confirmPayment = async (paymentIntentId, planId) => {
   try {
-    const response = await authAxios.post('/api/subscriptions/confirm-payment', {
+    console.log(`Sending confirm-payment request to ${API_BASE_URL}/api/subscriptions/confirm-payment`);
+    console.log(`Payment Intent ID: ${paymentIntentId}, Plan ID: ${planId}`);
+    
+    const response = await authAxios.post(`${API_BASE_URL}/api/subscriptions/confirm-payment`, {
       paymentIntentId,
       planId
     });
+    
+    console.log('Payment confirmation response:', response.data);
+    
+    if (response.data) {
+      // Update user data in localStorage with new subscription
+      try {
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        userData.subscription = response.data.subscription || response.data.message?.includes('Gold') ? 'Golden' : 
+                               response.data.message?.includes('Platinum') ? 'Platinum' : 
+                               response.data.message?.includes('Master') ? 'Master' : 'Free';
+        userData.subscriptionExpiryDate = response.data.expiryDate;
+        localStorage.setItem('user', JSON.stringify(userData));
+        console.log('Updated user subscription data in localStorage:', userData.subscription);
+      } catch (e) {
+        console.error('Error updating localStorage:', e);
+      }
+    }
+    
     return response.data;
   } catch (error) {
-    console.error('Error confirming payment:', error);
-    // Mock response for development if API fails
-    return { 
-      message: 'Mock payment successful', 
-      subscription: 'Golden', 
-      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) 
-    };
+    const errorStatus = error.response?.status;
+    const errorMessage = error.response?.data?.message || error.message;
+    console.error(`Error confirming payment (${errorStatus}): ${errorMessage}`, error);
+    throw new Error(`Payment confirmation failed: ${errorMessage}`);
   }
 };
 
@@ -59,49 +83,45 @@ export const confirmPayment = async (paymentIntentId, planId) => {
  */
 export const subscribeToPlan = async (planId, userType = 'company') => {
   try {
-    const response = await authAxios.post('/api/subscriptions/subscribe', {
-      planId,
+    console.log(`Sending subscribe request to ${API_BASE_URL}/api/subscriptions/subscribe/${planId}`);
+    
+    const response = await authAxios.post(`${API_BASE_URL}/api/subscriptions/subscribe/${planId}`, {
       userType
     });
-    return {
-      success: true,
-      ...response.data
-    };
-  } catch (error) {
-    console.error('Error subscribing to plan:', error);
-    // Handle 500 error by providing a better message
-    if (error.response && error.response.status === 500) {
-      return {
-        success: false,
-        message: 'Server error occurred while processing subscription. Please try again later.'
-      };
+    
+    console.log('Subscription response:', response.data);
+    
+    // If the backend doesn't update the subscription immediately for paid plans,
+    // we'll update the localStorage with the selected plan info
+    if (response.data.planDetails) {
+      try {
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        userData.subscription = response.data.planDetails.name;
+        // Set expiry date if provided, otherwise calculate it from the duration
+        if (response.data.expiryDate) {
+          userData.subscriptionExpiryDate = response.data.expiryDate;
+        } else if (response.data.planDetails.duration) {
+          const expiryDate = new Date();
+          expiryDate.setDate(expiryDate.getDate() + response.data.planDetails.duration);
+          userData.subscriptionExpiryDate = expiryDate.toISOString();
+        }
+        localStorage.setItem('user', JSON.stringify(userData));
+        console.log('Updated user subscription in localStorage based on plan details:', userData.subscription);
+      } catch (e) {
+        console.error('Error updating localStorage:', e);
+      }
     }
     
-    // Mock response for development if API fails
-    return { 
-      success: true, 
-      message: 'Mock subscription successful', 
-      subscription: planId.includes('golden') ? 'Golden' : 
-                  planId.includes('platinum') ? 'Platinum' : 
-                  planId.includes('master') ? 'Master' : 'Free', 
-      userType: userType,
-      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) 
+    return {
+      success: true,
+      ...response.data,
+      subscription: response.data.subscription || (response.data.planDetails ? response.data.planDetails.name : null)
     };
-  }
-};
-
-/**
- * Get user's current subscription details
- * @returns {Promise<{subscription: string, details: object, expiryDate: Date}>}
- */
-export const getUserSubscription = async () => {
-  try {
-    const response = await authAxios.get('/api/subscriptions/user-subscription');
-    return response.data;
   } catch (error) {
-    console.error('Error getting user subscription:', error);
-    // Return default free subscription if there's an error
-    return { subscription: 'Free', details: null, expiryDate: null };
+    const errorStatus = error.response?.status;
+    const errorMessage = error.response?.data?.message || error.message;
+    console.error(`Error subscribing to plan (${errorStatus}): ${errorMessage}`, error);
+    throw new Error(`Subscription failed: ${errorMessage}`);
   }
 };
 
@@ -112,51 +132,62 @@ export const getUserSubscription = async () => {
  */
 export const getPlans = async (userType = 'company') => {
   try {
-    const response = await authAxios.get(`/api/subscriptions/plans?userType=${userType}`);
+    console.log(`Sending plans request to ${API_BASE_URL}/api/subscriptions/plans?userType=${userType}`);
+    const response = await authAxios.get(`${API_BASE_URL}/api/subscriptions/plans?userType=${userType}`);
+    console.log(`Received ${response.data.length} plans from API`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching plans:', error);
+    const errorStatus = error.response?.status;
+    console.error(`Error fetching plans (${errorStatus}):`, error);
+    throw new Error('Failed to load subscription plans. Please try again later.');
+  }
+};
+
+/**
+ * Get user's current subscription details
+ * @returns {Promise<{subscription: string, details: object, expiryDate: Date}>}
+ */
+export const getUserSubscription = async () => {
+  try {
+    console.log(`Sending user-subscription request to ${API_BASE_URL}/api/subscriptions/user-subscription`);
+    const response = await authAxios.get(`${API_BASE_URL}/api/subscriptions/user-subscription`);
     
-    // Mock plans for development
-    const companyPlans = [
-      {
-        _id: 'company-free',
-        name: 'Free',
-        price: 0,
-        duration: 30,
-        description: 'Basic features for small companies',
-        features: ['Limited job postings', 'Basic company profile']
-      },
-      {
-        _id: 'company-golden',
-        name: 'Golden',
-        price: 49.99,
-        duration: 30,
-        description: 'Enhanced features for growing companies',
-        features: ['Unlimited job postings', 'Priority in search results']
+    console.log('User subscription response:', response.data);
+    
+    // Update local storage with the latest subscription data
+    if (response.data && response.data.subscription) {
+      try {
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        userData.subscription = response.data.subscription;
+        userData.subscriptionExpiryDate = response.data.expiryDate;
+        localStorage.setItem('user', JSON.stringify(userData));
+      } catch (e) {
+        console.error('Error updating localStorage:', e);
       }
-    ];
+    }
     
-    const candidatePlans = [
-      {
-        _id: 'candidate-free',
-        name: 'Free',
-        price: 0,
-        duration: 30,
-        description: 'Basic features for job seekers',
-        features: ['Limited job applications', 'Basic profile']
-      },
-      {
-        _id: 'candidate-golden',
-        name: 'Golden',
-        price: 9.99,
-        duration: 30,
-        description: 'Enhanced features for job seekers',
-        features: ['Unlimited applications', 'Advanced resume builder']
+    return response.data;
+  } catch (error) {
+    const errorStatus = error.response?.status;
+    console.error(`Error getting user subscription (${errorStatus}):`, error);
+    
+    // Check if user data is in localStorage
+    try {
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      if (userData.subscription) {
+        console.log('Using subscription data from localStorage:', userData.subscription);
+        return { 
+          subscription: userData.subscription, 
+          details: null, 
+          expiryDate: userData.subscriptionExpiryDate || null 
+        };
       }
-    ];
+    } catch (e) {
+      console.error('Error reading from localStorage:', e);
+    }
     
-    return userType === 'company' ? companyPlans : candidatePlans;
+    // Return default free subscription if there's an error
+    return { subscription: 'Free', details: null, expiryDate: null };
   }
 };
 
@@ -164,42 +195,13 @@ export const getPlans = async (userType = 'company') => {
  * Get all available subscription plans
  * @returns {Promise<Array>} List of subscription plans
  */
-export const getSubscriptionPlans = async () => {
+export const getAllPlans = async () => {
   try {
-    const response = await authAxios.get('/api/subscriptions/plans');
+    console.log(`Sending all plans request to ${API_BASE_URL}/api/subscriptions/plans`);
+    const response = await authAxios.get(`${API_BASE_URL}/api/subscriptions/plans`);
     return response.data;
   } catch (error) {
-    console.error('Error getting subscription plans:', error);
-    // Mock plans for development if API fails
-    return [
-      {
-        _id: 'mock_free_id',
-        name: 'Free',
-        price: 0,
-        features: ['Basic features'],
-        isPopular: false
-      },
-      {
-        _id: 'mock_golden_id',
-        name: 'Golden',
-        price: 29.99,
-        features: ['Premium features', 'Priority support'],
-        isPopular: true
-      },
-      {
-        _id: 'mock_platinum_id',
-        name: 'Platinum',
-        price: 59.99,
-        features: ['All Golden features', 'Advanced analytics', 'Dedicated support'],
-        isPopular: false
-      },
-      {
-        _id: 'mock_master_id',
-        name: 'Master',
-        price: 99.99,
-        features: ['All Platinum features', 'Custom integrations', '24/7 support'],
-        isPopular: false
-      }
-    ];
+    console.error('Error fetching all plans:', error);
+    throw new Error('Failed to load subscription plans. Please try again later.');
   }
 };

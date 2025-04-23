@@ -117,16 +117,23 @@ export default function Header() {
                 setSubscription(response.data);
             }
         } catch (error) {
-            console.error('Error fetching user subscription:', error);
-            if (error.response && error.response.status === 401) {
-                // Handle 401 error by logging out the user and redirecting to login page
-                handleLogout();
-            } else {
-                // For development: Set a default subscription if API fails
-                setSubscription({
-                    subscription: 'Free',
-                    subscriptionExpiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-                });
+            console.log('Error fetching subscription:', error);
+            
+            // If backend is unavailable, check localStorage for subscription info
+            try {
+                const userData = JSON.parse(localStorage.getItem('user') || '{}');
+                if (userData.subscription) {
+                    console.log('Using subscription data from localStorage:', userData.subscription);
+                    // Create a subscription object similar to what the API would return
+                    setSubscription({
+                        subscription: userData.subscription,
+                        mockData: true,
+                        pendingSync: userData.subscriptionPendingSync,
+                        expiryDate: userData.subscriptionExpiryDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                    });
+                }
+            } catch (localStorageError) {
+                console.error('Error reading from localStorage:', localStorageError);
             }
         }
     };
@@ -149,70 +156,58 @@ export default function Header() {
     
     // Function to get subscription button style based on plan
     const getSubscriptionButtonStyle = (planName) => {
+        // Base style for subscription button
         const baseStyle = {
-            padding: '8px 15px',
-            borderRadius: '25px',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            marginRight: '15px',
-            transition: 'all 0.3s ease',
+            padding: '5px 15px',
+            borderRadius: '20px',
             fontSize: '13px',
             fontWeight: '600',
-            cursor: 'pointer',
-            boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
-            transform: 'translateY(0)',
+            color: '#fff',
+            marginLeft: '10px',
             border: 'none',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease'
         };
         
-        // Get style based on plan type
-        switch(planName) {
-            case 'Free':
-                return {
-                    ...baseStyle,
-                    background: 'linear-gradient(145deg, #f5f5f5, #e0e0e0)',
-                    color: '#555',
-                    border: '1px solid #ddd',
-                    '&:hover': {
-                        transform: 'translateY(-3px)',
-                        boxShadow: '0 7px 15px rgba(0,0,0,0.15)',
-                    }
-                };
+        // Flag to indicate if subscription data is from mock (backend unavailable)
+        const isMockData = subscription && subscription.mockData;
+        
+        // Add warning indicator for mock data
+        const mockDataStyle = isMockData ? {
+            border: '1px dashed #f0ad4e'
+        } : {};
+        
+        switch (planName) {
             case 'Golden':
                 return {
                     ...baseStyle,
-                    background: 'linear-gradient(145deg, #ffd700, #ffb347)',
-                    color: '#fff',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                    '&:hover': {
-                        transform: 'translateY(-3px)',
-                        boxShadow: '0 7px 20px rgba(255,215,0,0.4)',
-                    }
+                    ...mockDataStyle,
+                    background: 'linear-gradient(to right, #FFD700, #FFA500)',
+                    boxShadow: '0 3px 10px rgba(255, 215, 0, 0.3)'
                 };
             case 'Platinum':
                 return {
                     ...baseStyle,
-                    background: 'linear-gradient(145deg, #e5e4e2, #a9a9a9)',
-                    color: '#fff',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                    '&:hover': {
-                        transform: 'translateY(-3px)',
-                        boxShadow: '0 7px 20px rgba(192,192,192,0.4)',
-                    }
+                    ...mockDataStyle,
+                    background: 'linear-gradient(to right, #E5E4E2, #BEBEBE)',
+                    boxShadow: '0 3px 10px rgba(190, 190, 190, 0.3)'
                 };
             case 'Master':
                 return {
                     ...baseStyle,
-                    background: 'linear-gradient(145deg, #ff4500, #ff8c00)',
-                    color: '#fff',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                    '&:hover': {
-                        transform: 'translateY(-3px)',
-                        boxShadow: '0 7px 20px rgba(255,69,0,0.4)',
-                    }
+                    ...mockDataStyle,
+                    background: 'linear-gradient(to right, #4169E1, #1E90FF)',
+                    boxShadow: '0 3px 10px rgba(30, 144, 255, 0.3)'
                 };
-            default:
-                return baseStyle;
+            default: // Free plan
+                return {
+                    ...baseStyle,
+                    ...mockDataStyle,
+                    background: 'linear-gradient(to right, #28a745, #20c997)',
+                    boxShadow: '0 3px 10px rgba(40, 167, 69, 0.3)'
+                };
         }
     };
     

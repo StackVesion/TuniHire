@@ -13,6 +13,11 @@ router.post("/subscribe/:planId", verifyToken, subscriptionPlanController.subscr
 router.post("/payment-intent", verifyToken, subscriptionPlanController.createPaymentIntent);
 router.post("/confirm-payment", verifyToken, subscriptionPlanController.confirmPayment);
 
+// Payment transaction routes
+router.get("/transactions", verifyToken, isAdmin, subscriptionPlanController.getAllTransactions);
+router.get("/transactions/:id", verifyToken, isAdmin, subscriptionPlanController.getTransactionById);
+router.get("/user-transactions", verifyToken, subscriptionPlanController.getUserTransactions);
+
 // Admin only routes - Manage subscription plans
 router.post("/plans", verifyToken, isAdmin, subscriptionPlanController.createSubscriptionPlan);
 router.put("/plans/:id", verifyToken, isAdmin, subscriptionPlanController.updateSubscriptionPlan);
