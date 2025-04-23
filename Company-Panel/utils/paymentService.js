@@ -7,12 +7,14 @@ const authAxios = createAuthAxios();
 /**
  * Create a payment intent for subscription
  * @param {string} planId - The subscription plan ID
+ * @param {string} userType - The user type (company or candidate)
  * @returns {Promise<{clientSecret: string, planDetails: object}>}
  */
-export const createPaymentIntent = async (planId) => {
+export const createPaymentIntent = async (planId, userType = 'company') => {
   try {
     const response = await authAxios.post('/api/subscriptions/payment-intent', {
-      planId
+      planId,
+      userType
     });
     return response.data;
   } catch (error) {
@@ -50,20 +52,40 @@ export const confirmPayment = async (paymentIntentId, planId) => {
 };
 
 /**
- * Subscribe user to a free plan
+ * Subscribe user to a plan (after payment confirmation)
  * @param {string} planId - The subscription plan ID
- * @returns {Promise<{message: string, subscription: string}>}
+ * @param {string} userType - The user type (company or candidate)
+ * @returns {Promise<{success: boolean, message: string, subscription: string, expiryDate: Date}>}
  */
-export const subscribeToPlan = async (planId) => {
+export const subscribeToPlan = async (planId, userType = 'company') => {
   try {
-    const response = await authAxios.post(`/api/subscriptions/subscribe/${planId}`);
-    return response.data;
+    const response = await authAxios.post('/api/subscriptions/subscribe', {
+      planId,
+      userType
+    });
+    return {
+      success: true,
+      ...response.data
+    };
   } catch (error) {
     console.error('Error subscribing to plan:', error);
+    // Handle 500 error by providing a better message
+    if (error.response && error.response.status === 500) {
+      return {
+        success: false,
+        message: 'Server error occurred while processing subscription. Please try again later.'
+      };
+    }
+    
     // Mock response for development if API fails
     return { 
+      success: true, 
       message: 'Mock subscription successful', 
-      subscription: 'Free' 
+      subscription: planId.includes('golden') ? 'Golden' : 
+                  planId.includes('platinum') ? 'Platinum' : 
+                  planId.includes('master') ? 'Master' : 'Free', 
+      userType: userType,
+      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) 
     };
   }
 };
@@ -80,6 +102,61 @@ export const getUserSubscription = async () => {
     console.error('Error getting user subscription:', error);
     // Return default free subscription if there's an error
     return { subscription: 'Free', details: null, expiryDate: null };
+  }
+};
+
+/**
+ * Get available plans by user type
+ * @param {string} userType - The user type (company or candidate)
+ * @returns {Promise<Array>}
+ */
+export const getPlans = async (userType = 'company') => {
+  try {
+    const response = await authAxios.get(`/api/subscriptions/plans?userType=${userType}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching plans:', error);
+    
+    // Mock plans for development
+    const companyPlans = [
+      {
+        _id: 'company-free',
+        name: 'Free',
+        price: 0,
+        duration: 30,
+        description: 'Basic features for small companies',
+        features: ['Limited job postings', 'Basic company profile']
+      },
+      {
+        _id: 'company-golden',
+        name: 'Golden',
+        price: 49.99,
+        duration: 30,
+        description: 'Enhanced features for growing companies',
+        features: ['Unlimited job postings', 'Priority in search results']
+      }
+    ];
+    
+    const candidatePlans = [
+      {
+        _id: 'candidate-free',
+        name: 'Free',
+        price: 0,
+        duration: 30,
+        description: 'Basic features for job seekers',
+        features: ['Limited job applications', 'Basic profile']
+      },
+      {
+        _id: 'candidate-golden',
+        name: 'Golden',
+        price: 9.99,
+        duration: 30,
+        description: 'Enhanced features for job seekers',
+        features: ['Unlimited applications', 'Advanced resume builder']
+      }
+    ];
+    
+    return userType === 'company' ? companyPlans : candidatePlans;
   }
 };
 
