@@ -219,17 +219,26 @@ exports.enrollInCourse = async (req, res) => {
     }
     
     // Check if already enrolled
-    const existingProgress = await CourseProgress.findOne({
+    let progress = await CourseProgress.findOne({
       userId,
       courseId
     });
     
-    if (existingProgress) {
-      return res.status(400).json({ message: 'Already enrolled in this course' });
+    // If already enrolled, return the existing progress
+    if (progress) {
+      // Update last accessed time to show user returned to course
+      progress.lastAccessedAt = new Date();
+      await progress.save();
+      
+      return res.status(200).json({ 
+        message: 'Continuing course',
+        progress: progress,
+        resuming: true
+      });
     }
     
-    // Create progress record
-    const courseProgress = new CourseProgress({
+    // Create progress record for new enrollment
+    progress = new CourseProgress({
       userId,
       courseId,
       enrolledAt: new Date(),
@@ -240,7 +249,7 @@ exports.enrollInCourse = async (req, res) => {
       completedSteps: []
     });
     
-    await courseProgress.save();
+    await progress.save();
     
     // Increment enrolled users count for the course
     await Course.findByIdAndUpdate(courseId, {
@@ -249,7 +258,8 @@ exports.enrollInCourse = async (req, res) => {
     
     res.status(201).json({ 
       message: 'Successfully enrolled in course',
-      progress: courseProgress
+      progress: progress,
+      resuming: false
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

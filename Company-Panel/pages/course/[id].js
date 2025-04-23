@@ -25,6 +25,37 @@ export default function CourseDetail() {
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [quizResults, setQuizResults] = useState(null);
 
+  // Function to get badge color based on subscription level
+  const getBadgeColor = (subscriptionLevel) => {
+    switch (subscriptionLevel) {
+      case 'Free':
+        return 'success';
+      case 'Golden':
+        return 'warning';
+      case 'Platinum':
+        return 'secondary';
+      case 'Master':
+        return 'primary';
+      default:
+        return 'light';
+    }
+  };
+
+  // Function to check if user has proper subscription access
+  const checkSubscriptionAccess = (requiredSubscription, userSubscription) => {
+    const subscriptionLevels = {
+      'Free': 0,
+      'Golden': 1,
+      'Platinum': 2,
+      'Master': 3
+    };
+    
+    const userLevel = subscriptionLevels[userSubscription] || 0;
+    const requiredLevel = subscriptionLevels[requiredSubscription] || 0;
+    
+    return userLevel >= requiredLevel;
+  };
+
   // Fetch course data when component mounts
   useEffect(() => {
     if (id) {
@@ -57,8 +88,12 @@ export default function CourseDetail() {
         // Check if user is enrolled
         if (response.data.userProgress) {
           setEnrolled(true);
-          setProgress(response.data.userProgress.progressPercentage);
-          setCurrentStep(response.data.userProgress.currentStep);
+          setProgress(response.data.userProgress.progressPercentage || 0);
+          
+          // Important: Set the current step to where the user left off
+          if (response.data.userProgress.currentStep !== undefined) {
+            setCurrentStep(response.data.userProgress.currentStep);
+          }
         }
       } catch (apiError) {
         console.warn('API not available, using mock data', apiError);
@@ -69,8 +104,8 @@ export default function CourseDetail() {
         
         if (mockCourse.userProgress) {
           setEnrolled(true);
-          setProgress(mockCourse.userProgress.progressPercentage);
-          setCurrentStep(mockCourse.userProgress.currentStep);
+          setProgress(mockCourse.userProgress.progressPercentage || 0);
+          setCurrentStep(mockCourse.userProgress.currentStep || 0);
         }
       }
     } catch (error) {
@@ -83,8 +118,8 @@ export default function CourseDetail() {
       
       if (mockCourse.userProgress) {
         setEnrolled(true);
-        setProgress(mockCourse.userProgress.progressPercentage);
-        setCurrentStep(mockCourse.userProgress.currentStep);
+        setProgress(mockCourse.userProgress.progressPercentage || 0);
+        setCurrentStep(mockCourse.userProgress.currentStep || 0);
       }
     } finally {
       setLoading(false);
@@ -113,17 +148,27 @@ export default function CourseDetail() {
         showCancelButton: true,
         confirmButtonColor: '#3085d6',
         cancelButtonColor: '#d33',
-        confirmButtonText: 'Upgrade Subscription',
-        cancelButtonText: 'Not Now'
+        confirmButtonText: 'Upgrade Now',
+        cancelButtonText: 'Cancel'
       }).then((result) => {
         if (result.isConfirmed) {
-          router.push('/pricing');
+          // Navigate to subscription page
+          router.push('/Pricing');
         }
       });
       return;
     }
     
-    setLoading(true);
+    // Show loading state
+    Swal.fire({
+      title: 'Enrolling...',
+      text: 'Please wait while we enroll you in this course.',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+    
     try {
       // Try to make API request to enroll
       try {
@@ -131,52 +176,72 @@ export default function CourseDetail() {
           courseId: id
         });
         
-        if (response.data) {
-          setEnrolled(true);
+        Swal.fire({
+          title: 'Enrolled Successfully!',
+          text: 'You are now enrolled in this course. You can start learning right away!',
+          icon: 'success',
+          confirmButtonColor: '#3085d6'
+        });
+        
+        // Update local state to reflect enrollment
+        setEnrolled(true);
+        
+        // If response contains progress information, update state
+        if (response.data && response.data.progress) {
+          setProgress(response.data.progress.progressPercentage || 0);
+          
+          if (response.data.progress.currentStep !== undefined) {
+            setCurrentStep(response.data.progress.currentStep);
+          }
+        } else {
+          // Initialize with 0 progress
           setProgress(0);
           setCurrentStep(0);
-          
-          Swal.fire({
-            title: 'Enrolled!',
-            text: 'You have successfully enrolled in this course.',
-            icon: 'success',
-            confirmButtonColor: '#3085d6'
-          });
-          
-          // Refresh course data to get updated progress
-          fetchCourseData();
         }
+        
+        // Refresh course data to get latest progress
+        fetchCourseData();
+        
       } catch (apiError) {
         console.warn('API not available for enrollment, using mock enrollment', apiError);
         
-        // If API fails, simulate enrollment with mock data
+        // If API fails, simulate enrollment
+        Swal.fire({
+          title: 'Enrolled Successfully!',
+          text: 'You are now enrolled in this course. You can start learning right away!',
+          icon: 'success',
+          confirmButtonColor: '#3085d6'
+        });
+        
+        // Update local state
         setEnrolled(true);
         setProgress(0);
         setCurrentStep(0);
         
-        Swal.fire({
-          title: 'Enrolled!',
-          text: 'You have successfully enrolled in this course.',
-          icon: 'success',
-          confirmButtonColor: '#3085d6'
-        });
+        // Create a mock progress entry in the course object
+        const updatedCourse = {
+          ...course,
+          userProgress: {
+            userId: JSON.parse(localStorage.getItem('user') || '{}')._id || 'user123',
+            courseId: id,
+            currentStep: 0,
+            completedSteps: [],
+            progressPercentage: 0,
+            completed: false
+          }
+        };
+        
+        setCourse(updatedCourse);
       }
     } catch (error) {
       console.error('Error in handleEnroll:', error);
       
-      // Mock enrollment as fallback
-      setEnrolled(true);
-      setProgress(0);
-      setCurrentStep(0);
-      
       Swal.fire({
-        title: 'Enrolled!',
-        text: 'You have successfully enrolled in this course.',
-        icon: 'success',
+        title: 'Enrollment Failed',
+        text: 'There was an error enrolling you in this course. Please try again later.',
+        icon: 'error',
         confirmButtonColor: '#3085d6'
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -189,49 +254,77 @@ export default function CourseDetail() {
           courseId: id,
           stepId,
           completed: isCompleted,
-          score
+          score,
+          currentStep: currentStep
         });
         
         if (response.data && response.data.progress) {
           setProgress(response.data.progress.progressPercentage);
           
-          // Move to next step if available
-          if (currentStep < course.steps.length - 1) {
+          // Update current step in state
+          if (response.data.progress.currentStep !== undefined) {
+            setCurrentStep(response.data.progress.currentStep);
+          } else if (currentStep < course.steps.length - 1 && isCompleted) {
+            // Only move to next step if current step is completed
             setCurrentStep(currentStep + 1);
           }
           
           // If course is completed, show certificate
           if (response.data.progress.completed) {
+            // All steps must be completed to get certificate
+            const allStepsCompleted = response.data.progress.completedSteps &&
+              response.data.progress.completedSteps.length === course.steps.length;
+            
+            if (allStepsCompleted) {
+              Swal.fire({
+                title: 'Congratulations!',
+                text: 'You have completed this course successfully! You can now view and download your certificate.',
+                icon: 'success',
+                confirmButtonColor: '#3085d6',
+                confirmButtonText: 'View Certificate'
+              }).then((result) => {
+                if (result.isConfirmed && response.data.progress.certificateId) {
+                  // Navigate to certificate view
+                  router.push(`/certificate/${response.data.progress.certificateId}`);
+                }
+              });
+            } else {
+              Swal.fire({
+                title: 'Almost There!',
+                text: 'You need to complete all steps to receive your certificate.',
+                icon: 'info',
+                confirmButtonColor: '#3085d6',
+              });
+            }
+          } else {
+            // Show simple success notification for step completion
             Swal.fire({
-              title: 'Congratulations!',
-              text: 'You have completed this course!',
+              title: 'Step Completed!',
+              text: 'Your progress has been saved successfully.',
               icon: 'success',
-              confirmButtonColor: '#3085d6',
-              confirmButtonText: 'View Certificate'
-            }).then((result) => {
-              if (result.isConfirmed && response.data.progress.certificateId) {
-                // Navigate to certificate view
-                router.push(`/certificate/${response.data.progress.certificateId}`);
-              }
+              timer: 2000,
+              showConfirmButton: false
             });
           }
         }
       } catch (apiError) {
         console.warn('API not available for progress update, using mock progress', apiError);
         
-        // If API fails, simulate progress update
-        const updatedProgress = Math.min(progress + 20, 100);
+        // If API fails, simulate progress update but with more accurate tracking
+        const completedStepsCount = Math.floor((progress / 100) * course.steps.length) + 1;
+        const updatedProgress = Math.min((completedStepsCount / course.steps.length) * 100, 100);
         setProgress(updatedProgress);
         
-        if (currentStep < course.steps.length - 1) {
+        // Only move to next step if current is complete and not the last one
+        if (currentStep < course.steps.length - 1 && isCompleted) {
           setCurrentStep(currentStep + 1);
         }
         
         // If course is completed, show certificate
-        if (updatedProgress >= 100) {
+        if (completedStepsCount >= course.steps.length) {
           Swal.fire({
             title: 'Congratulations!',
-            text: 'You have completed this course!',
+            text: 'You have completed this course! You can now view and download your certificate.',
             icon: 'success',
             confirmButtonColor: '#3085d6',
             confirmButtonText: 'View Certificate'
@@ -241,16 +334,26 @@ export default function CourseDetail() {
               router.push(`/certificate/${id}`);
             }
           });
+        } else {
+          Swal.fire({
+            title: 'Step Completed!',
+            text: 'Your progress has been saved.',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+          });
         }
       }
     } catch (error) {
       console.error('Error in completeStep:', error);
       
-      // Fallback to mock progress update
-      const updatedProgress = Math.min(progress + 20, 100);
+      // Fallback to mock progress update with better constraints
+      const completedStepsCount = Math.floor((progress / 100) * course.steps.length) + 1;
+      const updatedProgress = Math.min((completedStepsCount / course.steps.length) * 100, 100);
       setProgress(updatedProgress);
       
-      if (currentStep < course.steps.length - 1) {
+      // Only move to next step if not the last one
+      if (currentStep < course.steps.length - 1 && isCompleted) {
         setCurrentStep(currentStep + 1);
       }
       
@@ -258,7 +361,8 @@ export default function CourseDetail() {
         title: 'Progress Updated',
         text: 'Your progress has been saved.',
         icon: 'success',
-        confirmButtonColor: '#3085d6'
+        timer: 2000,
+        showConfirmButton: false
       });
     }
   };
@@ -311,12 +415,19 @@ export default function CourseDetail() {
 
   // Navigate to specific step
   const goToStep = (stepIndex) => {
-    if (stepIndex >= 0 && stepIndex < course?.steps?.length) {
-      setCurrentStep(stepIndex);
-      setQuizSubmitted(false);
-      setQuizResults(null);
-      setQuizAnswers({});
+    // Check if attempting to navigate to a future step (not yet unlocked)
+    if (stepIndex > currentStep) {
+      Swal.fire({
+        title: 'Step Locked',
+        text: 'Please complete the current step first before proceeding.',
+        icon: 'warning',
+        confirmButtonColor: '#3085d6'
+      });
+      return;
     }
+    
+    // Only allow navigation to completed steps or the current step
+    setCurrentStep(stepIndex);
   };
 
   // Generate a mock course detail for development
@@ -601,7 +712,7 @@ export default function CourseDetail() {
                 {idx < currentStep ? (
                   <i className="fas fa-check-circle"></i>
                 ) : (
-                  <span>{idx + 1}</span>
+                  idx + 1
                 )}
               </div>
             ))}
@@ -785,342 +896,358 @@ export default function CourseDetail() {
   return (
     <Layout>
       <div className="course-header py-4" style={{ 
-        backgroundImage: `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url(${course.coverImage || course.thumbnail || '/images/courses/default-banner.jpg'})`,
+        backgroundImage: `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url(${course.coverImage || course.thumbnail || "/images/courses/default-banner.jpg"})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         color: 'white'
       }}>
         <div className="container">
-          <div className="row">
-            <div className="col-lg-8">
-              <h1 className="mb-3">{course.title}</h1>
-              <div className="d-flex mb-3">
-                <div className="badge bg-primary me-2">{course.category}</div>
-                <div className={`badge me-2 ${
-                  course.difficulty === 'beginner' ? 'bg-success' : 
-                  course.difficulty === 'intermediate' ? 'bg-warning text-dark' : 
-                  'bg-danger'
-                }`}>
-                  {course.difficulty.charAt(0).toUpperCase() + course.difficulty.slice(1)}
-                </div>
-                <div className="badge bg-info">{Math.floor(course.duration / 60)} hours</div>
-              </div>
-              <p>{course.shortDescription || course.description.substring(0, 150) + '...'}</p>
-              <div className="d-flex align-items-center">
-                <img 
-                  src={course.instructor.avatar || '/images/instructors/default.jpg'} 
-                  alt={course.instructor.name}
-                  className="rounded-circle me-2"
-                  style={{ width: '40px', height: '40px', objectFit: 'cover' }}
-                />
-                <div>
-                  <div className="fw-bold">{course.instructor.name}</div>
-                  <div className="small">{course.instructor.bio}</div>
-                </div>
-              </div>
-            </div>
-            <div className="col-lg-4 d-flex flex-column justify-content-center align-items-end">
-              <div className="course-stats text-center mb-3">
-                <div className="d-flex justify-content-between mb-2">
-                  <div className="me-4">
-                    <div className="fs-4 fw-bold">{course.enrolledUsers}</div>
-                    <div>Enrolled</div>
+          <div className="row align-items-center">
+            <div className="col-md-8">
+              <h1 className="display-5 fw-bold mb-2">{course.title}</h1>
+              
+              <div className="d-flex align-items-center mb-3">
+                {course.instructor && (
+                  <div className="me-4 d-flex align-items-center">
+                    <i className="fas fa-user-tie me-2"></i>
+                    <span>{course.instructor.name}</span>
                   </div>
-                  <div>
-                    <div className="fs-4 fw-bold">{course.ratings.average}</div>
-                    <div>Rating ({course.ratings.count})</div>
-                  </div>
+                )}
+                
+                <div className="me-4 d-flex align-items-center">
+                  <i className="fas fa-clock me-2"></i>
+                  <span>{course.duration || '2 hours'}</span>
                 </div>
-                <div className={`badge ${
-                  course.subscriptionRequired === 'Free' ? 'bg-success' : 
-                  course.subscriptionRequired === 'Golden' ? 'bg-warning text-dark' : 
-                  course.subscriptionRequired === 'Platinum' ? 'bg-secondary' : 
-                  'bg-primary'
-                } p-2 fs-6 w-100`}>
-                  {course.subscriptionRequired} Subscription
+                
+                <div className="d-flex align-items-center">
+                  <i className="fas fa-signal me-2"></i>
+                  <span>{course.difficulty || 'Intermediate'}</span>
                 </div>
               </div>
               
-              {enrolled ? (
-                <div className="w-100">
-                  <div className="progress mb-2" style={{ height: '10px' }}>
-                    <div 
-                      className="progress-bar bg-success" 
-                      role="progressbar" 
-                      style={{ width: `${progress}%` }}
-                      aria-valuenow={progress} 
-                      aria-valuemin="0" 
-                      aria-valuemax="100"
-                    ></div>
-                  </div>
-                  <div className="d-flex justify-content-between">
-                    <small>{progress}% Complete</small>
-                    <small>{progress === 100 ? 'Completed' : 'In Progress'}</small>
-                  </div>
+              <div className="d-flex flex-wrap mb-3">
+                {course.skills && course.skills.map((skill, index) => (
+                  <span key={index} className="badge bg-light text-dark me-2 mb-2 p-2">
+                    <i className="fas fa-check-circle me-1 text-primary"></i> {skill}
+                  </span>
+                ))}
+              </div>
+              
+              <div className="mb-3 d-flex align-items-center">
+                <div className="subscription-badge me-3">
+                  <span className={`badge bg-${getBadgeColor(course.subscriptionRequired)} p-2`}>
+                    <i className="fas fa-crown me-1"></i> {course.subscriptionRequired || 'Free'}
+                  </span>
                 </div>
-              ) : (
+                
+                <div className="category-badge me-3">
+                  <span className="badge bg-light text-dark p-2">
+                    <i className="fas fa-folder me-1"></i> {course.category || 'Development'}
+                  </span>
+                </div>
+                
+                {enrolled && (
+                  <div className="progress-badge">
+                    <div className="progress" style={{ height: '10px', width: '150px' }}>
+                      <div 
+                        className="progress-bar" 
+                        role="progressbar" 
+                        style={{ width: `${progress}%` }} 
+                        aria-valuenow={progress} 
+                        aria-valuemin="0" 
+                        aria-valuemax="100"
+                      ></div>
+                    </div>
+                    <small className="text-white">{progress}% Complete</small>
+                  </div>
+                )}
+              </div>
+              
+              <p className="lead mb-0">{course.description}</p>
+            </div>
+            
+            <div className="col-md-4 text-center text-md-end mt-4 mt-md-0">
+              {/* If not enrolled and has proper subscription, show enroll button */}
+              {!enrolled && checkSubscriptionAccess(course.subscriptionRequired, userSubscription) && (
                 <button 
-                  className="btn btn-primary btn-lg" 
+                  className="btn btn-primary btn-lg fw-bold py-3 px-5" 
                   onClick={handleEnroll}
-                  disabled={loading}
                 >
-                  {loading ? 'Enrolling...' : 'Enroll Now'}
+                  <i className="fas fa-graduation-cap me-2"></i> Enroll Now
                 </button>
+              )}
+              
+              {/* If not enrolled and doesn't have proper subscription, show upgrade button */}
+              {!enrolled && !checkSubscriptionAccess(course.subscriptionRequired, userSubscription) && (
+                <div>
+                  <div className="alert alert-warning py-3 mb-3 d-flex align-items-center">
+                    <i className="fas fa-lock me-3 fa-2x"></i>
+                    <div>
+                      <div className="fw-bold">Subscription Required</div>
+                      <div>This course requires a {course.subscriptionRequired} subscription</div>
+                    </div>
+                  </div>
+                  <Link href="/Pricing">
+                    <button className="btn btn-warning btn-lg fw-bold py-3 px-5">
+                      <i className="fas fa-crown me-2"></i> Upgrade Subscription
+                    </button>
+                  </Link>
+                </div>
+              )}
+              
+              {/* If enrolled, show continue button */}
+              {enrolled && (
+                <div>
+                  <div className="alert alert-success mb-3 d-flex align-items-center">
+                    <i className="fas fa-check-circle me-3 fa-2x"></i>
+                    <div>
+                      <div className="fw-bold">You're Enrolled!</div>
+                      {progress > 0 ? (
+                        <div>Continue from where you left off ({progress}% complete)</div>
+                      ) : (
+                        <div>Start your learning journey</div>
+                      )}
+                    </div>
+                  </div>
+                  <button 
+                    className="btn btn-success btn-lg fw-bold py-3 px-5"
+                    onClick={() => {
+                      // Go directly to the currentStep (where user left off)
+                      goToStep(currentStep);
+                      
+                      // Scroll to course content
+                      document.querySelector('.course-sidebar')?.scrollIntoView({
+                        behavior: 'smooth'
+                      });
+                    }}
+                  >
+                    <i className="fas fa-play-circle me-2"></i> 
+                    {progress > 0 ? 'Continue Learning' : 'Start Learning'}
+                  </button>
+                </div>
               )}
             </div>
           </div>
         </div>
       </div>
       
-      <div className="container py-4">
-        <div className="row">
-          <div className="col-lg-4 mb-4">
-            <div className="card">
-              <div className="card-header">
-                <h5 className="mb-0">Course Content</h5>
-              </div>
-              <div className="list-group list-group-flush">
-                {course.steps.map((step, index) => (
-                  <button
-                    key={index}
-                    className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${currentStep === index ? 'active' : ''}`}
-                    onClick={() => enrolled && goToStep(index)}
-                    disabled={!enrolled}
-                  >
-                    <div>
-                      <div className="fw-bold">{index + 1}. {step.title}</div>
-                      <small className={currentStep === index ? 'text-white' : 'text-muted'}>
-                        {step.type === 'video' ? `${step.content.duration} min video` : 
-                         step.type === 'quiz' ? `${step.content.questions.length} questions` : 
-                         step.type === 'test' ? 'Final assessment' : 
-                         'Unknown type'}
-                      </small>
+      {enrolled && (
+        <div className="container py-5">
+          <div className="row">
+            <div className="col-lg-4 mb-4">
+              <div className="course-sidebar sticky-top" style={{ top: '2rem' }}>
+                <div className="card mb-4">
+                  <div className="card-header bg-primary text-white">
+                    <h5 className="mb-0">Course Progress</h5>
+                  </div>
+                  <div className="card-body">
+                    <div className="progress mb-3" style={{ height: '10px' }}>
+                      <div 
+                        className="progress-bar bg-success" 
+                        role="progressbar" 
+                        style={{ width: `${progress}%` }} 
+                        aria-valuenow={progress} 
+                        aria-valuemin="0" 
+                        aria-valuemax="100"
+                      ></div>
                     </div>
-                    {enrolled && course.userProgress?.completedSteps?.some(s => s.stepId === step._id) && (
-                      <span className="badge bg-success rounded-pill">
-                        <i className="fas fa-check"></i>
-                      </span>
+                    <div className="d-flex justify-content-between mb-4">
+                      <div><i className="fas fa-check-circle me-1"></i> {progress}% Complete</div>
+                      <div>{progress === 100 ? 'Completed' : 'In Progress'}</div>
+                    </div>
+                    
+                    <div className="steps-list">
+                      {course.steps.map((step, index) => (
+                        <div 
+                          key={index}
+                          className={`step-item d-flex align-items-center p-2 mb-2 ${currentStep === index ? 'active' : ''} ${index < currentStep ? 'completed' : ''} ${index > currentStep ? 'locked' : ''}`}
+                          onClick={() => goToStep(index)}
+                        >
+                          <div className="step-number me-3">
+                            {index < currentStep ? (
+                              <i className="fas fa-check-circle text-success"></i>
+                            ) : index === currentStep ? (
+                              <i className="fas fa-play-circle text-primary"></i>
+                            ) : (
+                              <i className="fas fa-lock text-secondary"></i>
+                            )}
+                          </div>
+                          <div className="step-info">
+                            <div className="step-title">{step.title}</div>
+                            <div className="step-type small">
+                              {step.type === 'video' && <><i className="fas fa-video me-1"></i> Video</>}
+                              {step.type === 'quiz' && <><i className="fas fa-question-circle me-1"></i> Quiz</>}
+                              {step.type === 'test' && <><i className="fas fa-file-alt me-1"></i> Test</>}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {progress === 100 && (
+                      <div className="mt-4 text-center">
+                        <Link href={`/certificate/${course._id}`}>
+                          <button className="btn btn-success">
+                            <i className="fas fa-award me-2"></i> View Certificate
+                          </button>
+                        </Link>
+                      </div>
                     )}
-                  </button>
-                ))}
-              </div>
-            </div>
-            
-            <div className="card mt-4">
-              <div className="card-header">
-                <h5 className="mb-0">Skills You'll Gain</h5>
-              </div>
-              <div className="card-body">
-                <div className="d-flex flex-wrap gap-2">
-                  {course.skills.map((skill, index) => (
-                    <span key={index} className="badge bg-light text-dark p-2">
-                      {skill}
-                    </span>
-                  ))}
+                  </div>
+                </div>
+                
+                <div className="card instructor-card">
+                  <div className="card-body">
+                    <h5 className="card-title mb-3">Instructor</h5>
+                    <div className="d-flex align-items-center mb-3">
+                      <img 
+                        src={course.instructor.avatar || '/images/instructors/default.jpg'} 
+                        alt={course.instructor.name}
+                        className="rounded-circle me-3"
+                        style={{ width: '60px', height: '60px', objectFit: 'cover' }}
+                      />
+                      <div>
+                        <h6 className="mb-1">{course.instructor.name}</h6>
+                        <div className="text-muted small">{course.instructor.title || 'Course Instructor'}</div>
+                      </div>
+                    </div>
+                    <p className="small mb-0">{course.instructor.bio || 'Expert instructor with years of experience in teaching.'}</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          
-          <div className="col-lg-8">
-            <div className="card">
-              <div className="card-body">
-                {renderStepContent()}
-              </div>
-            </div>
             
-            <div className="card mt-4">
-              <div className="card-header">
-                <h5 className="mb-0">About This Course</h5>
+            <div className="col-lg-8">
+              {/* Step progress bar */}
+              <div className="step-progress-bar mb-4">
+                <div className="step-progress-container">
+                  {course.steps.map((step, index) => (
+                    <div 
+                      key={index}
+                      className={`step-progress-node ${index < currentStep ? 'completed' : index === currentStep ? 'current' : ''}`}
+                      onClick={() => goToStep(index)}
+                      title={`${step.title} (${index < currentStep ? 'Completed' : index === currentStep ? 'Current' : 'Locked'})`}
+                    >
+                      {index < currentStep ? (
+                        <i className="fas fa-check"></i>
+                      ) : (
+                        index + 1
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="card-body">
-                <p>{course.description}</p>
+              
+              {/* Current step content */}
+              <div className="step-banner mb-4">
+                <h3 className="step-title mb-2">{course.steps[currentStep].title}</h3>
+                <p className="step-description mb-3">{course.steps[currentStep].description}</p>
+                <div className="d-flex align-items-center small">
+                  <div className="badge bg-primary me-2">
+                    {course.steps[currentStep].type.charAt(0).toUpperCase() + course.steps[currentStep].type.slice(1)}
+                  </div>
+                  <div>Step {currentStep + 1} of {course.steps.length}</div>
+                </div>
+              </div>
+              
+              {renderStepContent()}
+              
+              {/* Navigation buttons */}
+              <div className="step-navigation d-flex justify-content-between mt-4">
+                <button 
+                  className="btn btn-outline-primary" 
+                  onClick={() => goToStep(currentStep - 1)}
+                  disabled={currentStep === 0}
+                >
+                  <i className="fas fa-arrow-left me-2"></i> Previous Step
+                </button>
+                
+                {currentStep < course.steps.length - 1 ? (
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={() => {
+                      // Check if current step is completed before allowing to proceed
+                      const stepComplete = course.userProgress?.completedSteps?.includes(course.steps[currentStep]._id);
+                      
+                      if (!stepComplete && course.steps[currentStep].type === 'video') {
+                        // For video steps, mark as complete when clicking next
+                        completeStep(course.steps[currentStep]._id, true);
+                      } else if (!stepComplete && (course.steps[currentStep].type === 'quiz' || course.steps[currentStep].type === 'test')) {
+                        // For quiz/test steps, can't proceed until submitted and passed
+                        Swal.fire({
+                          title: 'Step Incomplete',
+                          text: `Please complete and pass the ${course.steps[currentStep].type} before proceeding to the next step.`,
+                          icon: 'warning',
+                          confirmButtonColor: '#3085d6'
+                        });
+                        return;
+                      }
+                      
+                      goToStep(currentStep + 1);
+                    }}
+                  >
+                    Next Step <i className="fas fa-arrow-right ms-2"></i>
+                  </button>
+                ) : (
+                  <button 
+                    className="btn btn-success" 
+                    onClick={() => {
+                      // Check if all steps are completed
+                      const allStepsCompleted = course.steps.every((step) => 
+                        course.userProgress?.completedSteps?.includes(step._id)
+                      );
+                      
+                      if (allStepsCompleted) {
+                        router.push(`/certificate/${course._id}`);
+                      } else {
+                        Swal.fire({
+                          title: 'Course Incomplete',
+                          text: 'You need to complete all steps to receive your certificate.',
+                          icon: 'info',
+                          confirmButtonColor: '#3085d6'
+                        });
+                      }
+                    }}
+                  >
+                    <i className="fas fa-award me-2"></i> Get Certificate
+                  </button>
+                )}
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
       
       <style jsx>{`
-        .quiz-container .form-check {
-          border: 1px solid #dee2e6;
-          border-radius: 0.25rem;
-          padding: 0.75rem 1.25rem;
-          margin-bottom: 0.5rem;
+        .step-item {
+          border-radius: 0.5rem;
+          background-color: #f8f9fa;
+          cursor: pointer;
           transition: all 0.2s ease;
         }
         
-        .quiz-container .form-check:hover {
+        .step-item:hover {
+          background-color: #e9ecef;
+        }
+        
+        .step-item.active {
+          background-color: #e7f1ff;
+          border-left: 3px solid #007bff;
+        }
+        
+        .step-item.completed {
+          background-color: #e9fff5;
+        }
+        
+        .step-item.locked {
           background-color: #f8f9fa;
+          opacity: 0.7;
+          cursor: not-allowed;
         }
         
-        .quiz-container .form-check input:checked + label {
-          font-weight: bold;
-        }
-        
-        /* Enhanced styles for course UI */
-        .course-lock-overlay {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background-color: rgba(0,0,0,0.7);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 10;
-          border-radius: 0.5rem;
-        }
-        
-        .enrollment-banner {
-          position: relative;
-          border-radius: 0.5rem;
-          overflow: hidden;
-          max-height: 300px;
-        }
-        
-        .enrollment-banner img {
-          width: 100%;
-          height: 300px;
-          object-fit: cover;
-          filter: brightness(0.7);
-        }
-        
-        .enrollment-overlay {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          background-color: rgba(0,0,0,0.5);
-          padding: 2rem;
-        }
-        
-        .step-banner {
-          padding: 1.5rem;
-          background-color: #f8f9fa;
-          border-radius: 0.5rem;
-          border-left: 5px solid #007bff;
-        }
-        
-        .step-progress-bar {
-          margin-bottom: 1.5rem;
-          position: relative;
-        }
-        
-        .step-progress-container {
-          display: flex;
-          justify-content: space-between;
-          position: relative;
-          z-index: 1;
-        }
-        
-        .step-progress-container:before {
-          content: '';
-          position: absolute;
-          top: 50%;
-          left: 0;
-          right: 0;
-          height: 2px;
-          background-color: #dee2e6;
-          z-index: -1;
-        }
-        
-        .step-progress-node {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          background-color: white;
-          border: 2px solid #dee2e6;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          font-weight: bold;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          position: relative;
-        }
-        
-        .step-progress-node.completed {
-          background-color: #28a745;
-          border-color: #28a745;
-          color: white;
-        }
-        
-        .step-progress-node.current {
-          border-color: #007bff;
-          background-color: #007bff;
-          color: white;
-          transform: scale(1.1);
-          box-shadow: 0 0 0 5px rgba(0, 123, 255, 0.2);
-        }
-        
-        .step-progress-node:hover {
-          transform: scale(1.1);
-        }
-        
-        .step-title {
-          font-weight: bold;
-          color: #212529;
-        }
-        
-        .step-description {
-          color: #6c757d;
-        }
-        
-        .quiz-option {
-          border: 1px solid #dee2e6;
-          border-radius: 0.5rem;
-          padding: 1rem;
-          transition: all 0.2s ease;
-          position: relative;
-          cursor: pointer;
-        }
-        
-        .quiz-option:hover {
-          background-color: #f8f9fa;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        
-        .quiz-option input {
-          position: absolute;
-          top: 50%;
-          left: 20px;
-          transform: translateY(-50%);
-        }
-        
-        .quiz-option-label {
-          margin-left: 20px;
-          display: block;
-          width: 100%;
-          cursor: pointer;
-        }
-        
-        .quiz-option input:checked + .quiz-option-label {
-          font-weight: bold;
-        }
-        
-        .quiz-question-card {
-          border-radius: 0.5rem;
-          overflow: hidden;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-          border: none;
-        }
-        
-        .quiz-question-card .card-header {
-          background-color: #f0f7ff;
-          border-bottom: none;
-          padding: 1rem 1.5rem;
-        }
-        
-        .result-details {
-          border: 1px solid #dee2e6;
+        .sticky-top {
+          position: sticky;
+          top: 100px;
         }
       `}</style>
     </Layout>
