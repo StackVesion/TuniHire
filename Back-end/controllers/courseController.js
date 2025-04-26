@@ -128,10 +128,7 @@ exports.getCourseById = async (req, res) => {
           completedAt: progress.completedAt,
           certificateIssued: progress.certificateIssued,
           certificateId: progress.certificateId,
-          completedSteps: progress.completedSteps
         };
-      } else {
-        courseObj.userProgress = null;
       }
     }
     
@@ -160,9 +157,11 @@ exports.updateCourse = async (req, res) => {
       req.body,
       { new: true, runValidators: true }
     );
+    
     if (!updatedCourse) {
       return res.status(404).json({ message: 'Course not found' });
     }
+    
     res.status(200).json(updatedCourse);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -173,9 +172,11 @@ exports.updateCourse = async (req, res) => {
 exports.deleteCourse = async (req, res) => {
   try {
     const deletedCourse = await Course.findByIdAndDelete(req.params.id);
+    
     if (!deletedCourse) {
       return res.status(404).json({ message: 'Course not found' });
     }
+    
     res.status(200).json({ message: 'Course deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -185,8 +186,8 @@ exports.deleteCourse = async (req, res) => {
 // Enroll in a course
 exports.enrollInCourse = async (req, res) => {
   try {
-    const { courseId } = req.body;
     const userId = req.user.id;
+    const { courseId } = req.body;
     
     // Check if course exists
     const course = await Course.findById(courseId);
@@ -194,72 +195,60 @@ exports.enrollInCourse = async (req, res) => {
       return res.status(404).json({ message: 'Course not found' });
     }
     
-    // Check if user has required subscription
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    
-    const subscriptionLevels = {
-      'Free': 0,
-      'Golden': 1,
-      'Platinum': 2,
-      'Master': 3
-    };
-    
-    const userLevel = subscriptionLevels[user.subscription] || 0;
-    const requiredLevel = subscriptionLevels[course.subscriptionRequired] || 0;
-    
-    if (userLevel < requiredLevel) {
-      return res.status(403).json({ 
-        message: 'Subscription required',
-        requiredSubscription: course.subscriptionRequired,
-        currentSubscription: user.subscription 
-      });
-    }
-    
-    // Check if already enrolled
-    let progress = await CourseProgress.findOne({
+    // Check if user already enrolled
+    const existingEnrollment = await CourseProgress.findOne({
       userId,
       courseId
     });
     
-    // If already enrolled, return the existing progress
-    if (progress) {
-      // Update last accessed time to show user returned to course
-      progress.lastAccessedAt = new Date();
-      await progress.save();
-      
-      return res.status(200).json({ 
-        message: 'Continuing course',
-        progress: progress,
-        resuming: true
-      });
+    if (existingEnrollment) {
+      return res.status(400).json({ message: 'Already enrolled in this course' });
     }
     
-    // Create progress record for new enrollment
-    progress = new CourseProgress({
+    // Check subscription requirements
+    if (course.subscriptionRequired && course.subscriptionRequired !== 'free') {
+      // Get user to check their subscription level
+      const user = await User.findById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      const subscriptionLevels = {
+        'free': 0,
+        'golden': 1,
+        'platinum': 2,
+        'master': 3
+      };
+      
+      const userSubscriptionLevel = subscriptionLevels[user.currentSubscription] || 0;
+      const requiredSubscriptionLevel = subscriptionLevels[course.subscriptionRequired] || 0;
+      
+      if (userSubscriptionLevel < requiredSubscriptionLevel) {
+        return res.status(403).json({
+          message: `This course requires a ${course.subscriptionRequired} subscription or higher.`,
+          requiredSubscription: course.subscriptionRequired,
+          currentSubscription: user.currentSubscription
+        });
+      }
+    }
+    
+    // Create new progress entry
+    const newProgress = new CourseProgress({
       userId,
       courseId,
       enrolledAt: new Date(),
       lastAccessedAt: new Date(),
-      currentStep: 0,
       progressPercentage: 0,
       completed: false,
       completedSteps: []
     });
     
-    await progress.save();
+    await newProgress.save();
     
-    // Increment enrolled users count for the course
-    await Course.findByIdAndUpdate(courseId, {
-      $inc: { enrolledUsers: 1 }
-    });
-    
-    res.status(201).json({ 
+    res.status(201).json({
       message: 'Successfully enrolled in course',
-      progress: progress,
-      resuming: false
+      courseProgress: newProgress
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -269,11 +258,11 @@ exports.enrollInCourse = async (req, res) => {
 // Update course progress
 exports.updateProgress = async (req, res) => {
   try {
-    const { courseId, stepId, completed, score } = req.body;
     const userId = req.user.id;
+    const { courseId, stepId, completed, score } = req.body;
     
-    // Find user's progress for this course
-    const progress = await CourseProgress.findOne({
+    // Find progress record or create if it doesn't exist
+    let progress = await CourseProgress.findOne({
       userId,
       courseId
     });
@@ -424,3 +413,5 @@ function calculateAverageScore(progress) {
   const totalScore = quizScores.reduce((sum, step) => sum + step.score, 0);
   return Math.round(totalScore / quizScores.length);
 }
+
+module.exports = exports;
