@@ -562,51 +562,207 @@ function Payment() {
             </div>
             
             <style jsx>{`
-                .bg-gradient-primary {
-                    background: linear-gradient(45deg, #3a7bd5, #00d2ff);
+                .payment-header {
+                    background: linear-gradient(135deg, #3a8ffe 0%, #9658fe 100%);
+                    padding: 40px 0;
+                    text-align: center;
+                    color: white;
                     border-radius: 10px 10px 0 0;
+                    margin-bottom: 30px;
+                }
+                
+                .payment-wrapper {
+                    background-color: #fff;
+                    border-radius: 15px;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+                    overflow: hidden;
+                    margin-top: 50px;
+                    margin-bottom: 50px;
+                }
+                
+                .plan-details {
+                    padding: 0 30px 30px;
+                }
+                
+                .plan-name {
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: #fff;
+                    margin-bottom: 10px;
                 }
                 
                 .plan-price {
-                    text-align: center;
-                    padding: 20px 0;
-                    border-bottom: 1px solid rgba(0,0,0,0.1);
+                    font-size: 42px;
+                    font-weight: 800;
+                    color: #fff;
+                    margin-bottom: 5px;
                 }
                 
-                .feature-list li {
-                    padding: 8px 0;
+                .plan-billing {
+                    font-size: 14px;
+                    color: rgba(255, 255, 255, 0.8);
+                }
+                
+                .plan-features {
+                    list-style: none;
+                    padding: 0;
+                    margin: 20px 0;
+                }
+                
+                .plan-features li {
+                    padding: 10px 0;
+                    border-bottom: 1px solid #f0f0f0;
+                    display: flex;
+                    align-items: center;
+                }
+                
+                .plan-features li:last-child {
+                    border-bottom: none;
                 }
                 
                 .feature-icon {
-                    margin-right: 8px;
-                    display: inline-block;
-                    width: 20px;
-                    height: 20px;
-                    background: rgba(58, 123, 213, 0.1);
-                    border-radius: 50%;
-                    text-align: center;
-                    line-height: 20px;
-                    color: #3a7bd5;
+                    color: #4BB543;
+                    margin-right: 10px;
+                    font-size: 18px;
                 }
                 
-                .divider {
-                    border-top: 1px solid rgba(0,0,0,0.1);
-                    margin: 15px 0;
+                .checkout-form {
+                    padding: 20px 30px 30px;
+                }
+                
+                .card-details {
+                    background-color: #f9f9f9;
+                    padding: 25px;
+                    border-radius: 10px;
+                }
+                
+                .form-row {
+                    margin-bottom: 20px;
+                }
+                
+                .form-row label {
+                    display: block;
+                    margin-bottom: 8px;
+                    font-weight: 600;
+                    color: #333;
+                }
+                
+                .form-row .required:after {
+                    content: "*";
+                    color: #e53935;
+                    margin-left: 3px;
+                }
+                
+                .form-row input {
+                    width: 100%;
+                    padding: 12px 15px;
+                    border: 1px solid #ddd;
+                    border-radius: 6px;
+                    font-size: 16px;
+                    transition: border-color 0.3s;
+                }
+                
+                .form-row input:focus {
+                    border-color: #3a8ffe;
+                    outline: none;
+                    box-shadow: 0 0 0 2px rgba(58, 143, 254, 0.2);
                 }
                 
                 .card-element-container {
-                    background-color: #fff;
-                    border: 1px solid #ced4da;
-                    border-radius: 4px;
-                    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+                    padding: 15px;
+                    border: 1px solid #ddd;
+                    border-radius: 6px;
+                    background-color: white;
+                    transition: all 0.3s;
                 }
                 
                 .card-element-container:focus-within {
-                    border-color: #86b7fe;
-                    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+                    border-color: #3a8ffe;
+                    box-shadow: 0 0 0 2px rgba(58, 143, 254, 0.2);
                 }
                 
-                /* Success Animation */
+                .card-icons {
+                    display: flex;
+                    margin-top: 10px;
+                    gap: 10px;
+                }
+                
+                .card-icons img {
+                    height: 25px;
+                }
+                
+                .error-message {
+                    background-color: #ffebee;
+                    color: #d32f2f;
+                    padding: 10px 15px;
+                    border-radius: 6px;
+                    margin-bottom: 20px;
+                    display: flex;
+                    align-items: center;
+                }
+                
+                .error-message i {
+                    margin-right: 8px;
+                    font-size: 18px;
+                }
+                
+                .btn-payment {
+                    width: 100%;
+                    padding: 14px;
+                    background: linear-gradient(135deg, #3a8ffe 0%, #9658fe 100%);
+                    border: none;
+                    border-radius: 6px;
+                    color: white;
+                    font-weight: 600;
+                    font-size: 16px;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                }
+                
+                .btn-payment:hover {
+                    background: linear-gradient(135deg, #3183e8 0%, #8750e8 100%);
+                    transform: translateY(-2px);
+                    box-shadow: 0 5px 15px rgba(58, 143, 254, 0.3);
+                }
+                
+                .btn-payment:disabled {
+                    background: #b0bec5;
+                    cursor: not-allowed;
+                    transform: none;
+                    box-shadow: none;
+                }
+                
+                .btn-payment.processing {
+                    background: #b0bec5;
+                }
+                
+                .processing-text {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                }
+                
+                .payment-security {
+                    display: flex;
+                    align-items: center;
+                    color: #757575;
+                    font-size: 14px;
+                    margin-bottom: 20px;
+                }
+                
+                .payment-security i {
+                    color: #4CAF50;
+                    margin-right: 8px;
+                    font-size: 16px;
+                }
+                
+                .subscription-icon {
+                    font-size: 64px;
+                    color: white;
+                    margin-bottom: 20px;
+                }
+                
                 .success-animation {
                     width: 100px;
                     height: 100px;
@@ -695,7 +851,7 @@ function Payment() {
                 
                 /* For smaller screens */
                 @media (max-width: 991.98px) {
-                    .bg-gradient-primary {
+                    .payment-header {
                         border-radius: 10px 10px 0 0;
                     }
                 }
@@ -719,6 +875,60 @@ function Payment() {
                 
                 @keyframes spin {
                     to { transform: rotate(360deg); }
+                }
+                
+                /* Plan feature icons */
+                .plan-feature-icon {
+                    width: 20px;
+                    height: 20px;
+                    margin-right: 10px;
+                    color: #4CAF50;
+                }
+                
+                /* Plan card styling */
+                .plan-card {
+                    border-radius: 10px;
+                    transition: all 0.3s;
+                    position: relative;
+                    overflow: hidden;
+                }
+                
+                .plan-card.free {
+                    background: linear-gradient(135deg, #90CAF9 0%, #42A5F5 100%);
+                }
+                
+                .plan-card.golden {
+                    background: linear-gradient(135deg, #FFD54F 0%, #FFA000 100%);
+                }
+                
+                .plan-card.platinum {
+                    background: linear-gradient(135deg, #E0E0E0 0%, #9E9E9E 100%);
+                }
+                
+                .plan-card.master {
+                    background: linear-gradient(135deg, #CE93D8 0%, #9C27B0 100%);
+                }
+                
+                .plan-card:before {
+                    content: '';
+                    position: absolute;
+                    top: -10px;
+                    right: -10px;
+                    background: rgba(255, 255, 255, 0.15);
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 50%;
+                }
+                
+                .plan-card:after {
+                    content: '';
+                    position: absolute;
+                    bottom: -50px;
+                    left: -50px;
+                    background: rgba(255, 255, 255, 0.1);
+                    width: 100px;
+                    height: 100px;
+                    border-radius: 50%;
                 }
             `}</style>
         </Layout>

@@ -28,6 +28,14 @@ export default function CoursePage() {
     });
     const [searchTerm, setSearchTerm] = useState('');
     
+    // Subscription levels for access control
+    const subscriptionLevels = {
+        'Free': 0,
+        'Golden': 1,
+        'Platinum': 2,
+        'Master': 3
+    };
+    
     // Pagination settings
     const limit = 8;
     const showPagination = 4;
@@ -205,13 +213,6 @@ export default function CoursePage() {
     
     // Handle course click - check subscription before allowing access
     const handleCourseClick = (course) => {
-        const subscriptionLevels = {
-            'Free': 0,
-            'Golden': 1,
-            'Platinum': 2,
-            'Master': 3
-        };
-        
         const userLevel = subscriptionLevels[userSubscription] || 0;
         const requiredLevel = subscriptionLevels[course.subscriptionRequired] || 0;
         
@@ -346,7 +347,7 @@ export default function CoursePage() {
                                                 <div className="col-md-4 mb-15">
                                                     <div className="form-group">
                                                         <label className="form-label" htmlFor="category-filter">
-                                                            <i className="fi-rr-apps-sort mr-5"></i>Category
+                                                            <i className="fi-rr-filter mr-5"></i>Category
                                                         </label>
                                                         <select 
                                                             className="form-control"
@@ -366,7 +367,7 @@ export default function CoursePage() {
                                                 <div className="col-md-4 mb-15">
                                                     <div className="form-group">
                                                         <label className="form-label" htmlFor="difficulty-filter">
-                                                            <i className="fi-rr-chart-line-up mr-5"></i>Difficulty
+                                                            <i className="fi-rr-signal-alt-2 mr-5"></i>Difficulty
                                                         </label>
                                                         <select 
                                                             className="form-control"
@@ -388,7 +389,7 @@ export default function CoursePage() {
                                                 <div className="col-md-4 mb-15">
                                                     <div className="form-group">
                                                         <label className="form-label" htmlFor="subscription-filter">
-                                                            <i className="fi-rr-badge mr-5"></i>Subscription
+                                                            <i className="fi-rr-crown mr-5"></i>Subscription
                                                         </label>
                                                         <select 
                                                             className="form-control"
@@ -411,7 +412,7 @@ export default function CoursePage() {
                                         <div className="col-xl-4 col-lg-5">
                                             <div className="form-group">
                                                 <label className="form-label" htmlFor="search-input">
-                                                    <i className="fi-rr-search mr-5"></i>Search Courses
+                                                    <i className="fi-rr-zoom-in mr-5"></i>Search Courses
                                                 </label>
                                                 <div className="input-group">
                                                     <input
@@ -429,7 +430,7 @@ export default function CoursePage() {
                                                             type="button"
                                                             onClick={handleSearch}
                                                         >
-                                                            <i className="fi-rr-search"></i>
+                                                            <i className="fi-rr-zoom-in"></i>
                                                         </button>
                                                     </div>
                                                 </div>
