@@ -43,7 +43,12 @@ const CheckoutForm = ({ plan, userType, onPaymentSuccess, onPaymentError }) => {
   const [processing, setProcessing] = useState(false);
   const [billingDetails, setBillingDetails] = useState({
     name: '',
-    email: ''
+    email: '',
+    address: {
+      line1: '',
+      city: '',
+      country: ''
+    }
   });
 
   // Handle form submission
@@ -131,133 +136,128 @@ const CheckoutForm = ({ plan, userType, onPaymentSuccess, onPaymentError }) => {
       // Real Stripe payment processing
       const cardElement = elements.getElement(CardElement);
       
-      // Update SweetAlert to show confirming payment
-      Swal.update({
-        title: 'Confirming Payment',
-        html: '<div class="payment-loader"><div class="spinner"></div><p>Securely processing your payment with Stripe...</p></div>'
-      });
-      
-      // Confirm the card payment
-      const { error, paymentIntent } = await stripe.confirmCardPayment(
-        paymentIntentResult.clientSecret,
-        {
-          payment_method: {
-            card: cardElement,
-            billing_details: billingDetails
+      // Confirm the payment
+      const payload = await stripe.confirmCardPayment(paymentIntentResult.clientSecret, {
+        payment_method: {
+          card: cardElement,
+          billing_details: {
+            name: billingDetails.name,
+            email: billingDetails.email
           }
         }
-      );
-
-      if (error) {
-        throw new Error(error.message);
-      } else if (paymentIntent.status === 'succeeded') {
-        // Update SweetAlert to show confirming subscription
-        Swal.update({
-          title: 'Confirming Subscription',
-          html: '<div class="payment-loader"><div class="spinner"></div><p>Updating your subscription details...</p></div>'
-        });
-        
-        // Confirm subscription with backend
-        const subscriptionResult = await confirmPayment(paymentIntent.id, plan._id);
-        if (subscriptionResult && subscriptionResult.subscription) {
-          onPaymentSuccess({
-            subscription: plan.name,
-            planId: plan._id,
-            expiryDate: subscriptionResult.expiryDate
-          });
-        } else {
-          throw new Error(subscriptionResult?.message || 'Payment was successful but subscription update failed. Please contact support.');
-        }
-      } else {
-        throw new Error(`Payment status: ${paymentIntent.status}. Please try again.`);
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      Swal.fire({
-        title: 'Payment Failed',
-        text: error.message || 'There was an error processing your payment. Please try again.',
-        icon: 'error',
-        confirmButtonColor: '#3085d6'
       });
-      onPaymentError(error.message);
+
+      if (payload.error) {
+        throw new Error(payload.error.message);
+      }
+
+      // Payment successful, subscribe to plan
+      console.log('Payment confirmed, subscribing to plan');
+      const subscriptionResult = await subscribeToPlan(plan._id, userType);
+      
+      if (subscriptionResult && subscriptionResult.success) {
+        onPaymentSuccess({
+          subscription: plan.name,
+          planId: plan._id,
+          expiryDate: subscriptionResult.expiryDate
+        });
+      } else {
+        throw new Error(subscriptionResult?.message || 'Failed to activate subscription');
+      }
+    } catch (err) {
+      console.error('Payment error:', err.message);
+      Swal.close();
+      setError(err.message);
+      onPaymentError(err.message);
     } finally {
       setProcessing(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="payment-form">
-      <div className="form-group mb-3">
-        <label htmlFor="name" className="form-label">
-          Name on Card
-        </label>
-        <input
-          id="name"
-          type="text"
-          className="form-control"
-          required
-          value={billingDetails.name}
-          onChange={(e) => setBillingDetails({ ...billingDetails, name: e.target.value })}
-          placeholder="Jane Doe"
-        />
-      </div>
-      
-      <div className="form-group mb-4">
-        <label htmlFor="email" className="form-label">
-          Email
-        </label>
-        <input
-          id="email"
-          type="email"
-          className="form-control"
-          required
-          value={billingDetails.email}
-          onChange={(e) => setBillingDetails({ ...billingDetails, email: e.target.value })}
-          placeholder="jane.doe@example.com"
-        />
-      </div>
-      
-      <div className="form-group mb-4">
-        <label htmlFor="card" className="form-label">
-          Card Details
-        </label>
-        <div className="card-element-container p-3">
-          <CardField
+    <form onSubmit={handleSubmit} className="checkout-form">
+      <div className="card-details">
+        <div className="form-row">
+          <label htmlFor="name">
+            <span className="required">Full Name</span>
+          </label>
+          <input
+            id="name"
+            type="text"
+            placeholder="John Smith"
+            required
+            value={billingDetails.name}
             onChange={(e) => {
-              // Handle Stripe errors correctly by checking error structure and extracting message
-              if (e.error) {
-                // Extract the message from error object
-                const errorMessage = typeof e.error === 'object' ? e.error.message : e.error.toString();
-                setError(errorMessage);
-              } else {
-                setError(null);
-              }
-              setCardComplete(e.complete);
+              setBillingDetails(prev => ({ ...prev, name: e.target.value }));
             }}
           />
         </div>
-        {error && <div className="text-danger mt-2">{error}</div>}
-      </div>
-      
-      <button
-        className="btn btn-primary w-100 py-2 fw-bold"
-        type="submit"
-        disabled={processing || !stripe}
-      >
-        {processing ? (
-          <span>
-            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-            Processing...
-          </span>
-        ) : (
-          `Pay $${plan.price.toFixed(2)}`
+        
+        <div className="form-row">
+          <label htmlFor="email">
+            <span className="required">Email Address</span>
+          </label>
+          <input
+            id="email"
+            type="email"
+            placeholder="john.smith@example.com"
+            required
+            value={billingDetails.email}
+            onChange={(e) => {
+              setBillingDetails(prev => ({ ...prev, email: e.target.value }));
+            }}
+          />
+        </div>
+        
+        <div className="form-row">
+          <label htmlFor="card">
+            <span className="required">Card Information</span>
+          </label>
+          <div className="card-element-container">
+            <CardField
+              onChange={(e) => {
+                setCardComplete(e.complete);
+                if (e.error) {
+                  setError(e.error.message);
+                } else {
+                  setError(null);
+                }
+              }}
+            />
+            <div className="card-icons">
+              <img src="/assets/imgs/page/payment/visa.svg" alt="Visa" />
+              <img src="/assets/imgs/page/payment/mastercard.svg" alt="Mastercard" />
+              <img src="/assets/imgs/page/payment/amex.svg" alt="American Express" />
+            </div>
+          </div>
+        </div>
+        
+        {error && (
+          <div className="error-message animated shakeX">
+            <i className="fi-rr-exclamation-triangle"></i> {error}
+          </div>
         )}
-      </button>
-      
-      <div className="text-center mt-3">
-        <small className="text-muted">
-          Your payment is secure. We use Stripe for secure payment processing.
-        </small>
+        
+        <div className="form-row payment-info">
+          <div className="payment-security">
+            <i className="fi-rr-lock"></i> Your payment is secure. We use SSL encryption to protect your data.
+          </div>
+        </div>
+        
+        <button 
+          type="submit" 
+          disabled={processing || !stripe || !cardComplete} 
+          className={`btn btn-payment ${processing ? 'processing' : ''}`}
+        >
+          {processing ? (
+            <span className="processing-text">
+              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              Processing...
+            </span>
+          ) : (
+            <span>Pay ${plan.price > 0 ? plan.price.toFixed(2) : '0.00'}</span>
+          )}
+        </button>
       </div>
     </form>
   );

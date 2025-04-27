@@ -56,25 +56,6 @@ export default function CoursePage() {
     const fetchCourses = async () => {
         setLoading(true);
         try {
-            // First, validate user subscription from API if possible
-            try {
-                const subscriptionResponse = await authAxios.get(`${API_BASE_URL}/api/subscriptions/user-subscription`);
-                if (subscriptionResponse.data && subscriptionResponse.data.subscription) {
-                    setUserSubscription(subscriptionResponse.data.subscription.plan || 'Free');
-                    // Also update localStorage for consistency
-                    try {
-                        const userData = JSON.parse(localStorage.getItem('user') || '{}');
-                        userData.subscription = subscriptionResponse.data.subscription.plan || 'Free';
-                        localStorage.setItem('user', JSON.stringify(userData));
-                    } catch (e) {
-                        console.error('Error updating localStorage:', e);
-                    }
-                }
-            } catch (subError) {
-                console.warn('Could not fetch subscription from API, using localStorage value', subError);
-                // Fall back to localStorage (already set in useEffect)
-            }
-            
             // Build query parameters
             const queryParams = new URLSearchParams({
                 page: currentPage,
@@ -87,13 +68,62 @@ export default function CoursePage() {
             
             console.log(`Attempting to fetch courses from ${API_BASE_URL}/api/courses?${queryParams}`);
             
-            // Try calling the API, but be ready to fall back to mock data
+            // Try calling the API with authenticated request to get user-specific data
             try {
                 const response = await authAxios.get(`${API_BASE_URL}/api/courses?${queryParams}`);
                 
                 if (response.data) {
                     console.log('Successfully fetched courses from API');
-                    setCourses(response.data.courses || []);
+                    
+                    // Get enrollment and certificate data for the user if they're logged in
+                    let coursesWithStatus = response.data.courses || [];
+                    
+                    // If user is authenticated, fetch their progress and certificates
+                    if (localStorage.getItem('token')) {
+                        try {
+                            // Get user's progress for all courses
+                            const progressResponse = await authAxios.get(`${API_BASE_URL}/api/courses/user/progress`);
+                            const userProgress = progressResponse.data.data || [];
+                            
+                            // Create maps for fast lookup
+                            const progressMap = {};
+                            const certificateMap = {};
+                            
+                            // Process progress data to extract certificates too
+                            userProgress.forEach(progress => {
+                                progressMap[progress.course._id] = progress;
+                                if (progress.certificateIssued && progress.certificateId) {
+                                    certificateMap[progress.course._id] = progress.certificateId;
+                                }
+                            });
+                            
+                            // Add progress and certificate info to each course
+                            coursesWithStatus = coursesWithStatus.map(course => {
+                                const courseObj = typeof course.toObject === 'function' ? course.toObject() : course;
+                                const userProgressForCourse = progressMap[course._id];
+                                
+                                if (userProgressForCourse) {
+                                    courseObj.isEnrolled = true;
+                                    courseObj.progress = userProgressForCourse.progressPercentage || 0;
+                                    courseObj.completed = userProgressForCourse.completed || false;
+                                    courseObj.certificateId = certificateMap[course._id] || null;
+                                } else {
+                                    courseObj.isEnrolled = false;
+                                    courseObj.progress = 0;
+                                    courseObj.completed = false;
+                                    courseObj.certificateId = null;
+                                }
+                                
+                                return courseObj;
+                            });
+                            
+                            console.log('Enhanced courses with user progress and certificates');
+                        } catch (progressError) {
+                            console.error('Error fetching user progress:', progressError);
+                        }
+                    }
+                    
+                    setCourses(coursesWithStatus);
                     setTotalPages(response.data.pagination?.pages || 1);
                     
                     // Create pagination array
@@ -301,234 +331,331 @@ export default function CoursePage() {
             
             <div className="section-box">
                 <div className="container">
-                    {/* Search and filter section */}
-                    <div className="panel-white mb-30">
-                        <div className="box-padding">
-                            <div className="row mb-4">
-                                <div className="col-lg-8">
-                                    <form onSubmit={handleSearch} className="d-flex">
-                                        <input
-                                            type="text"
-                                            className="form-control mr-2"
-                                            placeholder="Search courses..."
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                        />
-                                        <button type="submit" className="btn btn-primary">
-                                            <i className="fas fa-search"></i>
-                                        </button>
-                                    </form>
+                    {/* Filters and Search */}
+                    <div className="section-box">
+                        <div className="container">
+                            <div className="panel-white">
+                                <div className="panel-head">
+                                    <h5>Explore Courses</h5>
                                 </div>
-                                <div className="col-lg-4 d-flex justify-content-end">
-                                    <div className="dropdown mr-2">
-                                        <button className="btn btn-outline-primary dropdown-toggle" type="button" data-toggle="dropdown">
-                                            {filters.category || 'All Categories'}
-                                        </button>
-                                        <div className="dropdown-menu">
-                                            <button 
-                                                className="dropdown-item" 
-                                                onClick={() => handleFilterChange('category', '')}
-                                            >
-                                                All Categories
-                                            </button>
-                                            {categories.map(category => (
-                                                <button 
-                                                    key={category} 
-                                                    className="dropdown-item" 
-                                                    onClick={() => handleFilterChange('category', category)}
-                                                >
-                                                    {category}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="dropdown">
-                                        <button className="btn btn-outline-primary dropdown-toggle" type="button" data-toggle="dropdown">
-                                            {filters.difficulty ? 
-                                                filters.difficulty.charAt(0).toUpperCase() + filters.difficulty.slice(1) : 
-                                                'All Levels'}
-                                        </button>
-                                        <div className="dropdown-menu">
-                                            <button 
-                                                className="dropdown-item" 
-                                                onClick={() => handleFilterChange('difficulty', '')}
-                                            >
-                                                All Levels
-                                            </button>
-                                            {difficulties.map(difficulty => (
-                                                <button 
-                                                    key={difficulty} 
-                                                    className="dropdown-item" 
-                                                    onClick={() => handleFilterChange('difficulty', difficulty)}
-                                                >
-                                                    {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Courses grid */}
-                            <div className="row">
-                                {loading ? (
-                                    <div className="col-12 text-center py-5">
-                                        <div className="spinner-border text-primary" role="status">
-                                            <span className="visually-hidden">Loading...</span>
-                                        </div>
-                                        <p className="mt-3">Loading courses...</p>
-                                    </div>
-                                ) : error ? (
-                                    <div className="col-12">
-                                        <div className="alert alert-danger">{error}</div>
-                                    </div>
-                                ) : courses.length === 0 ? (
-                                    <div className="col-12 text-center py-5">
-                                        <div className="alert alert-info">
-                                            No courses found matching your criteria.
-                                        </div>
-                                    </div>
-                                ) : (
-                                    courses.map(course => {
-                                        // Check if course is locked based on subscription level
-                                        const subscriptionLevels = {
-                                            'Free': 0,
-                                            'Golden': 1,
-                                            'Platinum': 2,
-                                            'Master': 3
-                                        };
-                                        
-                                        const userLevel = subscriptionLevels[userSubscription] || 0;
-                                        const requiredLevel = subscriptionLevels[course.subscriptionRequired] || 0;
-                                        const isLocked = userLevel < requiredLevel;
-                                        
-                                        return (
-                                            <div className="col-xl-3 col-lg-4 col-md-6 mb-4" key={course._id}>
-                                                <div 
-                                                    className={`course-card ${isLocked ? 'course-locked' : ''}`} 
-                                                    onClick={() => !isLocked && handleCourseClick(course)}
-                                                >
-                                                    <div className="course-card-image">
-                                                        <img 
-                                                            src={course.thumbnail || "/images/courses/default.jpg"} 
-                                                            alt={course.title}
-                                                            className={isLocked ? 'locked-image' : ''}
-                                                        />
-                                                        
-                                                        {/* Subscription badge */}
-                                                        <div className={`course-subscription-badge ${course.subscriptionRequired.toLowerCase()}`}>
-                                                            {course.subscriptionRequired}
-                                                        </div>
-                                                        
-                                                        {/* Enrollment/Completion status badges */}
-                                                        {course.progress !== undefined && !isLocked && (
-                                                            <div className={`course-status-badge ${course.progress === 100 ? 'completed' : 'enrolled'}`}>
-                                                                {course.progress === 100 ? 'Completed' : 'Enrolled'}
-                                                            </div>
-                                                        )}
-                                                        
-                                                        {/* Lock overlay for locked courses */}
-                                                        {isLocked && (
-                                                            <div className="course-lock-overlay">
-                                                                <div className="lock-icon">
-                                                                    <i className="fas fa-lock fa-3x"></i>
-                                                                    <p className="mt-2">Requires {course.subscriptionRequired} Subscription</p>
-                                                                    <button 
-                                                                        className="btn btn-sm btn-light mt-2"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            router.push('/pricing');
-                                                                        }}
-                                                                    >
-                                                                        Upgrade Now
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="course-card-content">
-                                                        <div className="d-flex justify-content-between mb-2">
-                                                            <span className="course-category">{course.category}</span>
-                                                            <span className={`course-difficulty ${course.difficulty}`}>
-                                                                {course.difficulty.charAt(0).toUpperCase() + course.difficulty.slice(1)}
-                                                            </span>
-                                                        </div>
-                                                        <h5 className="course-title">{course.title}</h5>
-                                                        <p className="course-description">{course.shortDescription || course.description.substring(0, 100) + '...'}</p>
-                                                        <div className="course-meta">
-                                                            <div className="course-instructor">
-                                                                <i className="fas fa-user-tie"></i> {course.instructor.name}
-                                                            </div>
-                                                            <div className="course-duration">
-                                                                <i className="fas fa-clock"></i> {Math.floor(course.duration / 60)} hrs
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        {/* Progress bar */}
-                                                        {course.progress !== undefined && !isLocked && (
-                                                            <div className="course-progress mt-3">
-                                                                <div className="progress">
-                                                                    <div 
-                                                                        className={`progress-bar ${course.progress === 100 ? 'bg-success' : course.progress > 50 ? 'bg-info' : 'bg-primary'}`} 
-                                                                        role="progressbar" 
-                                                                        style={{width: `${course.progress}%`}}
-                                                                        aria-valuenow={course.progress} 
-                                                                        aria-valuemin="0" 
-                                                                        aria-valuemax="100">
-                                                                    </div>
-                                                                </div>
-                                                                <div className="d-flex justify-content-between">
-                                                                    <small className="progress-text">{course.progress === 0 ? 'Not started' : 
-                                                                           course.progress === 100 ? 'Completed' : `In progress (${course.progress}%)`}</small>
-                                                                    {course.progress === 100 && (
-                                                                        <small className="text-success">
-                                                                            <i className="fas fa-certificate"></i> Certificate earned
-                                                                        </small>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                        
-                                                        {/* Skills */}
-                                                        <div className="course-skills mt-3">
-                                                            {course.skills.slice(0, 3).map((skill, index) => (
-                                                                <span key={index} className="course-skill-badge">
-                                                                    {skill}
-                                                                </span>
+                                <div className="panel-body">
+                                    <div className="row">
+                                        <div className="col-xl-8 col-lg-7">
+                                            <div className="row mb-15">
+                                                {/* Category filter */}
+                                                <div className="col-md-4 mb-15">
+                                                    <div className="form-group">
+                                                        <label className="form-label" htmlFor="category-filter">
+                                                            <i className="fi-rr-apps-sort mr-5"></i>Category
+                                                        </label>
+                                                        <select 
+                                                            className="form-control"
+                                                            id="category-filter"
+                                                            value={filters.category}
+                                                            onChange={(e) => handleFilterChange('category', e.target.value)}
+                                                        >
+                                                            <option value="">All Categories</option>
+                                                            {categories.map((category, index) => (
+                                                                <option key={index} value={category}>{category}</option>
                                                             ))}
-                                                            {course.skills.length > 3 && (
-                                                                <span className="course-skill-badge more">
-                                                                    +{course.skills.length - 3}
-                                                                </span>
-                                                            )}
-                                                        </div>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Difficulty filter */}
+                                                <div className="col-md-4 mb-15">
+                                                    <div className="form-group">
+                                                        <label className="form-label" htmlFor="difficulty-filter">
+                                                            <i className="fi-rr-chart-line-up mr-5"></i>Difficulty
+                                                        </label>
+                                                        <select 
+                                                            className="form-control"
+                                                            id="difficulty-filter"
+                                                            value={filters.difficulty}
+                                                            onChange={(e) => handleFilterChange('difficulty', e.target.value)}
+                                                        >
+                                                            <option value="">All Levels</option>
+                                                            {difficulties.map((difficulty, index) => (
+                                                                <option key={index} value={difficulty}>
+                                                                    {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Subscription filter */}
+                                                <div className="col-md-4 mb-15">
+                                                    <div className="form-group">
+                                                        <label className="form-label" htmlFor="subscription-filter">
+                                                            <i className="fi-rr-badge mr-5"></i>Subscription
+                                                        </label>
+                                                        <select 
+                                                            className="form-control"
+                                                            id="subscription-filter"
+                                                            value={filters.subscription}
+                                                            onChange={(e) => handleFilterChange('subscription', e.target.value)}
+                                                        >
+                                                            <option value="">All Plans</option>
+                                                            <option value="Free">Free</option>
+                                                            <option value="Golden">Golden</option>
+                                                            <option value="Platinum">Platinum</option>
+                                                            <option value="Master">Master</option>
+                                                        </select>
                                                     </div>
                                                 </div>
                                             </div>
-                                        );
-                                    })
-                                )}
+                                        </div>
+                                        
+                                        {/* Search bar */}
+                                        <div className="col-xl-4 col-lg-5">
+                                            <div className="form-group">
+                                                <label className="form-label" htmlFor="search-input">
+                                                    <i className="fi-rr-search mr-5"></i>Search Courses
+                                                </label>
+                                                <div className="input-group">
+                                                    <input
+                                                        type="text"
+                                                        className="form-control"
+                                                        id="search-input"
+                                                        placeholder="Search by title, skills, or instructor"
+                                                        value={searchTerm}
+                                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                                        onKeyPress={(e) => e.key === 'Enter' && handleSearch(e)}
+                                                    />
+                                                    <div className="input-group-append">
+                                                        <button 
+                                                            className="btn btn-default btn-icon" 
+                                                            type="button"
+                                                            onClick={handleSearch}
+                                                        >
+                                                            <i className="fi-rr-search"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Display active filters */}
+                                    <div className="active-filters">
+                                        {Object.entries(filters).filter(([_, value]) => value).length > 0 && (
+                                            <div className="d-flex align-items-center mb-10">
+                                                <span className="text-small mr-10">Active filters:</span>
+                                                <div className="active-filter-badges">
+                                                    {filters.category && (
+                                                        <span className="badge">
+                                                            Category: {filters.category}
+                                                            <button 
+                                                                className="btn-clear-filter" 
+                                                                onClick={() => handleFilterChange('category', '')}
+                                                            >
+                                                                <i className="fi-rr-cross-small"></i>
+                                                            </button>
+                                                        </span>
+                                                    )}
+                                                    {filters.difficulty && (
+                                                        <span className="badge">
+                                                            Difficulty: {filters.difficulty.charAt(0).toUpperCase() + filters.difficulty.slice(1)}
+                                                            <button 
+                                                                className="btn-clear-filter" 
+                                                                onClick={() => handleFilterChange('difficulty', '')}
+                                                            >
+                                                                <i className="fi-rr-cross-small"></i>
+                                                            </button>
+                                                        </span>
+                                                    )}
+                                                    {filters.subscription && (
+                                                        <span className="badge">
+                                                            Subscription: {filters.subscription}
+                                                            <button 
+                                                                className="btn-clear-filter" 
+                                                                onClick={() => handleFilterChange('subscription', '')}
+                                                            >
+                                                                <i className="fi-rr-cross-small"></i>
+                                                            </button>
+                                                        </span>
+                                                    )}
+                                                    {(filters.category || filters.difficulty || filters.subscription) && (
+                                                        <button 
+                                                            className="btn btn-xs btn-outline-danger ml-10"
+                                                            onClick={() => {
+                                                                setFilters({
+                                                                    category: '',
+                                                                    difficulty: '',
+                                                                    subscription: ''
+                                                                });
+                                                            }}
+                                                        >
+                                                            Clear All
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        {searchTerm && (
+                                            <div className="d-flex align-items-center mb-10">
+                                                <span className="text-small mr-10">Search:</span>
+                                                <span className="badge">
+                                                    "{searchTerm}"
+                                                    <button 
+                                                        className="btn-clear-filter" 
+                                                        onClick={() => setSearchTerm('')}
+                                                    >
+                                                        <i className="fi-rr-cross-small"></i>
+                                                    </button>
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                            
-                            {/* Pagination */}
-                            {!loading && courses.length > 0 && (
-                                <div className="row">
-                                    <div className="col-12">
-                                        <div className="paginations">
-                                            <Pagination
-                                                getPaginationGroup={getPaginationGroup}
-                                                currentPage={currentPage}
-                                                pages={totalPages}
-                                                next={next}
-                                                prev={prev}
-                                                handleActive={handleActive}
-                                            />
+                        </div>
+                    </div>
+                    
+                    {/* Courses grid */}
+                    <div className="row mt-10">
+                        {loading ? (
+                            <div className="loader-center">
+                                <div className="loader"></div>
+                            </div>
+                        ) : courses.length > 0 ? (
+                            courses.map((course) => (
+                                <div key={course._id} className="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-30">
+                                    <div 
+                                        className={`card-grid-2 card-course ${!course.isEnrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] ? 'course-locked' : ''}`} 
+                                        onClick={() => handleCourseClick(course)}
+                                    >
+                                        <div className="card-grid-2-image-wrap course-card-image position-relative">
+                                            {course.thumbnail ? (
+                                                <img 
+                                                    src={course.thumbnail} 
+                                                    alt={course.title} 
+                                                    className={`${!course.isEnrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] ? 'locked-image' : ''}`}
+                                                    onError={(e) => {
+                                                        e.target.src = "/assets/imgs/page/dashboard/course-placeholder.jpg";
+                                                    }}
+                                                />
+                                            ) : (
+                                                <img 
+                                                    src="/assets/imgs/page/dashboard/course-placeholder.jpg" 
+                                                    alt={course.title} 
+                                                    className={`${!course.isEnrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] ? 'locked-image' : ''}`}
+                                                />
+                                            )}
+                                            
+                                            {/* Show subscription lock overlay if needed */}
+                                            {!course.isEnrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] && (
+                                                <div className="course-lock-overlay">
+                                                    <div className="lock-icon">
+                                                        <i className="fi-rr-lock" style={{ fontSize: '24px' }}></i>
+                                                        <div className="mt-2">{course.subscriptionRequired} Plan Required</div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            
+                                            {/* Enrollment Status and Completion Badges */}
+                                            <div className="course-badge-container">
+                                                {course.isEnrolled && (
+                                                    <div className="course-badge enrolled">
+                                                        <i className="fi-rr-check-circle mr-5"></i> Enrolled
+                                                    </div>
+                                                )}
+                                                {course.completed && (
+                                                    <div className="course-badge completed">
+                                                        <i className="fi-rr-diploma mr-5"></i> Completed
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Subscription Badge */}
+                                            <div className={`course-subscription-badge ${course.subscriptionRequired.toLowerCase()}`}>
+                                                {course.subscriptionRequired}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="card-block-info">
+                                            <div className="d-flex justify-content-between mb-5">
+                                                <span className="course-category">{course.category}</span>
+                                                <span className={`course-difficulty ${course.difficulty}`}>{course.difficulty}</span>
+                                            </div>
+                                            
+                                            <h5 className="course-title"><Link href={`/course/${course._id}`}>{course.title}</Link></h5>
+                                            <p className="course-description">{course.shortDescription || course.description}</p>
+                                            
+                                            {/* Skills Tags */}
+                                            <div className="course-skills">
+                                                {course.skills && course.skills.slice(0, 3).map((skill, index) => (
+                                                    <span key={index} className="course-skill-badge">{skill}</span>
+                                                ))}
+                                                {course.skills && course.skills.length > 3 && (
+                                                    <span className="course-skill-badge more">+{course.skills.length - 3}</span>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Progress Bar for Enrolled Courses */}
+                                            {course.isEnrolled && (
+                                                <div className="mt-15">
+                                                    <div className="progress">
+                                                        <div 
+                                                            className="progress-bar" 
+                                                            role="progressbar" 
+                                                            style={{ width: `${course.progress}%` }} 
+                                                            aria-valuenow={course.progress} 
+                                                            aria-valuemin="0" 
+                                                            aria-valuemax="100"
+                                                        ></div>
+                                                    </div>
+                                                    <div className="d-flex justify-content-between">
+                                                        <small className="text-muted">{Math.round(course.progress)}% Complete</small>
+                                                        {course.certificateId && (
+                                                            <Link href={`/certificate/${course.certificateId}`} onClick={(e) => e.stopPropagation()} className="btn-view-certificate">
+                                                                View Certificate
+                                                            </Link>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            
+                                            <div className="course-meta mt-10">
+                                                <div>
+                                                    <i className="fi-rr-user mr-5"></i>{course.instructor?.name || 'Instructor'}
+                                                </div>
+                                                <div>
+                                                    <i className="fi-rr-book-alt mr-5"></i>{course.steps?.length || 0} Lessons
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            )}
-                        </div>
+                            ))
+                        ) : (
+                            <div className="col-12 text-center mt-50">
+                                <img src="/assets/imgs/page/dashboard/no-courses.svg" alt="No courses found" className="mb-20" style={{ maxHeight: '150px' }} />
+                                <h3>No courses found</h3>
+                                <p className="text-muted">Try adjusting your filters or search terms</p>
+                            </div>
+                        )}
                     </div>
+                    
+                    {/* Pagination */}
+                    {!loading && courses.length > 0 && (
+                        <div className="row">
+                            <div className="col-12">
+                                <div className="paginations">
+                                    <Pagination
+                                        getPaginationGroup={getPaginationGroup}
+                                        currentPage={currentPage}
+                                        pages={totalPages}
+                                        next={next}
+                                        prev={prev}
+                                        handleActive={handleActive}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -538,7 +665,7 @@ export default function CoursePage() {
                     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
                 }
                 
-                .course-card {
+                .card-grid-2 {
                     border-radius: 10px;
                     overflow: hidden;
                     box-shadow: 0 5px 15px rgba(0,0,0,0.1);
@@ -550,63 +677,80 @@ export default function CoursePage() {
                     background-color: #fff;
                 }
                 
-                .course-card:hover {
+                .card-grid-2:hover {
                     transform: translateY(-5px);
                     box-shadow: 0 8px 25px rgba(0,0,0,0.15);
                 }
                 
-                .course-card-image {
+                .card-grid-2-image-wrap {
                     position: relative;
                     height: 160px;
                     overflow: hidden;
                 }
                 
-                .course-card-image img {
+                .card-grid-2-image-wrap img {
                     width: 100%;
                     height: 100%;
                     object-fit: cover;
                     transition: transform 0.5s ease;
                 }
                 
-                .course-card:hover .course-card-image img {
+                .card-grid-2:hover .card-grid-2-image-wrap img {
                     transform: scale(1.1);
+                }
+                
+                .course-badge-container {
+                    position: absolute;
+                    top: 10px;
+                    left: 10px;
+                }
+                
+                .course-badge {
+                    background-color: #4CAF50;
+                    color: white;
+                    padding: 5px 10px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: bold;
+                }
+                
+                .course-badge.enrolled {
+                    background-color: #4CAF50;
+                }
+                
+                .course-badge.completed {
+                    background-color: #9E9E9E;
                 }
                 
                 .course-subscription-badge {
                     position: absolute;
                     top: 10px;
                     right: 10px;
-                    padding: 4px 8px;
+                    padding: 5px 10px;
                     border-radius: 20px;
-                    font-size: 11px;
-                    font-weight: 600;
-                    z-index: 2;
+                    font-size: 12px;
+                    font-weight: bold;
+                    color: white;
                 }
                 
                 .course-subscription-badge.free {
-                    background-color: #E8F5E9;
-                    color: #388E3C;
+                    background-color: #4CAF50;
                 }
                 
                 .course-subscription-badge.golden {
-                    background-color: #FFF8E1;
-                    color: #FFA000;
-                    border: 1px solid #FFC107;
+                    background-color: #FFC107;
+                    color: #212121;
                 }
                 
                 .course-subscription-badge.platinum {
-                    background-color: #E0F7FA;
-                    color: #0097A7;
-                    border: 1px solid #00BCD4;
+                    background-color: #9E9E9E;
                 }
                 
                 .course-subscription-badge.master {
-                    background-color: #F3E5F5;
-                    color: #7B1FA2;
-                    border: 1px solid #9C27B0;
+                    background-color: #3F51B5;
                 }
                 
-                .course-card-content {
+                .card-block-info {
                     padding: 20px;
                     flex-grow: 1;
                     display: flex;
@@ -732,44 +876,57 @@ export default function CoursePage() {
                     cursor: not-allowed;
                 }
                 
-                .course-status-badge {
-                    position: absolute;
-                    top: 50px;
-                    right: 10px;
+                .active-filters {
+                    margin-top: 20px;
+                }
+                
+                .active-filter-badges {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                }
+                
+                .badge {
+                    background-color: #f5f5f5;
                     padding: 5px 10px;
                     border-radius: 20px;
                     font-size: 12px;
                     font-weight: bold;
-                    color: white;
-                    z-index: 2;
-                    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                    animation: pulse 1.5s infinite;
+                    color: #616161;
+                    display: flex;
+                    align-items: center;
                 }
                 
-                .course-status-badge.enrolled {
-                    background-color: #2196F3;
+                .badge .btn-clear-filter {
+                    margin-left: 5px;
+                    padding: 0;
+                    border: none;
+                    background-color: transparent;
+                    color: #616161;
+                    font-size: 12px;
+                    cursor: pointer;
                 }
                 
-                .course-status-badge.completed {
+                .badge .btn-clear-filter:hover {
+                    color: #212121;
+                }
+                
+                .btn-clear-filter i {
+                    font-size: 12px;
+                }
+                
+                .btn-view-certificate {
+                    font-size: 12px;
+                    padding: 5px 10px;
+                    border-radius: 20px;
+                    border: none;
                     background-color: #4CAF50;
-                    animation: none;
+                    color: white;
+                    cursor: pointer;
                 }
                 
-                @keyframes pulse {
-                    0% {
-                        transform: scale(1);
-                    }
-                    50% {
-                        transform: scale(1.05);
-                    }
-                    100% {
-                        transform: scale(1);
-                    }
-                }
-                
-                .progress-text {
-                    font-weight: 500;
-                    color: #424242;
+                .btn-view-certificate:hover {
+                    background-color: #3e8e41;
                 }
             `}</style>
         </Layout>
