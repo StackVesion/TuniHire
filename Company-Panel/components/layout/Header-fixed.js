@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import axios from 'axios'
 import { getCurrentUser, clearUserData, getToken, createAuthAxios } from '../../utils/authUtils'
+import { HiOutlineSparkles, HiStar, HiOutlineCrown } from 'react-icons/hi'
 
 // Logo style for responsive design with adaptive sizing
 const getLogoStyle = (windowWidth) => {
@@ -116,24 +117,12 @@ export default function Header() {
                 setSubscription(response.data);
             }
         } catch (error) {
-            console.log('Error fetching subscription:', error);
-            
-            // If backend is unavailable, check localStorage for subscription info
-            try {
-                const userData = JSON.parse(localStorage.getItem('user') || '{}');
-                if (userData.subscription) {
-                    console.log('Using subscription data from localStorage:', userData.subscription);
-                    // Create a subscription object similar to what the API would return
-                    setSubscription({
-                        subscription: userData.subscription,
-                        mockData: true,
-                        pendingSync: userData.subscriptionPendingSync,
-                        expiryDate: userData.subscriptionExpiryDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                    });
-                }
-            } catch (localStorageError) {
-                console.error('Error reading from localStorage:', localStorageError);
-            }
+            console.error('Error fetching user subscription:', error);
+            // For development: Set a default subscription if API fails
+            setSubscription({
+                subscription: 'Free',
+                subscriptionExpiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+            });
         }
     };
     
@@ -155,68 +144,43 @@ export default function Header() {
     
     // Function to get subscription button style based on plan
     const getSubscriptionButtonStyle = (planName) => {
-        if (!planName) return {};
-        
         const baseStyle = {
+            padding: '8px 12px',
+            borderRadius: '20px',
             display: 'flex',
             alignItems: 'center',
-            padding: '4px 12px',
-            borderRadius: '20px',
-            cursor: 'pointer',
+            gap: '5px',
+            marginRight: '10px',
             transition: 'all 0.3s ease',
-            boxShadow: '0 3px 8px rgba(0,0,0,0.1)',
-            fontSize: '12px',
+            fontSize: '13px',
             fontWeight: '600',
-            gap: '5px'
+            cursor: 'pointer',
         };
-
-        switch(planName.toString()) {
-            case 'Free':
-                return {
-                    ...baseStyle,
-                    backgroundColor: '#f1f2f6',
-                    color: '#666',
-                    border: '1px solid #ddd'
-                };
-            case 'Golden':
-                return {
-                    ...baseStyle,
-                    backgroundColor: '#fff8e1',
-                    color: '#ff9800',
-                    border: '1px solid #ffca28'
-                };
-            case 'Platinum':
-                return {
-                    ...baseStyle,
-                    backgroundColor: '#ecf0f1',
-                    color: '#7f8c8d',
-                    border: '1px solid #bdc3c7'
-                };
-            case 'Master':
-                return {
-                    ...baseStyle,
-                    backgroundColor: '#fbe9e7',
-                    color: '#c0392b',
-                    border: '1px solid #e74c3c'
-                };
-            default:
-                return baseStyle;
-        }
+        
+        // Current subscription button style
+        return {
+            ...baseStyle,
+            background: planName === 'Free' ? '#e0e0e0' : 
+                        planName === 'Golden' ? 'linear-gradient(145deg, #ffd700, #ffb347)' : 
+                        planName === 'Platinum' ? 'linear-gradient(145deg, #e5e4e2, #c0c0c0)' :
+                        'linear-gradient(145deg, #ff4500, #ff8c00)',
+            color: planName === 'Free' ? '#555' : '#fff',
+            boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+            border: 'none',
+        };
     };
     
-    // Function to render subscription icon based on plan using CSS instead of icon packages
+    // Function to render subscription icon based on plan
     const renderSubscriptionIcon = (planName) => {
-        if (!planName) return null;
-        
-        switch(planName.toString()) {
+        switch(planName) {
             case 'Free':
                 return null;
             case 'Golden':
-                return <div className="animate-pulse" style={{ fontSize: '18px', color: 'gold' }}>★</div>;
+                return <HiStar className="animate-pulse" />;
             case 'Platinum':
-                return <div className="animate-pulse" style={{ fontSize: '18px', color: 'silver' }}>✧</div>;
+                return <HiOutlineSparkles className="animate-spin" style={{ animationDuration: '3s' }} />;
             case 'Master':
-                return <div className="animate-bounce" style={{ fontSize: '18px', color: '#c0392b' }}>♕</div>;
+                return <HiOutlineCrown className="animate-bounce" style={{ animationDuration: '2s' }} />;
             default:
                 return null;
         }
@@ -246,7 +210,7 @@ export default function Header() {
                         </div>
                         
                         <div className="header-right">
-                            <div className="block-signin d-flex align-items-center">
+                            <div className="block-signin">
                                 {user ? (
                                     <>
                                         {/* HR ROLE: Show Post New Job button if user is HR */}
@@ -271,101 +235,43 @@ export default function Header() {
                                         )}
                                         
                                         {/* Subscription Plan Badge */}
-                                        <div className="subscription-buttons d-flex mr-15" style={{ marginLeft: 'auto' }}>
+                                        <div className="subscription-buttons d-flex mr-15">
                                             {/* Current subscription badge, clickable to redirect to pricing page */}
-                                            {subscription && subscription.subscription && (
+                                            {subscription && (
                                                 <div 
                                                     className="subscription-badge"
-                                                    style={{
-                                                        ...getSubscriptionButtonStyle(subscription.subscription),
-                                                        animation: 'fadeIn 0.5s ease-in-out',
-                                                    }}
+                                                    style={getSubscriptionButtonStyle(subscription.subscription)}
                                                     onClick={handleGoToPricing}
-                                                    title="Click to upgrade your subscription"
+                                                    title="Click to view subscription plans"
                                                 >
                                                     {renderSubscriptionIcon(subscription.subscription)}
-                                                    <span>{subscription.subscription} Plan</span>
+                                                    {subscription.subscription}
                                                 </div>
                                             )}
                                         </div>
                                         
                                         <div className="member-login d-flex align-items-center">
-                                            <div 
-                                                className="user-avatar"
-                                                style={{
-                                                    width: '40px',
-                                                    height: '40px',
-                                                    borderRadius: '50%',
-                                                    overflow: 'hidden',
-                                                    border: '2px solid #3c65f5',
-                                                    boxShadow: '0 4px 10px rgba(60,101,245,0.2)',
-                                                    transition: 'all 0.3s ease',
-                                                }}
-                                            >
-                                                <img 
-                                                    alt="User profile" 
-                                                    src={user.profilePicture || "/assets/imgs/page/dashboard/profile.png"} 
-                                                    style={{ 
-                                                        objectFit: 'cover',
-                                                        width: '100%',
-                                                        height: '100%'
-                                                    }}
-                                                />
-                                            </div>
-                                            <div className="info-member ml-10"> 
-                                                <strong className="color-brand-1 font-sm d-block">{user.firstName} {user.lastName}</strong>
+                                            <img 
+                                                alt="User profile" 
+                                                src={user.profilePicture || "/assets/imgs/page/dashboard/profile.png"} 
+                                                style={{ objectFit: 'cover', borderRadius: '50%', width: '40px', height: '40px' }}
+                                            />
+                                            <div className="info-member"> 
+                                                <strong className="color-brand-1">{user.firstName} {user.lastName}</strong>
                                                 <Menu as="div" className="dropdown">
                                                     <Menu.Button as="a" className="font-xs color-text-paragraph-2 icon-down">{user.email}</Menu.Button>
-                                                    <Menu.Items as="ul" className="dropdown-menu dropdown-menu-light dropdown-menu-end" style={{ 
-                                                        right: "0", 
-                                                        left: "auto",
-                                                        minWidth: '200px',
-                                                        padding: '10px 0',
-                                                        border: 'none',
-                                                        borderRadius: '10px',
-                                                        boxShadow: '0 5px 30px rgba(0,0,0,0.1)',
-                                                    }}>
-                                                        <li>
-                                                            <Link className="dropdown-item" href="/profile" style={{
-                                                                padding: '10px 20px',
-                                                                fontSize: '14px',
-                                                                transition: 'all 0.2s ease'
-                                                            }}>
-                                                                <i className="fi-rr-user mr-10"></i> My Profile
-                                                            </Link>
-                                                        </li>
-                                                        <li>
-                                                            <Link className="dropdown-item" href="/settings" style={{
-                                                                padding: '10px 20px',
-                                                                fontSize: '14px',
-                                                                transition: 'all 0.2s ease'
-                                                            }}>
-                                                                <i className="fi-rr-settings mr-10"></i> Settings
-                                                            </Link>
-                                                        </li>
-                                                        <li style={{ borderTop: '1px solid #eee', marginTop: '5px' }}>
-                                                            <a 
-                                                                className="dropdown-item" 
-                                                                onClick={handleLogout} 
-                                                                style={{
-                                                                    cursor: 'pointer',
-                                                                    padding: '10px 20px',
-                                                                    fontSize: '14px',
-                                                                    transition: 'all 0.2s ease',
-                                                                    color: '#dc3545'
-                                                                }}
-                                                            >
-                                                                <i className="fi-rr-sign-out mr-10"></i> Logout
-                                                            </a>
-                                                        </li>
+                                                    <Menu.Items as="ul" className="dropdown-menu dropdown-menu-light dropdown-menu-end show" style={{ right: "0", left: "auto" }}>
+                                                        <li><Link className="dropdown-item" href="/profile">My Profile</Link></li>
+                                                        <li><Link className="dropdown-item" href="/settings">Settings</Link></li>
+                                                        <li><a className="dropdown-item" onClick={handleLogout} style={{cursor: 'pointer'}}>Logout</a></li>
                                                     </Menu.Items>
                                                 </Menu>
                                             </div>
                                         </div>
                                     </>
                                 ) : (
-                                    <Link href="/login" className="btn btn-default btn-md hover-up ml-20">
-                                        <i className="fi-rr-user mr-5"></i> Login
+                                    <Link href="/login" className="btn btn-default ml-20">
+                                        Login
                                     </Link>
                                 )}
                             </div>

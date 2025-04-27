@@ -1,18 +1,17 @@
 const express = require("express");
-const authMiddleware = require("../middleware/authMiddleware");
+const { verifyToken, isAdmin } = require("../middleware/authMiddleware");
 const User = require("../models/User"); // Add this line to import the User model
 const multer = require("multer");
 const path = require("path");
 const crypto = require("crypto");
 const jwt = require('jsonwebtoken'); // Add this line to import jwt
 const { sendVerificationEmail } = require('../config/emailService');
-const { verifyToken } = require("../middleware/auth"); // Import verifyToken middleware
 const { getUsers, createUser, signIn, signInn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, updateUser, deleteUser, validateToken, generateNewVerificationToken, updateUserRole } = require("../controllers/userController");
 
 const router = express.Router();
 
 // Test endpoint for JWT verification
-router.get("/test-auth", authMiddleware, (req, res) => {
+router.get("/test-auth", verifyToken, (req, res) => {
     return res.status(200).json({ message: "Authentication successful", user: req.user });
 });
 
@@ -140,16 +139,16 @@ router.post("/signin/faceid", signInWithFaceID);
 router.post("/signout", signOut);
 
 // Route to update user profile
-router.put("/update-profile", authMiddleware, updateUserProfile);
+router.put("/update-profile", verifyToken, updateUserProfile);
 
 // Route to change user password
-router.put("/change-password", authMiddleware, changeUserPassword);
+router.put("/change-password", verifyToken, changeUserPassword);
 
 // Route to update user role
 router.put("/update-role/:id", updateUserRole);
 
 // Route to validate a token and return user info (for cross-site auth)
-router.get("/me", authMiddleware, async (req, res) => {
+router.get("/me", verifyToken, async (req, res) => {
     try {
         const userId = req.user.userId;
         
@@ -229,7 +228,7 @@ router.get("/user-details/:id", verifyToken, async (req, res) => {
 });
 
 // Ajouter cette nouvelle route pour récupérer le profil complet de l'utilisateur
-router.get("/profile", authMiddleware, async (req, res) => {
+router.get("/profile", verifyToken, async (req, res) => {
     try {
         const userId = req.user.userId;
         

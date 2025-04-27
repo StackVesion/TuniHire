@@ -108,7 +108,7 @@ export const getToken = () => {
 // Create authenticated axios instance with token refresh
 export const createAuthAxios = () => {
   const axiosInstance = axios.create({
-    baseURL: 'http://localhost:5000',
+    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
   });
 
   // Request interceptor to add token to all requests
@@ -129,41 +129,50 @@ export const createAuthAxios = () => {
     async (error) => {
       const originalRequest = error.config;
       
-      // If error is 401 and not already retrying
-      if (error.response?.status === 401 && 
-          error.response?.data?.message === 'Token expired.' && 
-          !originalRequest._retry) {
+      // If error is 401 (Unauthorized) and not already retrying
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        console.log('Authentication error detected, attempting token refresh');
         originalRequest._retry = true;
         
         try {
           const refreshToken = getRefreshToken();
           
           if (!refreshToken) {
-            // No refresh token available, redirect to login
+            console.log('No refresh token available, redirecting to login');
             clearUserData();
-            window.location.href = 'http://localhost:3000/page-signin';
+            redirectToLogin();
             return Promise.reject(error);
           }
           
           // Call token refresh endpoint
-          const response = await axios.post('http://localhost:5000/api/users/refresh-token', {
+          console.log('Attempting to refresh token');
+          const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/refresh-token`, {
             refreshToken
           });
           
-          const { accessToken } = response.data;
-          
-          // Update token in localStorage
-          localStorage.setItem('token', accessToken);
-          
-          // Update authorization header and retry request
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          return axios(originalRequest);
+          if (response.data && response.data.token) {
+            const { token, refreshToken: newRefreshToken } = response.data;
+            
+            console.log('Token refresh successful, updating credentials');
+            
+            // Update tokens in localStorage
+            localStorage.setItem('token', token);
+            if (newRefreshToken) {
+              storeRefreshToken(newRefreshToken);
+            }
+            
+            // Update authorization header and retry request
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return axios(originalRequest);
+          } else {
+            throw new Error('Invalid refresh token response');
+          }
         } catch (refreshError) {
           console.error('Token refresh failed:', refreshError);
           
           // Clear user data and redirect to login
           clearUserData();
-          window.location.href = 'http://localhost:3000/page-signin';
+          redirectToLogin();
           return Promise.reject(refreshError);
         }
       }
@@ -173,4 +182,73 @@ export const createAuthAxios = () => {
   );
   
   return axiosInstance;
+};
+
+// Helper function to redirect to the main application login page
+export const redirectToLogin = () => {
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined') return;
+  
+  const mainAppUrl = process.env.NEXT_PUBLIC_MAIN_APP_URL || 'http://localhost:3000';
+  const returnUrl = encodeURIComponent(window.location.href);
+  
+  // Redirect to the main application's login page with return URL
+  window.location.href = `${mainAppUrl}/login?returnUrl=${returnUrl}`;
+};
+
+// Function to check token expiration and proactively refresh if needed
+export const checkAndRefreshToken = async () => {
+  try {
+    const token = getToken();
+    if (!token) return false;
+    
+    // Decode the JWT token to check expiration
+    // JWT tokens have 3 parts separated by dots: header.payload.signature
+    const payload = token.split('.')[1];
+    if (!payload) return false;
+    
+    // Decode the base64 payload
+    const decodedPayload = JSON.parse(atob(payload));
+    
+    // Check if token is expired or about to expire (within 5 minutes)
+    const currentTime = Math.floor(Date.now() / 1000);
+    const expiryTime = decodedPayload.exp;
+    const timeToExpiry = expiryTime - currentTime;
+    
+    // If token is about to expire (less than 5 minutes remaining)
+    if (timeToExpiry < 300 && timeToExpiry > 0) {
+      console.log('Token expiring soon, refreshing proactively');
+      
+      const refreshToken = getRefreshToken();
+      if (!refreshToken) return false;
+      
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/refresh-token`, {
+        refreshToken
+      });
+      
+      if (response.data && response.data.token) {
+        const { token, refreshToken: newRefreshToken } = response.data;
+        
+        // Update tokens in localStorage
+        localStorage.setItem('token', token);
+        if (newRefreshToken) {
+          storeRefreshToken(newRefreshToken);
+        }
+        
+        return true;
+      }
+    }
+    
+    return timeToExpiry > 0; // Return true if token is still valid
+  } catch (error) {
+    console.error('Error checking token expiration:', error);
+    return false;
+  }
+};
+
+// Function to handle logout and redirect to main application
+export const logout = () => {
+  clearUserData();
+  const mainAppUrl = process.env.NEXT_PUBLIC_MAIN_APP_URL || 'http://localhost:3000';
+  window.location.href = `${mainAppUrl}/login?logout=true`;
 };

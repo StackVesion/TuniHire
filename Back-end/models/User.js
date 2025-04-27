@@ -15,6 +15,18 @@ const UserSchema = new mongoose.Schema({
     type: String, 
     enum: ["admin", "HR", "hr", "candidate", "recruiter", "company"] 
   },
+  subscription: {
+    type: String,
+    enum: ["Free", "Golden", "Platinum", "Master"],
+    default: "Free"
+  },
+  subscriptionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "SubscriptionPlan"
+  },
+  subscriptionExpiryDate: {
+    type: Date
+  },
   phone: { type: String },
   profilePicture: { type: String },
   experienceYears: { type: Number },

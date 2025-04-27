@@ -34,6 +34,7 @@
     "pdf-creator-node": "^2.3.5",
     "pdfkit": "^0.17.0",
     "react-toastify": "^11.0.5",
+    "stripe": "^18.0.0",
     "uuid": "^11.0.5"
   },
   "devDependencies": {

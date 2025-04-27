@@ -198,14 +198,18 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Routes
+app.use("/api/auth", require("./routes/user"));
 app.use("/api/users", require("./routes/userRoutes"));
-app.use("/api/companies", require("./routes/company"));
 app.use("/api/jobs", require("./routes/jobRoutes"));
-app.use("/api/contact", require("./routes/contactRoutes"));
+app.use("/api/companies", require("./routes/company"));
 app.use("/api/applications", require("./routes/applicationRoutes"));
+app.use("/api/contacts", require("./routes/contactRoutes"));
 app.use("/api/portfolios", require("./routes/portfolioRoutes"));
 app.use("/api/dashboard", require("./routes/dashboard"));
 app.use("/api/ai", require("./routes/aiRoutes"));
+app.use("/api/courses", require("./routes/courseRoutes"));
+app.use("/api/certificates", require("./routes/certificateRoutes"));
+app.use("/api/subscriptions", require("./routes/subscriptionRoutes"));
 app.use("/health", require("./routes/health"));
 
 // API route list

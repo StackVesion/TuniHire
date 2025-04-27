@@ -7,7 +7,7 @@ import Header from "./Header";
 import MobileMenu from "./MobileMenu";
 import PageHead from "./PageHead";
 import Sidebar from "./Sidebar";
-import { getCurrentUser, clearUserData } from "../../utils/authUtils";
+import { getCurrentUser, clearUserData, checkAndRefreshToken, redirectToLogin } from "../../utils/authUtils";
 
 export default function Layout({ headTitle, breadcrumbTitle, breadcrumbActive, children }) {
   const [isToggled, setToggled] = useState(false);
@@ -23,13 +23,30 @@ export default function Layout({ headTitle, breadcrumbTitle, breadcrumbActive, c
     }
   };
 
-  // Helper function to redirect to login
-  const redirectToLogin = () => {
-    console.log('Redirecting to login page...');
-    setTimeout(() => {
-      window.location.href = "http://localhost:3000/page-signin";
-    }, 1000);
-  };
+  // Token refresh timer
+  useEffect(() => {
+    // Initial token check
+    checkAndRefreshToken().catch(err => console.error('Initial token check failed:', err));
+    
+    // Set up periodic token refresh (every 4 minutes)
+    const tokenRefreshInterval = setInterval(() => {
+      console.log('Running scheduled token refresh check');
+      checkAndRefreshToken()
+        .then(isValid => {
+          if (!isValid) {
+            console.warn('Token is invalid and could not be refreshed, redirecting to login');
+            redirectToLogin();
+          }
+        })
+        .catch(err => {
+          console.error('Scheduled token refresh failed:', err);
+        });
+    }, 4 * 60 * 1000); // 4 minutes
+    
+    return () => {
+      clearInterval(tokenRefreshInterval);
+    };
+  }, []);
 
   useEffect(() => {
     // Verify user session and role when component mounts
