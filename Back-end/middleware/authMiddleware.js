@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 
-const authMiddleware = (req, res, next) => {
+// Verify token middleware
+const verifyToken = (req, res, next) => {
     try {
         // Get token from header
         const authHeader = req.headers.authorization;
@@ -41,4 +42,22 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
-module.exports = authMiddleware;
+// Check if user is admin
+const isAdmin = (req, res, next) => {
+    // User must be authenticated first with verifyToken middleware
+    if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+    }
+    
+    // Check if user has admin role
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    next();
+};
+
+module.exports = { 
+    verifyToken, 
+    isAdmin 
+};

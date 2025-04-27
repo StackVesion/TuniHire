@@ -56,6 +56,25 @@ export default function CoursePage() {
     const fetchCourses = async () => {
         setLoading(true);
         try {
+            // First, validate user subscription from API if possible
+            try {
+                const subscriptionResponse = await authAxios.get(`${API_BASE_URL}/api/subscriptions/user-subscription`);
+                if (subscriptionResponse.data && subscriptionResponse.data.subscription) {
+                    setUserSubscription(subscriptionResponse.data.subscription.plan || 'Free');
+                    // Also update localStorage for consistency
+                    try {
+                        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+                        userData.subscription = subscriptionResponse.data.subscription.plan || 'Free';
+                        localStorage.setItem('user', JSON.stringify(userData));
+                    } catch (e) {
+                        console.error('Error updating localStorage:', e);
+                    }
+                }
+            } catch (subError) {
+                console.warn('Could not fetch subscription from API, using localStorage value', subError);
+                // Fall back to localStorage (already set in useEffect)
+            }
+            
             // Build query parameters
             const queryParams = new URLSearchParams({
                 page: currentPage,
@@ -401,6 +420,13 @@ export default function CoursePage() {
                                                             {course.subscriptionRequired}
                                                         </div>
                                                         
+                                                        {/* Enrollment/Completion status badges */}
+                                                        {course.progress !== undefined && !isLocked && (
+                                                            <div className={`course-status-badge ${course.progress === 100 ? 'completed' : 'enrolled'}`}>
+                                                                {course.progress === 100 ? 'Completed' : 'Enrolled'}
+                                                            </div>
+                                                        )}
+                                                        
                                                         {/* Lock overlay for locked courses */}
                                                         {isLocked && (
                                                             <div className="course-lock-overlay">
@@ -443,18 +469,17 @@ export default function CoursePage() {
                                                             <div className="course-progress mt-3">
                                                                 <div className="progress">
                                                                     <div 
-                                                                        className="progress-bar" 
+                                                                        className={`progress-bar ${course.progress === 100 ? 'bg-success' : course.progress > 50 ? 'bg-info' : 'bg-primary'}`} 
                                                                         role="progressbar" 
                                                                         style={{width: `${course.progress}%`}}
                                                                         aria-valuenow={course.progress} 
                                                                         aria-valuemin="0" 
                                                                         aria-valuemax="100">
-                                                                        {course.progress}%
                                                                     </div>
                                                                 </div>
                                                                 <div className="d-flex justify-content-between">
-                                                                    <small>{course.progress === 0 ? 'Not started' : 
-                                                                           course.progress === 100 ? 'Completed' : 'In progress'}</small>
+                                                                    <small className="progress-text">{course.progress === 0 ? 'Not started' : 
+                                                                           course.progress === 100 ? 'Completed' : `In progress (${course.progress}%)`}</small>
                                                                     {course.progress === 100 && (
                                                                         <small className="text-success">
                                                                             <i className="fas fa-certificate"></i> Certificate earned
@@ -551,28 +576,34 @@ export default function CoursePage() {
                     position: absolute;
                     top: 10px;
                     right: 10px;
-                    padding: 5px 10px;
+                    padding: 4px 8px;
                     border-radius: 20px;
-                    font-size: 12px;
-                    font-weight: bold;
-                    color: white;
+                    font-size: 11px;
+                    font-weight: 600;
+                    z-index: 2;
                 }
                 
                 .course-subscription-badge.free {
-                    background-color: #4CAF50;
+                    background-color: #E8F5E9;
+                    color: #388E3C;
                 }
                 
                 .course-subscription-badge.golden {
-                    background-color: #FFC107;
-                    color: #212121;
+                    background-color: #FFF8E1;
+                    color: #FFA000;
+                    border: 1px solid #FFC107;
                 }
                 
                 .course-subscription-badge.platinum {
-                    background-color: #9E9E9E;
+                    background-color: #E0F7FA;
+                    color: #0097A7;
+                    border: 1px solid #00BCD4;
                 }
                 
                 .course-subscription-badge.master {
-                    background-color: #3F51B5;
+                    background-color: #F3E5F5;
+                    color: #7B1FA2;
+                    border: 1px solid #9C27B0;
                 }
                 
                 .course-card-content {
@@ -699,6 +730,46 @@ export default function CoursePage() {
                 
                 .course-locked {
                     cursor: not-allowed;
+                }
+                
+                .course-status-badge {
+                    position: absolute;
+                    top: 50px;
+                    right: 10px;
+                    padding: 5px 10px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: bold;
+                    color: white;
+                    z-index: 2;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                    animation: pulse 1.5s infinite;
+                }
+                
+                .course-status-badge.enrolled {
+                    background-color: #2196F3;
+                }
+                
+                .course-status-badge.completed {
+                    background-color: #4CAF50;
+                    animation: none;
+                }
+                
+                @keyframes pulse {
+                    0% {
+                        transform: scale(1);
+                    }
+                    50% {
+                        transform: scale(1.05);
+                    }
+                    100% {
+                        transform: scale(1);
+                    }
+                }
+                
+                .progress-text {
+                    font-weight: 500;
+                    color: #424242;
                 }
             `}</style>
         </Layout>

@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import axios from 'axios'
 import { getCurrentUser, clearUserData, getToken, createAuthAxios } from '../../utils/authUtils'
-import { HiOutlineSparkles, HiStar, HiOutlineCrown } from 'react-icons/hi'
 
 // Logo style for responsive design with adaptive sizing
 const getLogoStyle = (windowWidth) => {
@@ -156,72 +155,68 @@ export default function Header() {
     
     // Function to get subscription button style based on plan
     const getSubscriptionButtonStyle = (planName) => {
-        // Base style for subscription button
+        if (!planName) return {};
+        
         const baseStyle = {
             display: 'flex',
             alignItems: 'center',
-            padding: '5px 15px',
+            padding: '4px 12px',
             borderRadius: '20px',
-            fontSize: '13px',
-            fontWeight: '600',
-            color: '#fff',
-            marginLeft: '10px',
-            border: 'none',
             cursor: 'pointer',
-            transition: 'all 0.3s ease'
+            transition: 'all 0.3s ease',
+            boxShadow: '0 3px 8px rgba(0,0,0,0.1)',
+            fontSize: '12px',
+            fontWeight: '600',
+            gap: '5px'
         };
-        
-        // Flag to indicate if subscription data is from mock (backend unavailable)
-        const isMockData = subscription && subscription.mockData;
-        
-        // Add warning indicator for mock data
-        const mockDataStyle = isMockData ? {
-            border: '1px dashed #f0ad4e'
-        } : {};
-        
-        switch (planName) {
+
+        switch(planName.toString()) {
+            case 'Free':
+                return {
+                    ...baseStyle,
+                    backgroundColor: '#f1f2f6',
+                    color: '#666',
+                    border: '1px solid #ddd'
+                };
             case 'Golden':
                 return {
                     ...baseStyle,
-                    ...mockDataStyle,
-                    background: 'linear-gradient(to right, #FFD700, #FFA500)',
-                    boxShadow: '0 3px 10px rgba(255, 215, 0, 0.3)'
+                    backgroundColor: '#fff8e1',
+                    color: '#ff9800',
+                    border: '1px solid #ffca28'
                 };
             case 'Platinum':
                 return {
                     ...baseStyle,
-                    ...mockDataStyle,
-                    background: 'linear-gradient(to right, #E5E4E2, #BEBEBE)',
-                    boxShadow: '0 3px 10px rgba(190, 190, 190, 0.3)'
+                    backgroundColor: '#ecf0f1',
+                    color: '#7f8c8d',
+                    border: '1px solid #bdc3c7'
                 };
             case 'Master':
                 return {
                     ...baseStyle,
-                    ...mockDataStyle,
-                    background: 'linear-gradient(to right, #4169E1, #1E90FF)',
-                    boxShadow: '0 3px 10px rgba(30, 144, 255, 0.3)'
+                    backgroundColor: '#fbe9e7',
+                    color: '#c0392b',
+                    border: '1px solid #e74c3c'
                 };
-            default: // Free plan
-                return {
-                    ...baseStyle,
-                    ...mockDataStyle,
-                    background: 'linear-gradient(to right, #28a745, #20c997)',
-                    boxShadow: '0 3px 10px rgba(40, 167, 69, 0.3)'
-                };
+            default:
+                return baseStyle;
         }
     };
     
-    // Function to render subscription icon based on plan
+    // Function to render subscription icon based on plan using CSS instead of icon packages
     const renderSubscriptionIcon = (planName) => {
-        switch(planName) {
+        if (!planName) return null;
+        
+        switch(planName.toString()) {
             case 'Free':
                 return null;
             case 'Golden':
-                return <HiStar className="animate-pulse" style={{ fontSize: '18px' }} />;
+                return <div className="animate-pulse" style={{ fontSize: '18px', color: 'gold' }}>★</div>;
             case 'Platinum':
-                return <HiOutlineSparkles className="animate-spin" style={{ animationDuration: '3s', fontSize: '18px' }} />;
+                return <div className="animate-pulse" style={{ fontSize: '18px', color: 'silver' }}>✧</div>;
             case 'Master':
-                return <HiOutlineCrown className="animate-bounce" style={{ animationDuration: '2s', fontSize: '18px' }} />;
+                return <div className="animate-bounce" style={{ fontSize: '18px', color: '#c0392b' }}>♕</div>;
             default:
                 return null;
         }
@@ -278,7 +273,7 @@ export default function Header() {
                                         {/* Subscription Plan Badge */}
                                         <div className="subscription-buttons d-flex mr-15" style={{ marginLeft: 'auto' }}>
                                             {/* Current subscription badge, clickable to redirect to pricing page */}
-                                            {subscription && (
+                                            {subscription && subscription.subscription && (
                                                 <div 
                                                     className="subscription-badge"
                                                     style={{

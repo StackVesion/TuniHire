@@ -1,17 +1,17 @@
 const mongoose = require("mongoose");
 
 const CertificateSchema = new mongoose.Schema({
-  userId: { 
+  user: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User',
     required: true
   },
-  courseId: { 
+  course: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Course',
     required: true
   },
-  issuedDate: { type: Date, default: Date.now },
+  issueDate: { type: Date, default: Date.now },
   completionDate: { type: Date, default: Date.now },
   certificateNumber: { 
     type: String,
@@ -20,6 +20,8 @@ const CertificateSchema = new mongoose.Schema({
   skills: [{ type: String }],
   grade: { type: String },
   score: { type: Number },
+  courseName: { type: String },
+  userName: { type: String },
   status: {
     type: String,
     enum: ['issued', 'verified', 'revoked'],
@@ -41,7 +43,7 @@ CertificateSchema.pre('save', async function(next) {
   if (!this.certificateNumber) {
     // Format: TH-YEAR-USERID(FIRST 5)-RANDOM(4)
     const year = new Date().getFullYear();
-    const userIdPart = this.userId.toString().slice(0, 5);
+    const userIdPart = this.user.toString().slice(0, 5);
     const randomPart = Math.floor(1000 + Math.random() * 9000);
     this.certificateNumber = `TH-${year}-${userIdPart}-${randomPart}`;
   }

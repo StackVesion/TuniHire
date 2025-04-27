@@ -3,30 +3,26 @@ const router = express.Router();
 const courseController = require('../controllers/courseController');
 const { verifyToken, isAdmin } = require('../middleware/authMiddleware');
 
-// Debug: Log available controller methods
-console.log('Available courseController methods:', Object.keys(courseController));
-
 // Test endpoint
 router.get('/test', courseController.testEndpoint);
 
+// Protected routes (require user authentication)
+// These specific routes must come BEFORE parameterized routes to avoid conflicts
+
+// Course enrollment and progress endpoints for Company Panel
+router.post('/:id/enroll', verifyToken, courseController.enrollCourse);
+router.post('/progress', verifyToken, courseController.updateCourseProgress);
+router.get('/user/progress', verifyToken, courseController.getUserCourseProgress);
+
+// Get specific course with user progress
+router.get('/:id', verifyToken, courseController.getCourseWithUserProgress);
+
 // Public routes
 router.get('/', courseController.getAllCourses);
-router.get('/:id', courseController.getCourseById);
 
-// Protected routes (require user authentication)
-router.post('/enroll', verifyToken, courseController.enrollInCourse);
-// Fix for the undefined updateProgress method
-if (typeof courseController.updateProgress === 'function') {
-  router.post('/progress', verifyToken, courseController.updateProgress);
-} else {
-  console.error('WARNING: courseController.updateProgress is not a function!');
-  // Temporary placeholder to avoid the error
-  router.post('/progress', verifyToken, (req, res) => {
-    res.status(501).json({ message: 'Progress update functionality is currently unavailable' });
-  });
-}
-router.get('/progress/:courseId', verifyToken, courseController.getUserProgress);
-router.get('/certificates/user', verifyToken, courseController.getUserCertificates);
+// Certificate routes
+router.get('/certificates/:id', verifyToken, courseController.getCertificate);
+router.get('/certificates/course/:courseId', verifyToken, courseController.getCertificateByCourse);
 
 // Admin-only routes
 router.post('/', verifyToken, isAdmin, courseController.createCourse);
