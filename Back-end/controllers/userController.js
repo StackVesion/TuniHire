@@ -1102,7 +1102,62 @@ const updateUserRole = async (req, res) => {
         });
     }
 };
+// Get all users without role filtering
+const getAllUsers = async (req, res) => {
+    try {
+        console.log('Received request:', req.query);
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.max(1, parseInt(req.query.limit) || 12);
 
+        // Build filter based on query parameters
+        let filter = {};
+        
+        // Get total count of all users
+        const totalUsers = await User.countDocuments({});
+        
+        // Get paginated users with all fields
+        const [users, total] = await Promise.all([
+            User.find(filter)
+                .select('firstName lastName email role profilePicture isEmailVerified isActive createdAt')
+                .sort('-createdAt')
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .lean(),
+            User.countDocuments(filter)
+        ]);
+
+        // Transform data to ensure consistent format
+        const processedUsers = users.map(user => ({
+            _id: user._id.toString(),
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            email: user.email || '',
+            role: user.role || 'Undefined',
+            profilePicture: user.profilePicture || '',
+            isEmailVerified: !!user.isEmailVerified,
+            isActive: user.isActive !== false,
+            createdAt: user.createdAt
+        }));
+
+        return res.status(200).json({
+            success: true,
+            users: processedUsers,
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(total / limit),
+                total: total,
+                limit: limit
+            }
+        });
+
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
 // Keep the main module.exports with all functions
 module.exports = {
     getUsers,
@@ -1120,5 +1175,6 @@ module.exports = {
     changeUserPassword,
     validateToken,
     generateNewVerificationToken,
-    updateUserRole
+    updateUserRole,
+    getAllUsers
 };

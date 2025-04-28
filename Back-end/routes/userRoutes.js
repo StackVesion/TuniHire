@@ -7,12 +7,100 @@ const crypto = require("crypto");
 const jwt = require('jsonwebtoken'); // Add this line to import jwt
 const { sendVerificationEmail } = require('../config/emailService');
 const { getUsers, createUser, signIn, signInn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, updateUser, deleteUser, validateToken, generateNewVerificationToken, updateUserRole } = require("../controllers/userController");
+const { getAllUsers } = require("../controllers/userController");
+const fs = require('fs');
 
 const router = express.Router();
+
+// ==========================================
+// IMPORTANT: SPECIFIC ROUTES FIRST
+// User profile and specific routes that don't use URL parameters
+// ==========================================
+
+// Route to update user profile - Must be before /:id route!
+router.put("/update-profile", verifyToken, updateUserProfile);
+
+// Route to change user password
+router.put("/change-password", verifyToken, changeUserPassword);
+
+// ==========================================
+// ROUTES WITH URL PARAMETERS (MUST BE AFTER SPECIFIC ROUTES)
+// ==========================================
+
+// Route to delete a user
+router.delete("/:id", deleteUser);
+
+// Route to update a user
+router.put("/:id", updateUser);
 
 // Test endpoint for JWT verification
 router.get("/test-auth", verifyToken, (req, res) => {
     return res.status(200).json({ message: "Authentication successful", user: req.user });
+});
+
+// Debug endpoint for token inspection
+router.post("/debug-token", async (req, res) => {
+    try {
+        const { token } = req.body;
+        
+        if (!token) {
+            return res.status(400).json({ message: "Token is required" });
+        }
+        
+        try {
+            // Try to decode without verification first
+            const decoded = jwt.decode(token);
+            
+            // Check token structure
+            if (!decoded) {
+                return res.status(400).json({ 
+                    valid: false, 
+                    message: "Token is not a valid JWT format",
+                    tokenInfo: {
+                        length: token.length,
+                        format: token.includes('.') ? "Contains dots" : "No dots detected"
+                    }
+                });
+            }
+            
+            // Show basic info without exposing sensitive data
+            const tokenInfo = {
+                sub: decoded.userId || decoded.sub,
+                iat: decoded.iat ? new Date(decoded.iat * 1000).toISOString() : null,
+                exp: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : null,
+                isExpired: decoded.exp ? (decoded.exp * 1000 < Date.now()) : "Unknown",
+                roles: decoded.role || "Not specified",
+                email: decoded.email ? decoded.email.substring(0, 3) + "..." + decoded.email.split('@')[1] : "Not present"
+            };
+            
+            // Now attempt verification with the secret
+            try {
+                const verified = jwt.verify(token, process.env.JWT_SECRET || 'your-jwt-secret');
+                return res.status(200).json({
+                    valid: true,
+                    message: "Token is valid",
+                    tokenInfo: tokenInfo
+                });
+            } catch (verifyError) {
+                return res.status(401).json({
+                    valid: false,
+                    message: `Token verification failed: ${verifyError.message}`,
+                    tokenInfo: tokenInfo,
+                    error: verifyError.name
+                });
+            }
+        } catch (error) {
+            return res.status(500).json({ 
+                message: "Error processing token", 
+                error: error.message 
+            });
+        }
+    } catch (error) {
+        return res.status(500).json({ 
+            message: "Server error", 
+            error: error.message 
+        });
+    }
 });
 
 // Route pour valider un token JWT - updated to handle validation internally
@@ -117,11 +205,8 @@ router.get("/diagnostic/email-tokens", async (req, res) => {
 // Route to get all users
 router.get("/", getUsers);
 
-// Route to delete a user
-router.delete("/:id", deleteUser);
-
-// Route to update a user
-router.put("/:id", updateUser);
+// Route to get all users
+router.get("/allusers", getAllUsers);
 
 // Route to sign up/create a new user
 router.post("/signup", createUser);
@@ -138,14 +223,11 @@ router.post("/signin/faceid", signInWithFaceID);
 // Route to sign out
 router.post("/signout", signOut);
 
-// Route to update user profile
-router.put("/update-profile", verifyToken, updateUserProfile);
-
-// Route to change user password
-router.put("/change-password", verifyToken, changeUserPassword);
-
 // Route to update user role
 router.put("/update-role/:id", updateUserRole);
+
+// Route to verify email (This route was missing a handler)
+router.post("/verify-email", verifyEmail);
 
 // Route to validate a token and return user info (for cross-site auth)
 router.get("/me", verifyToken, async (req, res) => {
@@ -303,6 +385,71 @@ router.post('/refresh-token', async (req, res) => {
   } catch (error) {
     console.error('Error refreshing token:', error);
     return res.status(401).json({ message: 'Invalid refresh token' });
+  }
+});
+
+// Configure multer for profile picture uploads
+const profileStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../uploads/profile-pictures');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'profile-' + uniqueSuffix + ext);
+  }
+});
+
+const profileUpload = multer({
+  storage: profileStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  },
+  limits: {
+    fileSize: 2 * 1024 * 1024 // 2MB
+  }
+});
+
+// Profile picture upload route
+router.post('/upload-profile-picture', verifyToken, profileUpload.single('profilePicture'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No image file uploaded' });
+    }
+
+    const userId = req.user.userId;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Generate URL for the uploaded file
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+    const profilePicturePath = `/uploads/profile-pictures/${req.file.filename}`;
+    const profilePictureUrl = `${baseUrl}${profilePicturePath}`;
+
+    // Update user's profile picture URL in the database
+    user.profilePicture = profilePictureUrl;
+    await user.save();
+
+    res.status(200).json({
+      message: 'Profile picture uploaded successfully',
+      profilePicture: profilePictureUrl
+    });
+  } catch (error) {
+    console.error('Error uploading profile picture:', error);
+    res.status(500).json({ 
+      message: 'Server error during profile picture upload',
+      error: error.message
+    });
   }
 });
 

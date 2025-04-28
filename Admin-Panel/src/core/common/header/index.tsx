@@ -111,13 +111,20 @@ const Header = () => {
       {/* Header */}
       <div className="header">
 			<div className="main-header">
-
 				<div className="header-left">
 					<Link to={routes.adminDashboard} className="logo">
-						<ImageWithBasePath src="assets/Image1.png" alt="Logo"/>
+						{user?.profilePicture ? (
+							<img src={user.profilePicture} alt="User Profile" className="profile-img" style={{width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover'}} />
+						) : (
+							<ImageWithBasePath src="assets/Image1.png" alt="Logo"/>
+						)}
 					</Link>
 					<Link to={routes.adminDashboard} className="dark-logo">
-						<ImageWithBasePath src="assets/Image1.png" alt="Logo"/>
+						{user?.profilePicture ? (
+							<img src={user.profilePicture} alt="User Profile" className="profile-img" style={{width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover'}} />
+						) : (
+							<ImageWithBasePath src="assets/Image1.png" alt="Logo"/>
+						)}
 					</Link>
 				</div>
 
@@ -370,7 +377,16 @@ const Header = () => {
 							<div className="dropdown profile-dropdown">
 								<Link to="#" className="dropdown-toggle d-flex align-items-center" data-bs-toggle="dropdown">
 									<span className="avatar avatar-sm online">
-										<ImageWithBasePath src="assets/img/profiles/avatar-12.jpg" alt="Img" className="img-fluid rounded-circle"/>
+										{user?.profilePicture ? (
+											<img 
+												src={user.profilePicture} 
+												alt={`${user.firstName}'s profile`} 
+												className="img-fluid rounded-circle"
+												style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+											/>
+										) : (
+											<ImageWithBasePath src="assets/img/profiles/avatar-12.jpg" alt="Img" className="img-fluid rounded-circle"/>
+										)}
 									</span>
 								</Link>
 								<div className="dropdown-menu shadow-none">
@@ -378,7 +394,16 @@ const Header = () => {
 										<div className="card-header">
 											<div className="d-flex align-items-center">
 												<span className="avatar avatar-lg me-2 avatar-rounded">
-													<ImageWithBasePath src="assets/img/profiles/avatar-12.jpg" alt="img"/>
+													{user?.profilePicture ? (
+														<img 
+															src={user.profilePicture} 
+															alt={`${user.firstName}'s profile`} 
+															className="img-fluid rounded-circle"
+															style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+														/>
+													) : (
+														<ImageWithBasePath src="assets/img/profiles/avatar-12.jpg" alt="img"/>
+													)}
 												</span>
 												<div>
 													<h5 className="mb-0">{fullName}</h5>
@@ -416,7 +441,16 @@ const Header = () => {
 							</div>
 							<div className="dropdown mobile-user-menu">
 								<Link to="#" className="nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-									<i className="fa fa-ellipsis-v"></i>
+									{user?.profilePicture ? (
+										<img 
+											src={user.profilePicture} 
+											alt="User" 
+											className="rounded-circle"
+											style={{ width: '30px', height: '30px', objectFit: 'cover', marginRight: '5px' }}
+										/>
+									) : (
+										<i className="fa fa-ellipsis-v"></i>
+									)}
 								</Link>
 								<div className="dropdown-menu dropdown-menu-end">
 									<Link className="dropdown-item" to={routes.profile}>My Profile</Link>

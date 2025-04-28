@@ -16,16 +16,37 @@ import "../src/style/icon/ionic/ionicons.css";
 import "../src/style/icon/tabler-icons/webfont/tabler-icons.css";
 import ALLRoutes from "./feature-module/router/router";
 import "../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js";
+import { checkTokenValidity, debugToken } from "./services/authService";
 
-const root = ReactDOM.createRoot(
-  document.getElementById("root") as HTMLElement
-);
-root.render(
-  <React.StrictMode>
-    <Provider store={store}>
-      <BrowserRouter basename={base_path}>
-        <ALLRoutes />
-      </BrowserRouter>
-    </Provider>
-  </React.StrictMode>
-);
+// Initialize authentication on app startup
+const initializeAuth = async () => {
+  console.log('Initializing authentication...');
+  
+  // Debug current token if any
+  await debugToken();
+  
+  // Check and refresh token if needed
+  const isValid = await checkTokenValidity();
+  console.log('Token validity check result:', isValid ? 'Valid' : 'Invalid');
+};
+
+// Initialize auth and then render app
+initializeAuth().then(() => {
+  const root = ReactDOM.createRoot(
+    document.getElementById("root") as HTMLElement
+  );
+
+  root.render(
+    <React.StrictMode>
+      <Provider store={store}>
+        <BrowserRouter basename={base_path}>
+          <ALLRoutes />
+        </BrowserRouter>
+      </Provider>
+    </React.StrictMode>
+  );
+
+  // If you want to start measuring performance in your app, pass a function
+  // to log results (for example: reportWebVitals(console.log))
+  // or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+});
