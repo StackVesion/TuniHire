@@ -7,6 +7,8 @@ interface User {
   firstName: string;
   lastName: string;
   role: string;
+  profilePicture?: string;
+  phone?: string;
 }
 
 interface AuthState {
@@ -109,6 +111,17 @@ const authSlice = createSlice({
       state.verificationEmail = action.payload;
       state.loading = false;
     },
+    updateUserProfile: (state, action: PayloadAction<Partial<User>>) => {
+      if (state.user) {
+        state.user = {
+          ...state.user,
+          ...action.payload
+        };
+        
+        // Update in localStorage
+        localStorage.setItem('user', JSON.stringify(state.user));
+      }
+    },
     checkAuth: (state) => {
       // This is handled by the loadAuthState function when initializing the slice
       // We'll keep this action for components to dispatch, but no additional logic is needed here
@@ -124,6 +137,7 @@ export const {
   logout,
   clearError,
   setVerificationEmail,
+  updateUserProfile,
   checkAuth
 } = authSlice.actions;
 

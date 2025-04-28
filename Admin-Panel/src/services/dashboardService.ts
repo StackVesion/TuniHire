@@ -57,6 +57,22 @@ interface ActivityData {
   date: Date;
 }
 
+// Add User interfaces
+interface UserProfile {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  profilePicture?: string;
+  role: string;
+  address?: string;
+  country?: string;
+  state?: string;
+  city?: string;
+  zipCode?: string;
+}
+
 // Mock data functions
 const getMockDashboardStats = (): DashboardStats => {
   return {
@@ -284,6 +300,24 @@ const getMockRecentActivities = (): ActivityData[] => {
   ];
 };
 
+// Mock user profile data
+const getMockUserProfile = (): UserProfile => {
+  return {
+    userId: '1',
+    firstName: 'Admin',
+    lastName: 'User',
+    email: 'admin@tunihire.com',
+    phone: '+216 123 456 789',
+    profilePicture: '/assets/img/profiles/avatar-01.jpg',
+    role: 'admin',
+    address: '123 TuniHire St',
+    country: 'Tunisia',
+    state: 'Tunis',
+    city: 'Tunis City',
+    zipCode: '1001'
+  };
+};
+
 // Actual service functions that connect to MongoDB
 export const fetchDashboardStats = async () => {
   if (MOCK_MODE) {
@@ -377,5 +411,86 @@ export const fetchRecentActivities = async () => {
     // Fallback to mock data on error
     console.warn('Falling back to mock data for recent activities');
     return getMockRecentActivities();
+  }
+};
+
+// User profile services
+export const fetchUserProfile = async (): Promise<UserProfile> => {
+  if (MOCK_MODE) {
+    return getMockUserProfile();
+  }
+  
+  try {
+    // Get the token from localStorage
+    const token = localStorage.getItem('token');
+    
+    // Make API request with authorization header
+    const response = await axios.get(`${API_URL}/users/profile`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    
+    return response.data.user;
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    throw error;
+  }
+};
+
+export const updateUserProfile = async (profileData: Partial<UserProfile>): Promise<UserProfile> => {
+  if (MOCK_MODE) {
+    // Return updated mock data
+    return {
+      ...getMockUserProfile(),
+      ...profileData
+    };
+  }
+  
+  try {
+    // Get the token from localStorage
+    const token = localStorage.getItem('token');
+    
+    // Make API request with authorization header
+    const response = await axios.put(`${API_URL}/users/update-profile`, profileData, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    
+    return response.data.user;
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    throw error;
+  }
+};
+
+// Upload profile picture
+export const uploadProfilePicture = async (file: File): Promise<string> => {
+  if (MOCK_MODE) {
+    // Return a mock URL
+    return '/assets/img/profiles/avatar-01.jpg';
+  }
+  
+  try {
+    // Get the token from localStorage
+    const token = localStorage.getItem('token');
+    
+    // Create form data
+    const formData = new FormData();
+    formData.append('profilePicture', file);
+    
+    // Make API request with authorization header
+    const response = await axios.post(`${API_URL}/users/upload-profile-picture`, formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    return response.data.profilePicture;
+  } catch (error) {
+    console.error('Error uploading profile picture:', error);
+    throw error;
   }
 };

@@ -48,7 +48,7 @@ const Manageusers = () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/users`
+        `http://localhost:5000/api/users/allusers`
       );
       
       // Ensure userData is always an array
@@ -223,27 +223,9 @@ const Manageusers = () => {
               <a 
                 className="dropdown-item" 
                 href="#" 
-                onClick={(e) => updateUserRole(record._id, 'hr', e)}
+                onClick={(e) => updateUserRole(record._id, 'HR', e)}
               >
                 HR
-              </a>
-            </li>
-            <li>
-              <a 
-                className="dropdown-item" 
-                href="#" 
-                onClick={(e) => updateUserRole(record._id, 'user', e)}
-              >
-                User
-              </a>
-            </li>
-            <li>
-              <a 
-                className="dropdown-item" 
-                href="#" 
-                onClick={(e) => updateUserRole(record._id, 'employer', e)}
-              >
-                Employer
               </a>
             </li>
             <li>
@@ -502,7 +484,6 @@ const Manageusers = () => {
     { value: "admin", label: "Admin" },
     { value: "hr", label: "HR" },
     { value: "candidate", label: "Candidate" },
-    { value: "visitor", label: "Visitor" }
   ];
 
   return (
