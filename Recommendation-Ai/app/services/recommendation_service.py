@@ -7,6 +7,7 @@ class RecommendationService:
     def __init__(self, db):
         """Initialize with database connection"""
         self.db = db
+        self.analyzer = PortfolioAnalyzer()  # Initialize the ML-capable analyzer
     
     def generate_recommendation(self, user_id, job_id):
         """
@@ -22,6 +23,7 @@ class RecommendationService:
         - strengths: List of matching skills/qualifications
         - weaknesses: List of missing skills/qualifications
         - similar_jobs: List of similar job postings that match user skills
+        - text_report: Detailed text report for human-readable insights
         """
         try:
             # Convert string IDs to ObjectId
@@ -43,46 +45,80 @@ class RecommendationService:
             if not job_data:
                 raise Exception(f"Job posting with ID {job_id} not found")
             
+            # Add company name to job data if available
+            if 'companyId' in job_data:
+                company = self.db.companies.find_one({'_id': job_data['companyId']})
+                if company and 'name' in company:
+                    job_data['companyName'] = company['name']
+            
             # Get all applications for this job
             applications = list(self.db.applications.find({'jobId': job_object_id}))
             
             # Get all applicant portfolios (excluding current user)
-            other_applicant_ids = [app['userId'] for app in applications if app['userId'] != user_object_id]
+            other_applicant_ids = [app['userId'] for app in applications if str(app['userId']) != str(user_object_id)]
             other_portfolios = list(self.db.portfolios.find({'userId': {'$in': other_applicant_ids}}))
             
-            # Calculate skill match percentage
-            user_skills = user_portfolio.get('skills', [])
-            job_requirements = job_data.get('requirements', [])
+            # Train the model with historical application data if available
+            all_applications = list(self.db.applications.find({'status': {'$in': ['Accepted', 'Rejected']}}))
+            all_portfolios = list(self.db.portfolios.find())
+            all_jobs = list(self.db.jobposts.find())
             
-            skill_match = PortfolioAnalyzer.calculate_skill_match_percentage(user_skills, job_requirements)
+            # Try to train the model with existing data
+            self.analyzer.train_on_application_results(all_applications, all_portfolios, all_jobs)
             
-            # Calculate experience score
-            experience_score = PortfolioAnalyzer.calculate_experience_score(
-                user_portfolio.get('experience', []), 
-                job_data
-            )
-            
-            # Calculate education score
-            education_score = PortfolioAnalyzer.calculate_education_score(
-                user_portfolio.get('education', []),
-                job_data
-            )
-            
-            # Calculate overall ATS pass percentage (weighted average)
-            pass_percentage = (
-                skill_match * 0.5 +       # Skills are 50% of score
-                experience_score * 0.3 +   # Experience is 30% of score
-                education_score * 0.2      # Education is 20% of score
-            )
+            # Predict success rate using ML model
+            pass_percentage = self.analyzer.predict_application_success(user_portfolio, job_data)
             
             # Compare with other portfolios to get ranking
-            ranking = PortfolioAnalyzer.compare_portfolios(user_portfolio, other_portfolios, job_data)
+            ranking = self.analyzer.compare_portfolios(user_portfolio, other_portfolios, job_data)
             
             # Identify strengths and weaknesses
-            strengths_weaknesses = PortfolioAnalyzer.identify_strengths_weaknesses(user_portfolio, job_data)
+            strengths_weaknesses = self.analyzer.identify_strengths_weaknesses(user_portfolio, job_data)
             
-            # Find similar jobs that match user skills
-            similar_jobs = self._find_similar_jobs(user_portfolio, job_id)
+            # Find all available jobs (excluding current one)
+            available_jobs = list(self.db.jobposts.find({'_id': {'$ne': job_object_id}}))
+            
+            # Find better matching jobs for this user
+            recommended_jobs = self.analyzer.find_best_matching_jobs(user_portfolio, available_jobs)
+            
+            # Generate detailed text report
+            text_report = self.analyzer.generate_detailed_report(
+                user_data, 
+                job_data, 
+                user_portfolio, 
+                ranking, 
+                strengths_weaknesses['strengths'], 
+                strengths_weaknesses['weaknesses'],
+                recommended_jobs
+            )
+            
+            # Record this recommendation for future learning
+            self.analyzer.record_recommendation(user_id, job_id, {
+                'pass_percentage': pass_percentage,
+                'ranking': ranking,
+                'portfolio_score': ranking['score']
+            })
+            
+            # Format the job recommendations for API response
+            formatted_jobs = []
+            for job, score in recommended_jobs:
+                job_info = {
+                    'id': str(job['_id']),
+                    'title': job.get('title', ''),
+                    'match_percentage': score
+                }
+                
+                # Add company info if available
+                if 'companyId' in job:
+                    job_info['company_id'] = str(job['companyId'])
+                    company = self.db.companies.find_one({'_id': job['companyId']})
+                    if company and 'name' in company:
+                        job_info['company_name'] = company['name']
+                
+                formatted_jobs.append(job_info)
+            
+            # Save the trained model
+            self.analyzer.save_models()
             
             # Prepare final recommendation result
             recommendation = {
@@ -90,7 +126,8 @@ class RecommendationService:
                 'ranking': ranking,
                 'strengths': strengths_weaknesses['strengths'],
                 'weaknesses': strengths_weaknesses['weaknesses'],
-                'similar_jobs': similar_jobs
+                'similar_jobs': formatted_jobs,
+                'text_report': text_report
             }
             
             return recommendation
