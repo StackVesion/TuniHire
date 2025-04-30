@@ -1,0 +1,8 @@
+flask==2.0.1
+pymongo==4.0.2
+python-dotenv==0.19.1
+numpy==1.22.3
+scikit-learn==1.0.2
+pandas==1.4.2
+tensorflow==2.8.0
+joblib==1.1.0
