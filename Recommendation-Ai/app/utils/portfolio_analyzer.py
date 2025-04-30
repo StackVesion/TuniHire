@@ -25,7 +25,29 @@ class PortfolioAnalyzer:
         # Initialize models
         self.skill_vectorizer = self._load_or_create_vectorizer()
         self.success_predictor = self._load_or_create_predictor()
+        self.nn_model = self._load_or_create_nn_model()
         self.recommendation_history = []
+        
+        # Train models on initialization if possible
+        try:
+            self._initial_model_training()
+        except Exception as e:
+            print(f"Initial model training failed: {str(e)}")
+    
+    def _initial_model_training(self):
+        """Train models on synthetic data for initial usage"""
+        # Create synthetic data for initial training
+        X = np.random.rand(100, 3) * 100  # skill_match, exp_score, edu_score
+        y = (X[:, 0] * 0.5 + X[:, 1] * 0.3 + X[:, 2] * 0.2) > 50  # Success threshold
+        
+        # Train success predictor
+        self.success_predictor.fit(X, y)
+        
+        # Train NN model
+        self.nn_model.fit(X, y, epochs=10, verbose=0)
+        
+        # Save models
+        self.save_models()
     
     def _load_or_create_vectorizer(self):
         """Load existing vectorizer or create a new one"""
@@ -51,13 +73,46 @@ class PortfolioAnalyzer:
         # Create a new predictor if loading fails
         return RandomForestClassifier(n_estimators=100, random_state=42)
     
+    def _load_or_create_nn_model(self):
+        """Load existing neural network model or create a new one"""
+        model_path = os.path.join(self.MODEL_PATH, 'nn_model')
+        if os.path.exists(model_path):
+            try:
+                return tf.keras.models.load_model(model_path)
+            except:
+                pass
+        
+        # Create a new neural network model if loading fails
+        model = tf.keras.Sequential([
+            tf.keras.layers.Dense(128, activation='relu', input_shape=(3,)),
+            tf.keras.layers.Dropout(0.2),
+            tf.keras.layers.Dense(64, activation='relu'),
+            tf.keras.layers.Dropout(0.2),
+            tf.keras.layers.Dense(32, activation='relu'),
+            tf.keras.layers.Dense(1, activation='sigmoid')
+        ])
+        
+        model.compile(
+            optimizer='adam',
+            loss='binary_crossentropy',
+            metrics=['accuracy']
+        )
+        
+        return model
+    
     def save_models(self):
         """Save models to disk"""
         vectorizer_path = os.path.join(self.MODEL_PATH, 'skill_vectorizer.joblib')
         predictor_path = os.path.join(self.MODEL_PATH, 'success_predictor.joblib')
+        model_path = os.path.join(self.MODEL_PATH, 'nn_model')
         
         joblib.dump(self.skill_vectorizer, vectorizer_path)
         joblib.dump(self.success_predictor, predictor_path)
+        
+        try:
+            self.nn_model.save(model_path)
+        except Exception as e:
+            print(f"Error saving neural network model: {str(e)}")
     
     def train_on_application_results(self, applications, portfolios, job_postings):
         """
@@ -106,7 +161,14 @@ class PortfolioAnalyzer:
         if X and y and len(X) == len(y) and len(X) > 5:
             X = np.array(X)
             y = np.array(y)
+            
+            # Train random forest
             self.success_predictor.fit(X, y)
+            
+            # Train neural network
+            self.nn_model.fit(X, y, epochs=50, batch_size=8, verbose=0)
+            
+            # Save models
             self.save_models()
             return True
         
@@ -133,11 +195,44 @@ class PortfolioAnalyzer:
         # If we have accumulated enough history, retrain the model
         if len(self.recommendation_history) >= 10:
             # Logic to retrain based on history would go here
-            pass
+            self._retrain_from_history()
+    
+    def _retrain_from_history(self):
+        """Retrain models using recorded recommendation history"""
+        # Only retrain if we have application results
+        results = [rec for rec in self.recommendation_history if rec.get('application_result')]
+        
+        if len(results) >= 5:
+            X = []
+            y = []
+            
+            for rec in results:
+                if 'portfolio_score' in rec['recommendation'] and 'application_result' in rec:
+                    # Simple feature extraction from historical data
+                    score = rec['recommendation']['portfolio_score']
+                    skills = rec['recommendation'].get('skill_match', 70)
+                    exp = rec['recommendation'].get('exp_score', 50)
+                    
+                    X.append([score, skills, exp])
+                    y.append(1 if rec['application_result'] == 'Accepted' else 0)
+            
+            if X and y and len(X) == len(y):
+                X = np.array(X)
+                y = np.array(y)
+                
+                # Update models
+                self.success_predictor.fit(X, y)
+                self.nn_model.fit(X, y, epochs=20, batch_size=4, verbose=0)
+                
+                # Save updated models
+                self.save_models()
+                
+                # Reset history after retraining
+                self.recommendation_history = []
     
     def predict_application_success(self, portfolio, job_data):
         """
-        Predict likelihood of success for a job application
+        Predict likelihood of success for a job application using ensemble approach
         
         Parameters:
         - portfolio: User portfolio data
@@ -164,11 +259,21 @@ class PortfolioAnalyzer:
         # Create feature vector
         X = np.array([[skill_match, exp_score, edu_score]])
         
-        # Try to predict probability
+        # Try to predict probability using both models
         try:
-            proba = self.success_predictor.predict_proba(X)[0][1] * 100
-            return round(proba, 2)
-        except:
+            # Get predictions from both models
+            rf_proba = self.success_predictor.predict_proba(X)[0][1] * 100
+            
+            # Neural network prediction
+            nn_proba = self.nn_model.predict(X, verbose=0)[0][0] * 100
+            
+            # Ensemble prediction (60% neural network, 40% random forest)
+            ensemble_proba = nn_proba * 0.6 + rf_proba * 0.4
+            
+            # Return rounded result
+            return round(ensemble_proba, 2)
+        except Exception as e:
+            print(f"Prediction error: {str(e)}")
             # Fall back to weighted average if prediction fails
             return round(skill_match * 0.5 + exp_score * 0.3 + edu_score * 0.2, 2)
     
@@ -180,7 +285,12 @@ class PortfolioAnalyzer:
             " ".join(job_data.get('requirements', []))
         ])
         
-        return self.skill_vectorizer.transform([text])
+        try:
+            return self.skill_vectorizer.transform([text])
+        except Exception as e:
+            # If vectorizer is not fit yet, fit it and try again
+            self.skill_vectorizer.fit([text])
+            return self.skill_vectorizer.transform([text])
     
     def generate_portfolio_embedding(self, portfolio):
         """Generate vector embedding for a user portfolio"""
@@ -215,7 +325,13 @@ class PortfolioAnalyzer:
                 text_parts.append(edu.get('fieldOfStudy', ''))
         
         combined_text = " ".join(text_parts)
-        return self.skill_vectorizer.transform([combined_text])
+        
+        try:
+            return self.skill_vectorizer.transform([combined_text])
+        except Exception as e:
+            # If vectorizer is not fit yet, fit it and try again
+            self.skill_vectorizer.fit([combined_text])
+            return self.skill_vectorizer.transform([combined_text])
     
     def find_best_matching_jobs(self, portfolio, all_jobs, limit=5):
         """
@@ -238,16 +354,20 @@ class PortfolioAnalyzer:
             # Calculate similarity scores for all jobs
             job_scores = []
             for job in all_jobs:
-                job_embedding = self.generate_job_embedding(job)
-                similarity = cosine_similarity(portfolio_embedding, job_embedding)[0][0]
-                
-                # Predict success probability
-                success_prob = self.predict_application_success(portfolio, job)
-                
-                # Combined score (70% similarity, 30% success probability)
-                combined_score = similarity * 70 + success_prob * 0.3
-                
-                job_scores.append((job, combined_score))
+                try:
+                    job_embedding = self.generate_job_embedding(job)
+                    similarity = cosine_similarity(portfolio_embedding, job_embedding)[0][0]
+                    
+                    # Predict success probability
+                    success_prob = self.predict_application_success(portfolio, job)
+                    
+                    # Combined score (70% similarity, 30% success probability)
+                    combined_score = similarity * 0.7 + (success_prob/100) * 0.3
+                    
+                    job_scores.append((job, combined_score))
+                except Exception as e:
+                    print(f"Error scoring job: {str(e)}")
+                    continue
             
             # Sort by score (descending)
             job_scores.sort(key=lambda x: x[1], reverse=True)
