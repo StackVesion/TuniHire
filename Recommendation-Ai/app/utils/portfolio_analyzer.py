@@ -142,13 +142,41 @@ class PortfolioAnalyzer:
         - recommendation_result: The recommendation provided
         - application_result: The actual result if available (for training)
         """
-        self.recommendation_history.append({
-            'user_id': user_id,
-            'job_id': job_id,
+        # Create recommendation record
+        record = {
+            'user_id': str(user_id),
+            'job_id': str(job_id),
             'recommendation': recommendation_result,
             'application_result': application_result,
-            'timestamp': datetime.now()
-        })
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        # Add to in-memory history
+        self.recommendation_history.append(record)
+        
+        # Save to disk in the training_history folder
+        try:
+            import os
+            import json
+            
+            # Ensure training_history directory exists
+            # Using the base directory (2 levels up from current file)
+            current_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            history_dir = os.path.join(current_dir, 'training_history')
+            os.makedirs(history_dir, exist_ok=True)
+            
+            # Create a unique filename with timestamp
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"recommendation_{timestamp}_{user_id[-6:]}.json"
+            filepath = os.path.join(history_dir, filename)
+            
+            # Write recommendation data to JSON file
+            with open(filepath, 'w') as f:
+                json.dump(record, f, indent=2, default=str)
+                
+            print(f"Training record saved to {filepath}")
+        except Exception as e:
+            print(f"Error saving training history: {str(e)}")
         
         # If we have accumulated enough history, retrain the model
         if len(self.recommendation_history) >= 10:

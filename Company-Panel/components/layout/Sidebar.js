@@ -45,7 +45,7 @@ export default function Sidebar() {
                             <>
                                 <li><Link className={router.pathname === "/" ? "dashboard2 active" : "dashboard2"} href="/"><img src="/assets/imgs/page/dashboard/dashboard.svg" alt="jobBox" /><span className="name">Company Dashboard</span></Link></li>
                                 <li><Link className={router.pathname === "/my-job-grid" ? "dashboard2 active" : "dashboard2"} href="/my-job-grid"><img src="/assets/imgs/page/dashboard/jobs.svg" alt="jobBox" /><span className="name">Manage Jobs</span></Link></li>
-                                <li><Link className={router.pathname === "/candidates" ? "dashboard2 active" : "dashboard2"} href="/candidates"><img src="/assets/imgs/page/dashboard/candidates.svg" alt="jobBox" /><span className="name">Candidates</span></Link></li>
+                                <li><Link className={router.pathname === "/CompanyApplications" ? "dashboard2 active" : "dashboard2"} href="/CompanyApplications"><img src="/assets/imgs/page/dashboard/candidates.svg" alt="jobBox" /><span className="name">Applications</span></Link></li>
                                 <li><Link className={router.pathname === "/company-settings" ? "dashboard2 active" : "dashboard2"} href="/settings"><img src="/assets/imgs/page/dashboard/profiles.svg" alt="jobBox" /><span className="name">Company Profile</span></Link></li>
                                 <li><Link className={router.pathname === "/profile" ? "dashboard2 active" : "dashboard2"} href="/profile"><img src="/assets/imgs/page/dashboard/profiles.svg" alt="jobBox" /><span className="name">My Profile</span></Link></li>
                             </>

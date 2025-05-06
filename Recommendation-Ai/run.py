@@ -12,8 +12,8 @@ if __name__ == '__main__':
     # Import the flask_app from the app package
     from app import flask_app
     
-    # Get port from environment or use default 5000
-    port = int(os.environ.get('PORT', 5000))
+    # Get port from environment or use default 5001 (changed from 5000 to avoid conflict)
+    port = int(os.environ.get('PORT', 5001))
     
     # Get debug mode from environment (default to True for development)
     debug = os.environ.get('DEBUG', 'True').lower() == 'true'

@@ -119,8 +119,8 @@ def get_db_connection():
         # Verify connection by getting server info
         client.server_info()
         
-        # Return TuniHire database
-        return client.TuniHire
+        # Return TuniHireDB database (fixed to match the actual DB name)
+        return client.TuniHireDB
     except Exception as e:
         print(f"Error connecting to MongoDB: {str(e)}")
         print("Ensure MongoDB is running and accessible.")
