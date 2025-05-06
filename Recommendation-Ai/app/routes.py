@@ -1,13 +1,11 @@
-from flask import Flask, request, jsonify
+from flask import request, jsonify
+from app import app
 from app.services.recommendation_service import RecommendationService
 from app.utils.db_connection import get_db_connection
-from bson import ObjectId
 import os
 import json
 import datetime
-
-# Initialize Flask app
-app = Flask(__name__)
+from bson import ObjectId
 
 # Get MongoDB connection
 db = get_db_connection()
@@ -16,13 +14,13 @@ db = get_db_connection()
 recommendation_service = RecommendationService(db)
 
 # Configure training history tracking
-TRAINING_HISTORY_DIR = os.path.join(os.path.dirname(__file__), 'training_history')
+TRAINING_HISTORY_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'training_history')
 if not os.path.exists(TRAINING_HISTORY_DIR):
     os.makedirs(TRAINING_HISTORY_DIR)
     print(f"Created training history directory: {TRAINING_HISTORY_DIR}")
 
 def log_api_call(endpoint, params, result=None, error=None):
-    """Log API calls to track performance and results"""
+    """Log API calls to track performance and results for self-learning"""
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     log_data = {
         "timestamp": timestamp,
@@ -52,6 +50,9 @@ def log_api_call(endpoint, params, result=None, error=None):
     log_file = os.path.join(TRAINING_HISTORY_DIR, f"api_call_{timestamp}.json")
     with open(log_file, 'w') as f:
         json.dump(log_data, f, indent=2)
+    
+    print(f"API call logged to: {log_file}")
+    return log_file
 
 @app.route('/api/recommendation', methods=['GET'])
 def get_recommendation():
@@ -82,7 +83,10 @@ def get_recommendation():
         result = recommendation_service.generate_recommendation(user_id, job_id)
         
         # Log successful API call
-        log_api_call('/api/recommendation', {'user_id': user_id, 'job_id': job_id}, result=result)
+        log_file = log_api_call('/api/recommendation', {'user_id': user_id, 'job_id': job_id}, result=result)
+        
+        # Add training history file path to the result
+        result['training_log'] = os.path.basename(log_file)
         
         return jsonify({
             'success': True,
@@ -96,6 +100,7 @@ def get_recommendation():
             'message': str(e)
         }), 500
 
+# Add an endpoint to get better job matches for a user
 @app.route('/api/better-matches/<user_id>', methods=['GET'])
 def get_better_matches(user_id):
     """
@@ -183,12 +188,13 @@ def get_better_matches(user_id):
             'message': str(e)
         }), 500
 
+# Add a status endpoint for health checks
 @app.route('/api/status', methods=['GET'])
 def get_status():
     """Get application health and training status"""
     try:
         model_files = []
-        models_dir = os.path.join(os.path.dirname(__file__), 'app', 'models')
+        models_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'app', 'models')
         
         if os.path.exists(models_dir):
             model_files = os.listdir(models_dir)
@@ -207,6 +213,7 @@ def get_status():
             'status': 'online',
             'models': model_files,
             'training_history': len(training_files),
+            'latest_training': training_files[-1] if training_files else None,
             'mongodb_connected': len(collections) > 0,
             'collections': collections,
             'timestamp': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -222,6 +229,7 @@ def get_status():
             'message': str(e)
         }), 500
 
+# Add an endpoint to manually retrain the model
 @app.route('/api/retrain', methods=['POST'])
 def retrain_model():
     """Manually retrain the recommendation model"""
@@ -269,6 +277,7 @@ def retrain_model():
             'message': str(e)
         }), 500
 
+# Create a route to generate sample data for testing
 @app.route('/api/generate-test-data', methods=['POST'])
 def generate_test_data():
     """Generate sample data for testing the recommendation engine"""
@@ -287,15 +296,3 @@ def generate_test_data():
             'success': False,
             'message': str(e)
         }), 500
-
-if __name__ == '__main__':
-    # Make sure training history directory exists
-    if not os.path.exists(TRAINING_HISTORY_DIR):
-        os.makedirs(TRAINING_HISTORY_DIR)
-    
-    # Make sure models directory exists 
-    models_dir = os.path.join(os.path.dirname(__file__), 'app', 'models')
-    if not os.path.exists(models_dir):
-        os.makedirs(models_dir)
-    
-    app.run(debug=True, host='0.0.0.0', port=5000)

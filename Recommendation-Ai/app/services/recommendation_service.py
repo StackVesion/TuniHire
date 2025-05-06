@@ -4,6 +4,14 @@ from app.utils.portfolio_analyzer import PortfolioAnalyzer
 class RecommendationService:
     """Service for generating AI-powered job application recommendations"""
     
+    # Subscription tiers and their weights for recommendations
+    SUBSCRIPTION_TIERS = {
+        "Free": 1.0,
+        "Golden": 1.1,  # 10% bonus for Golden subscribers
+        "Platinum": 1.2,  # 20% bonus for Platinum subscribers
+        "Master": 1.3,   # 30% bonus for Master subscribers
+    }
+    
     def __init__(self, db):
         """Initialize with database connection"""
         self.db = db
@@ -24,6 +32,7 @@ class RecommendationService:
         - weaknesses: List of missing skills/qualifications
         - similar_jobs: List of similar job postings that match user skills
         - text_report: Detailed text report for human-readable insights
+        - subscription_bonus: Applied bonus based on user's subscription tier
         """
         try:
             # Convert string IDs to ObjectId
@@ -69,6 +78,13 @@ class RecommendationService:
             # Predict success rate using ML model
             pass_percentage = self.analyzer.predict_application_success(user_portfolio, job_data)
             
+            # Apply subscription tier bonus if available
+            subscription_tier = user_data.get('subscription', 'Free')
+            subscription_bonus = self.SUBSCRIPTION_TIERS.get(subscription_tier, 1.0)
+            
+            # Apply subscription bonus to pass percentage (but cap at 100%)
+            adjusted_pass_percentage = min(pass_percentage * subscription_bonus, 100)
+            
             # Compare with other portfolios to get ranking
             ranking = self.analyzer.compare_portfolios(user_portfolio, other_portfolios, job_data)
             
@@ -79,7 +95,12 @@ class RecommendationService:
             available_jobs = list(self.db.jobposts.find({'_id': {'$ne': job_object_id}}))
             
             # Find better matching jobs for this user
-            recommended_jobs = self.analyzer.find_best_matching_jobs(user_portfolio, available_jobs)
+            # Include subscription tier in the filtering logic
+            recommended_jobs = self._find_subscription_appropriate_jobs(
+                user_portfolio, 
+                available_jobs, 
+                subscription_tier
+            )
             
             # Generate detailed text report
             text_report = self.analyzer.generate_detailed_report(
@@ -96,7 +117,8 @@ class RecommendationService:
             self.analyzer.record_recommendation(user_id, job_id, {
                 'pass_percentage': pass_percentage,
                 'ranking': ranking,
-                'portfolio_score': ranking['score']
+                'portfolio_score': ranking['score'],
+                'subscription_tier': subscription_tier
             })
             
             # Format the job recommendations for API response
@@ -122,7 +144,10 @@ class RecommendationService:
             
             # Prepare final recommendation result
             recommendation = {
-                'pass_percentage': round(pass_percentage, 2),
+                'pass_percentage': round(adjusted_pass_percentage, 2),
+                'base_percentage': round(pass_percentage, 2),
+                'subscription_tier': subscription_tier,
+                'subscription_bonus': round((subscription_bonus - 1) * 100, 1),  # Convert to percentage bonus
                 'ranking': ranking,
                 'strengths': strengths_weaknesses['strengths'],
                 'weaknesses': strengths_weaknesses['weaknesses'],
@@ -138,46 +163,79 @@ class RecommendationService:
             # Re-raise to be handled by the API endpoint
             raise
     
-    def _find_similar_jobs(self, user_portfolio, current_job_id, limit=5):
-        """Find similar job postings that match user's skills and qualifications"""
-        try:
-            # Extract user skills
-            user_skills = user_portfolio.get('skills', [])
+    def _find_subscription_appropriate_jobs(self, portfolio, all_jobs, subscription_tier):
+        """
+        Find jobs that match both the user's skills and their subscription tier
+        Higher tier subscribers get access to more premium job recommendations
+        """
+        # Get basic job recommendations from analyzer
+        job_matches = self.analyzer.find_best_matching_jobs(portfolio, all_jobs)
+        
+        # Premium job filtering based on subscription tier
+        # For premium subscribers, we prioritize higher quality job matches
+        if subscription_tier in ["Golden", "Platinum", "Master"]:
+            # Sort by quality and salary range for premium subscribers
+            premium_jobs = []
+            standard_jobs = []
             
-            # Build a query to find jobs with matching requirements
-            # Using $text search if skill fields are indexed, otherwise using $in
-            query = {
-                '_id': {'$ne': ObjectId(current_job_id)},  # Exclude current job
-                '$or': [
-                    {'requirements': {'$in': user_skills}},
-                    {'title': {'$regex': '|'.join(user_skills), '$options': 'i'}}
-                ]
-            }
-            
-            # Find matching jobs, sort by relevance or recency
-            similar_jobs = list(self.db.jobposts.find(query).limit(limit))
-            
-            # Format job data for response
-            formatted_jobs = []
-            for job in similar_jobs:
-                formatted_jobs.append({
-                    'id': str(job['_id']),
-                    'title': job.get('title', ''),
-                    'company_id': str(job.get('companyId', '')),
-                    'match_percentage': PortfolioAnalyzer.calculate_skill_match_percentage(
-                        user_skills, 
-                        job.get('requirements', [])
-                    )
-                })
+            for job, score in job_matches:
+                # Check if job has premium indicators
+                is_premium = False
+                salary_range = job.get('salaryRange', '')
                 
-                # Try to get company name
-                if 'companyId' in job:
-                    company = self.db.companies.find_one({'_id': job['companyId']})
-                    if company and 'name' in company:
-                        formatted_jobs[-1]['company_name'] = company['name']
+                # Simple heuristic to identify premium jobs (higher salary ranges)
+                if salary_range:
+                    try:
+                        # Handle ranges like "$80K-100K" or "80,000-100,000"
+                        salary_text = salary_range.replace('$', '').replace(',', '').lower()
+                        if 'k' in salary_text:
+                            # Handle K notation (e.g., "80K-100K")
+                            max_part = salary_text.split('-')[-1].replace('k', '000')
+                            max_salary = float(max_part)
+                        else:
+                            # Handle full numbers
+                            max_part = salary_text.split('-')[-1]
+                            max_salary = float(max_part)
+                        
+                        # Jobs with potentially higher salaries are marked as premium
+                        if max_salary > 80000:  # Threshold for premium jobs
+                            is_premium = True
+                    except (ValueError, IndexError):
+                        # If we can't parse the salary, just use other indicators
+                        pass
+                
+                # Other premium indicators in job title or description
+                premium_keywords = ['senior', 'lead', 'manager', 'director', 'architect']
+                title = job.get('title', '').lower()
+                if any(keyword in title for keyword in premium_keywords):
+                    is_premium = True
+                
+                # Filter based on subscription tier and premium status
+                if is_premium:
+                    premium_jobs.append((job, score))
+                else:
+                    standard_jobs.append((job, score))
             
-            return formatted_jobs
+            # Platinum and Master subscribers get more premium jobs
+            if subscription_tier == "Master":
+                # Master gets mostly premium jobs
+                premium_ratio = 0.8
+            elif subscription_tier == "Platinum":
+                # Platinum gets balanced premium/standard jobs
+                premium_ratio = 0.6
+            else:  # Golden
+                # Golden gets some premium jobs
+                premium_ratio = 0.4
+                
+            # Calculate how many premium jobs to include
+            max_jobs = min(len(job_matches), 5)  # Cap at 5 jobs
+            premium_count = int(max_jobs * premium_ratio)
+            standard_count = max_jobs - premium_count
             
-        except Exception as e:
-            print(f"Error finding similar jobs: {str(e)}")
-            return []
+            # Combine premium and standard jobs based on calculated ratio
+            result = premium_jobs[:premium_count] + standard_jobs[:standard_count]
+            result.sort(key=lambda x: x[1], reverse=True)  # Sort by score descending
+            return result
+                
+        # For free tier, just return standard recommendations
+        return job_matches[:5]  # Cap at 5 jobs

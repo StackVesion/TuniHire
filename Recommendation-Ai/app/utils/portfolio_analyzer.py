@@ -1,14 +1,12 @@
 import re
 from collections import Counter
 import numpy as np
-import pandas as pd
 import joblib
 import os
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics.pairwise import cosine_similarity
 from datetime import datetime
-import tensorflow as tf
 
 class PortfolioAnalyzer:
     """Utility class for analyzing and comparing portfolios with ML capabilities"""
@@ -25,7 +23,6 @@ class PortfolioAnalyzer:
         # Initialize models
         self.skill_vectorizer = self._load_or_create_vectorizer()
         self.success_predictor = self._load_or_create_predictor()
-        self.nn_model = self._load_or_create_nn_model()
         self.recommendation_history = []
         
         # Train models on initialization if possible
@@ -42,9 +39,6 @@ class PortfolioAnalyzer:
         
         # Train success predictor
         self.success_predictor.fit(X, y)
-        
-        # Train NN model
-        self.nn_model.fit(X, y, epochs=10, verbose=0)
         
         # Save models
         self.save_models()
@@ -73,46 +67,13 @@ class PortfolioAnalyzer:
         # Create a new predictor if loading fails
         return RandomForestClassifier(n_estimators=100, random_state=42)
     
-    def _load_or_create_nn_model(self):
-        """Load existing neural network model or create a new one"""
-        model_path = os.path.join(self.MODEL_PATH, 'nn_model')
-        if os.path.exists(model_path):
-            try:
-                return tf.keras.models.load_model(model_path)
-            except:
-                pass
-        
-        # Create a new neural network model if loading fails
-        model = tf.keras.Sequential([
-            tf.keras.layers.Dense(128, activation='relu', input_shape=(3,)),
-            tf.keras.layers.Dropout(0.2),
-            tf.keras.layers.Dense(64, activation='relu'),
-            tf.keras.layers.Dropout(0.2),
-            tf.keras.layers.Dense(32, activation='relu'),
-            tf.keras.layers.Dense(1, activation='sigmoid')
-        ])
-        
-        model.compile(
-            optimizer='adam',
-            loss='binary_crossentropy',
-            metrics=['accuracy']
-        )
-        
-        return model
-    
     def save_models(self):
         """Save models to disk"""
         vectorizer_path = os.path.join(self.MODEL_PATH, 'skill_vectorizer.joblib')
         predictor_path = os.path.join(self.MODEL_PATH, 'success_predictor.joblib')
-        model_path = os.path.join(self.MODEL_PATH, 'nn_model')
         
         joblib.dump(self.skill_vectorizer, vectorizer_path)
         joblib.dump(self.success_predictor, predictor_path)
-        
-        try:
-            self.nn_model.save(model_path)
-        except Exception as e:
-            print(f"Error saving neural network model: {str(e)}")
     
     def train_on_application_results(self, applications, portfolios, job_postings):
         """
@@ -164,9 +125,6 @@ class PortfolioAnalyzer:
             
             # Train random forest
             self.success_predictor.fit(X, y)
-            
-            # Train neural network
-            self.nn_model.fit(X, y, epochs=50, batch_size=8, verbose=0)
             
             # Save models
             self.save_models()
@@ -222,7 +180,6 @@ class PortfolioAnalyzer:
                 
                 # Update models
                 self.success_predictor.fit(X, y)
-                self.nn_model.fit(X, y, epochs=20, batch_size=4, verbose=0)
                 
                 # Save updated models
                 self.save_models()
@@ -232,7 +189,7 @@ class PortfolioAnalyzer:
     
     def predict_application_success(self, portfolio, job_data):
         """
-        Predict likelihood of success for a job application using ensemble approach
+        Predict likelihood of success for a job application
         
         Parameters:
         - portfolio: User portfolio data
@@ -259,19 +216,13 @@ class PortfolioAnalyzer:
         # Create feature vector
         X = np.array([[skill_match, exp_score, edu_score]])
         
-        # Try to predict probability using both models
+        # Try to predict probability using random forest
         try:
-            # Get predictions from both models
+            # Get prediction from random forest
             rf_proba = self.success_predictor.predict_proba(X)[0][1] * 100
             
-            # Neural network prediction
-            nn_proba = self.nn_model.predict(X, verbose=0)[0][0] * 100
-            
-            # Ensemble prediction (60% neural network, 40% random forest)
-            ensemble_proba = nn_proba * 0.6 + rf_proba * 0.4
-            
             # Return rounded result
-            return round(ensemble_proba, 2)
+            return round(rf_proba, 2)
         except Exception as e:
             print(f"Prediction error: {str(e)}")
             # Fall back to weighted average if prediction fails
@@ -504,7 +455,7 @@ class PortfolioAnalyzer:
         potential_skills = [word for word in words if word not in stop_words and len(word) > 2]
         
         return potential_skills
-        
+    
     @staticmethod
     def calculate_skill_match_percentage(user_skills, required_skills):
         """Calculate the percentage of required skills matched by user skills"""
