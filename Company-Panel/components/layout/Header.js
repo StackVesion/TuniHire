@@ -1,6 +1,6 @@
 import { Menu } from '@headlessui/react'
 import Link from "next/link"
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/router'
 import axios from 'axios'
 import { getCurrentUser, clearUserData, getToken, createAuthAxios } from '../../utils/authUtils'
@@ -45,6 +45,8 @@ export default function Header() {
     const [companyStatus, setCompanyStatus] = useState(null);
     const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
     const [subscription, setSubscription] = useState(null);
+    const [showDropdown, setShowDropdown] = useState(false);
+    const dropdownRef = useRef(null);
     const router = useRouter();
     const authAxios = createAuthAxios();
     
@@ -140,16 +142,88 @@ export default function Header() {
     // Function to handle logout
     const handleLogout = async () => {
         try {
-            // API call to logout
-            await authAxios.post('/api/auth/logout');
-            console.log('User logged out successfully');
+            // Import SweetAlert dynamically
+            const Swal = (await import('sweetalert2')).default;
+            
+            // Confirm logout with the user
+            const result = await Swal.fire({
+                title: 'Logout',
+                text: 'Are you sure you want to logout?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Logout',
+                cancelButtonText: 'Cancel'
+            });
+            
+            if (result.isConfirmed) {
+                try {
+                    // Clear any cookies by setting expiration in the past
+                    document.cookie.split(";").forEach(function(c) {
+                        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                    });
+                    
+                    // Use axios with credentials for proper cookie handling
+                    const axiosInstance = axios.create({
+                        withCredentials: true,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        }
+                    });
+                    
+                    // Check authentication type (same as Front-End)
+                    if (user && user.googleId) {
+                        // Google logout
+                        await axiosInstance.get("http://localhost:5000/api/users/google/logout");
+                    } else if (user && user.githubId) {
+                        // GitHub logout
+                        await axiosInstance.get("http://localhost:5000/api/users/github/logout");
+                    } else {
+                        // Regular logout - use the exact same endpoint as Front-End
+                        await axiosInstance.post("http://localhost:5000/api/users/signout");
+                    }
+                    
+                    // Success message
+                    Swal.fire({
+                        title: 'Logged Out!',
+                        text: 'You have been successfully logged out',
+                        icon: 'success',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                } catch (error) {
+                    console.error("Logout API error:", error);
+                    
+                    // Show a message indicating local logout only
+                    Swal.fire({
+                        title: 'Logged Out',
+                        text: 'You have been logged out locally, but there was an issue contacting the server.',
+                        icon: 'info',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } finally {
+                    // Always clear localStorage data
+                    localStorage.clear(); // Clear all localStorage, not just user data
+                    sessionStorage.clear(); // Clear session storage too
+                    
+                    // Force a reload of all open windows with the same origin
+                    // This ensures both apps lose their session
+                    setTimeout(() => {
+                        // Redirect to sign-in page on Front-End project with a forced reload
+                        window.location.href = `http://localhost:3000/page-signin?forceLogout=true&timestamp=${new Date().getTime()}`;
+                    }, 500);
+                }
+            }
         } catch (error) {
-            console.error('Error logging out:', error);
-        } finally {
-            // Clear user data regardless of API success/failure
-            clearUserData();
-            // Redirect to login page
-            router.push('/login');
+            console.error('Error during logout process:', error);
+            
+            // Fallback: clear all data and hard redirect
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Use a timestamp to force a fresh load
+            window.location.href = `http://localhost:3000/page-signin?forceLogout=true&timestamp=${new Date().getTime()}`;
         }
     };
     
@@ -227,6 +301,27 @@ export default function Header() {
         router.push('/pricing');
     };
     
+    // Add click outside listener to close dropdown
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setShowDropdown(false);
+            }
+        }
+        
+        // Bind the event listener
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            // Unbind the event listener on clean up
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [dropdownRef]);
+
+    // Toggle dropdown
+    const toggleDropdown = () => {
+        setShowDropdown(!showDropdown);
+    };
+
     return (
         <>
             <header className={`header sticky-bar ${scroll ? "stick" : ""}`}>
@@ -290,55 +385,73 @@ export default function Header() {
                                         </div>
                                         
                                         <div className="member-login d-flex align-items-center">
-                                            <div 
-                                                className="user-avatar"
-                                                style={{
-                                                    width: '40px',
-                                                    height: '40px',
-                                                    borderRadius: '50%',
-                                                    overflow: 'hidden',
-                                                    border: '2px solid #3c65f5',
-                                                    boxShadow: '0 4px 10px rgba(60,101,245,0.2)',
-                                                    transition: 'all 0.3s ease',
-                                                }}
-                                            >
-                                                <img 
-                                                    alt="User profile" 
-                                                    src={user.profilePicture || "/assets/imgs/page/dashboard/profile.png"} 
-                                                    style={{ 
-                                                        objectFit: 'cover',
-                                                        width: '100%',
-                                                        height: '100%'
-                                                    }}
-                                                />
-                                            </div>
-                                            <div className="info-member ml-10"> 
-                                                <strong className="color-brand-1 font-sm d-block">{user.firstName} {user.lastName}</strong>
-                                                <Menu as="div" className="dropdown">
-                                                    <Menu.Button as="a" className="font-xs color-text-paragraph-2 icon-down">{user.email}</Menu.Button>
-                                                    <Menu.Items as="ul" className="dropdown-menu dropdown-menu-light dropdown-menu-end" style={{ 
-                                                        right: "0", 
-                                                        left: "auto",
-                                                        minWidth: '200px',
-                                                        padding: '10px 0',
-                                                        border: 'none',
-                                                        borderRadius: '10px',
-                                                        boxShadow: '0 5px 30px rgba(0,0,0,0.1)',
-                                                    }}>
+                                            <div className="position-relative" ref={dropdownRef}>
+                                                <div 
+                                                    className="d-flex align-items-center cursor-pointer" 
+                                                    onClick={toggleDropdown}
+                                                >
+                                                    <div 
+                                                        className="user-avatar"
+                                                        style={{
+                                                            width: '40px',
+                                                            height: '40px',
+                                                            borderRadius: '50%',
+                                                            overflow: 'hidden',
+                                                            border: '2px solid #3c65f5',
+                                                            boxShadow: '0 4px 10px rgba(60,101,245,0.2)',
+                                                            transition: 'all 0.3s ease',
+                                                        }}
+                                                    >
+                                                        <img 
+                                                            alt="User profile" 
+                                                            src={user.profilePicture || "/assets/imgs/page/dashboard/profile.png"} 
+                                                            style={{ 
+                                                                objectFit: 'cover',
+                                                                width: '100%',
+                                                                height: '100%'
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div className="info-member ml-10"> 
+                                                        <strong className="color-brand-1 font-sm d-block">{user.firstName} {user.lastName}</strong>
+                                                        <span className="font-xs color-text-paragraph-2 icon-down">{user.email}</span>
+                                                    </div>
+                                                </div>
+                                                
+                                                {showDropdown && (
+                                                    <ul 
+                                                        className="dropdown-menu dropdown-menu-light dropdown-menu-end show" 
+                                                        style={{ 
+                                                            display: 'block',
+                                                            position: 'absolute',
+                                                            right: 0,
+                                                            top: '100%',
+                                                            marginTop: '10px',
+                                                            minWidth: '200px',
+                                                            padding: '10px 0',
+                                                            border: 'none',
+                                                            borderRadius: '10px',
+                                                            boxShadow: '0 5px 30px rgba(0,0,0,0.1)',
+                                                            zIndex: 1000,
+                                                            backgroundColor: '#fff'
+                                                        }}
+                                                    >
                                                         <li>
                                                             <Link className="dropdown-item" href="/profile" style={{
                                                                 padding: '10px 20px',
                                                                 fontSize: '14px',
-                                                                transition: 'all 0.2s ease'
+                                                                transition: 'all 0.2s ease',
+                                                                display: 'block'
                                                             }}>
                                                                 <i className="fi-rr-user mr-10"></i> My Profile
                                                             </Link>
                                                         </li>
                                                         <li>
-                                                            <Link className="dropdown-item" href="/settings" style={{
+                                                            <Link className="dropdown-item" href="/GeneralSettings" style={{
                                                                 padding: '10px 20px',
                                                                 fontSize: '14px',
-                                                                transition: 'all 0.2s ease'
+                                                                transition: 'all 0.2s ease',
+                                                                display: 'block'
                                                             }}>
                                                                 <i className="fi-rr-settings mr-10"></i> Settings
                                                             </Link>
@@ -352,14 +465,15 @@ export default function Header() {
                                                                     padding: '10px 20px',
                                                                     fontSize: '14px',
                                                                     transition: 'all 0.2s ease',
-                                                                    color: '#dc3545'
+                                                                    color: '#dc3545',
+                                                                    display: 'block'
                                                                 }}
                                                             >
                                                                 <i className="fi-rr-sign-out mr-10"></i> Logout
                                                             </a>
                                                         </li>
-                                                    </Menu.Items>
-                                                </Menu>
+                                                    </ul>
+                                                )}
                                             </div>
                                         </div>
                                     </>
