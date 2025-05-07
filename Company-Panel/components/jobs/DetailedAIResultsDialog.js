@@ -166,28 +166,36 @@ const DetailedAIResultsDialog = ({
           <div className="bg-primary text-white py-4 px-4">
             <div className="container-fluid">
               <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <motion.h4 
-                    className="mb-1 fw-bold"
-                    initial="hidden"
-                    animate="visible"
-                    variants={titleVariants}
-                  >
-                    AI Job Match Analysis
-                  </motion.h4>
-                  <motion.p 
-                    className="mb-0 opacity-75"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 0.75 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    {jobData?.title || 'Job Position'} - {jobData?.company || 'Company'}
-                  </motion.p>
-                </div>
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="d-flex align-items-center flex-grow-1"
+                >
+                  <div className="rounded-circle bg-white d-flex align-items-center justify-content-center me-3" style={{ width: '42px', height: '42px' }}>
+                    <i className="fas fa-robot text-primary fa-lg"></i>
+                  </div>
+                  <div className="d-flex align-items-center justify-content-between flex-grow-1 flex-wrap">
+                    <div>
+                      <h4 className="mb-0 fw-bold d-flex align-items-center">
+                        <span className="me-2">AI Job Match Analysis</span>
+                        <Badge bg="light" text="primary" pill className="fs-6 px-2">{matchPercentage}% Match</Badge>
+                      </h4>
+                      <motion.p 
+                        className="mb-0 text-white-50 mt-1"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.3 }}
+                      >
+                        {jobData?.title || 'Job Position'} - {jobData?.company || 'Company'}
+                      </motion.p>
+                    </div>
+                  </div>
+                </motion.div>
                 <div>
                   <Button 
                     variant="light" 
-                    className="fw-bold"
+                    className="fw-bold px-4 py-2"
                     onClick={handleApply}
                   >
                     <i className="fas fa-paper-plane me-2"></i>

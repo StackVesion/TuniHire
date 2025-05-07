@@ -89,9 +89,118 @@
 /* Card styles */
 .card {
   transition: all 0.3s ease;
+  height: 100%;
 }
 
 .card:hover {
   transform: translateY(-5px);
   box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Consistent table styles */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.ai-results-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.ai-results-table th, 
+.ai-results-table td {
+  padding: 0.75rem 1rem;
+  vertical-align: middle;
+  text-align: left;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.ai-results-table th {
+  font-weight: 600;
+  background-color: #f8f9fa;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* Title styles */
+.inline-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  margin-bottom: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inline-title .title-icon {
+  margin-right: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #0d6efd, #0b5ed7);
+  color: white;
+  flex-shrink: 0;
+}
+
+.inline-title .title-text {
+  font-weight: 600;
+  font-size: 1.25rem;
+  background: linear-gradient(90deg, #0d6efd, #6610f2);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+.inline-title .title-badge {
+  margin-left: 1rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  background-color: rgba(13, 110, 253, 0.1);
+  color: #0d6efd;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* Responsive sizing for content */
+.content-area {
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -0.5rem;
+  height: 100%;
+}
+
+.tab-col {
+  padding: 0 0.5rem;
+  margin-bottom: 1rem;
+  height: 100%;
+}
+
+@media (max-width: 768px) {
+  .inline-title {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .inline-title .title-badge {
+    margin-left: 0;
+    margin-top: 0.5rem;
+  }
 }
