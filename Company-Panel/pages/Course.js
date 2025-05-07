@@ -107,6 +107,7 @@ export default function CoursePage() {
                                 userCertificates.forEach(cert => {
                                     // Handle different certificate data formats
                                     let courseId;
+                                    let certificateId = cert._id;
                                     
                                     // If course is a populated object
                                     if (cert.course && typeof cert.course === 'object') {
@@ -122,9 +123,11 @@ export default function CoursePage() {
                                     }
                                     
                                     // Only map if we have a valid course ID and certificate ID
-                                    if (courseId && cert._id) {
-                                        console.log(`Mapping certificate ${cert._id} to course ${courseId}`);
-                                        certificateMap[courseId] = cert._id;
+                                    if (courseId && certificateId) {
+                                        console.log(`Mapping certificate ${certificateId} to course ${courseId}`);
+                                        
+                                        // Make sure we're storing the actual certificate ID, not the course ID
+                                        certificateMap[courseId] = certificateId.toString();
                                     }
                                 });
                             } catch (certError) {
@@ -163,7 +166,15 @@ export default function CoursePage() {
                                     certificateId = certificateMap[course._id.toString()];
                                 }
                                 
+                                // Verify that certificateId is actually a certificate ID, not a course ID
                                 if (certificateId) {
+                                    // Make sure certificateId doesn't match the course._id (common mistake)
+                                    if (certificateId === course._id.toString()) {
+                                        console.warn(`Warning: Certificate ID (${certificateId}) matches course ID. This is likely incorrect.`);
+                                        // Try to find the correct certificate by doing an additional fetch
+                                        // We'll leave certificateId as is for now, but log a warning
+                                    }
+                                    
                                     console.log(`Course ${course.title} (${course._id}) has certificate: ${certificateId}`);
                                 }
                                 
@@ -673,9 +684,65 @@ export default function CoursePage() {
                                                         {course.certificateId && (
                                                             <Link 
                                                                 href={`/certificate/${course.certificateId}`} 
-                                                                onClick={(e) => {
+                                                                onClick={async (e) => {
                                                                     e.stopPropagation();
-                                                                    console.log('Navigating to certificate:', course.certificateId);
+                                                                    console.log('View Certificate clicked for:', course.title);
+                                                                    console.log('Certificate ID from course listing:', course.certificateId);
+                                                                    
+                                                                    // Check if certificateId might actually be a course ID (error case)
+                                                                    if (course.certificateId === course._id.toString()) {
+                                                                        console.warn('ERROR: Certificate ID matches course ID - attempting to fix');
+                                                                        e.preventDefault(); // Prevent the default navigation
+                                                                        
+                                                                        // Try to get the real certificate ID from the server
+                                                                        try {
+                                                                            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+                                                                            const authAxios = createAuthAxios();
+                                                                            
+                                                                            // Try verification endpoint first
+                                                                            const verifyCertResponse = await authAxios.get(
+                                                                                `${API_BASE_URL}/api/certificates/verify/${course._id}`
+                                                                            );
+                                                                            
+                                                                            if (verifyCertResponse.data?.success && verifyCertResponse.data?.exists) {
+                                                                                const correctCertId = 
+                                                                                    verifyCertResponse.data.certificateId || 
+                                                                                    verifyCertResponse.data._id || 
+                                                                                    verifyCertResponse.data.certificate?._id;
+                                                                                
+                                                                                if (correctCertId) {
+                                                                                    console.log('Found correct certificate ID:', correctCertId);
+                                                                                    window.location.href = `/certificate/${correctCertId}`;
+                                                                                    return;
+                                                                                }
+                                                                            }
+                                                                            
+                                                                            // Fallback to fetching all certificates
+                                                                            const userCertsResponse = await authAxios.get(`${API_BASE_URL}/api/certificates/user`);
+                                                                            
+                                                                            if (userCertsResponse.data?.success && userCertsResponse.data?.data) {
+                                                                                const certs = userCertsResponse.data.data;
+                                                                                const matchingCert = certs.find(cert => {
+                                                                                    const certCourseId = cert.course?._id || cert.course;
+                                                                                    return certCourseId && certCourseId.toString() === course._id.toString();
+                                                                                });
+                                                                                
+                                                                                if (matchingCert && matchingCert._id) {
+                                                                                    console.log('Found matching certificate:', matchingCert._id);
+                                                                                    window.location.href = `/certificate/${matchingCert._id}`;
+                                                                                    return;
+                                                                                }
+                                                                            }
+                                                                            
+                                                                            // If all fails, try direct navigation to course detail page
+                                                                            window.location.href = `/course/${course._id}`;
+                                                                            
+                                                                        } catch (err) {
+                                                                            console.error('Error finding certificate:', err);
+                                                                            // Fallback to course page
+                                                                            window.location.href = `/course/${course._id}`;
+                                                                        }
+                                                                    }
                                                                 }} 
                                                                 className="btn-view-certificate"
                                                             >

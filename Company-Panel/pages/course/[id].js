@@ -1126,8 +1126,41 @@ export default function CourseDetail() {
                                 const certId = certificateCheckResponse.data.certificateId || certificateCheckResponse.data._id;
                                 
                                 if (certId) {
-                                  console.log('Redirecting to certificate page with ID:', certId);
-                                  router.push(`/certificate/${certId}`);
+                                  // Verify that we're not passing the course ID instead of certificate ID
+                                  if (certId.toString() === course._id.toString()) {
+                                    console.error('ERROR: Certificate ID matches course ID, this is incorrect!');
+                                    
+                                    // Try to get the correct certificate ID through a different API call
+                                    try {
+                                      console.log('Attempting to fetch user certificates to find correct ID');
+                                      const userCertsResponse = await authAxios.get(`${API_BASE_URL}/api/certificates/user`);
+                                      
+                                      if (userCertsResponse.data.success && userCertsResponse.data.data) {
+                                        // Find certificate for this course
+                                        const correctCert = userCertsResponse.data.data.find(cert => {
+                                          const certCourseId = cert.course?._id || cert.course;
+                                          return certCourseId && certCourseId.toString() === course._id.toString();
+                                        });
+                                        
+                                        if (correctCert && correctCert._id) {
+                                          console.log('Found correct certificate ID:', correctCert._id);
+                                          router.push(`/certificate/${correctCert._id}`);
+                                          return;
+                                        }
+                                      }
+                                    } catch (err) {
+                                      console.error('Error fetching user certificates:', err);
+                                    }
+                                    
+                                    Swal.fire({
+                                      title: 'Certificate Error',
+                                      text: 'Could not locate your certificate correctly. Please try again later.',
+                                      icon: 'error'
+                                    });
+                                  } else {
+                                    console.log('Redirecting to certificate page with ID:', certId);
+                                    router.push(`/certificate/${certId}`);
+                                  }
                                 } else {
                                   console.error('Certificate ID not found in response:', certificateCheckResponse.data);
                                   Swal.fire({
@@ -1154,6 +1187,16 @@ export default function CourseDetail() {
                               console.log('Certificate creation response:', certResponse.data);
                               
                               if (certResponse.data && certResponse.data._id) {
+                                // Extract certificate ID right away so it's in the correct scope
+                                const certificateId = certResponse.data._id;
+                                console.log('Certificate created successfully with ID:', certificateId);
+                                console.log('Course ID for reference:', course._id);
+                                
+                                // Verify we have a real certificate ID (not course ID)
+                                if (certificateId && certificateId.toString() === course._id.toString()) {
+                                  console.error('ERROR: Certificate ID matches course ID - this is incorrect');
+                                }
+                                
                                 // Show success animation
                                 Swal.fire({
                                   title: 'Congratulations!',
@@ -1172,14 +1215,14 @@ export default function CourseDetail() {
                                   }
                                 }).then((result) => {
                                   // Navigate to certificate page
-                                  router.push(`/certificate/${certResponse.data._id}`);
+                                  router.push(`/certificate/${certificateId}`);
                                 });
                                 
                                 // Update course data to show certificate badge
                                 setCourse({
                                   ...course,
                                   isCertified: true,
-                                  certificateId: certResponse.data._id
+                                  certificateId: certificateId
                                 });
                               } else {
                                 throw new Error('Failed to create certificate');

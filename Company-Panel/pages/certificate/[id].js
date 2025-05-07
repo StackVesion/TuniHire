@@ -307,7 +307,7 @@ export default function CertificatePage() {
                 <div className="certificate-header text-center mb-5">
                   <div className="d-flex justify-content-between align-items-center mb-4">
                     <div className="logo">
-                      <img src="/images/logo/logo.svg" alt="TuniHire Logo" height="60" />
+                      <img src="/assets/logoBanner.png" alt="TuniHire Logo" height="60" />
                     </div>
                     <div className="certificate-number">
                       <span className="text-muted">Certificate #: </span>
@@ -384,9 +384,9 @@ export default function CertificatePage() {
                   <div className="row align-items-center">
                     <div className="col-md-6 text-center">
                       <div className="signature mb-2">
-                        <img src="/images/signature.png" alt="Signature" height="60" />
+                        <img src="/assets/signature.png" alt="Signature" height="60" />
                       </div>
-                      <div className="signature-name fw-bold">Ahmed Ben Ali</div>
+                      <div className="signature-name fw-bold">Nihed BenAbdennour</div>
                       <div className="signature-title text-muted">CEO, TuniHire</div>
                     </div>
                     <div className="col-md-6 text-center">
@@ -431,15 +431,95 @@ export default function CertificatePage() {
                     </div>
                     <div className="mt-3">
                       <h6>Share Your Achievement</h6>
-                      <div className="d-flex mt-2">
-                        <button className="btn btn-outline-primary me-2">
+                      <div className="d-flex flex-wrap mt-2">
+                        <a 
+                          href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}&title=${encodeURIComponent(`I just earned a certificate in ${course?.title || 'this course'} from TuniHire!`)}&summary=${encodeURIComponent(`I successfully completed the ${course?.title || 'course'} on TuniHire and earned a certificate. Check it out!`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-outline-primary me-2 mb-2"
+                          onClick={() => {
+                            console.log('Sharing to LinkedIn');
+                            // Track sharing (optional)
+                            if (typeof window !== 'undefined' && window.gtag) {
+                              window.gtag('event', 'share', {
+                                method: 'linkedin',
+                                content_type: 'certificate',
+                                item_id: certificate?._id
+                              });
+                            }
+                          }}
+                        >
                           <i className="fab fa-linkedin"></i> LinkedIn
-                        </button>
-                        <button className="btn btn-outline-primary me-2">
+                        </a>
+                        
+                        <a 
+                          href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}&quote=${encodeURIComponent(`I just earned a certificate in ${course?.title || 'this course'} from TuniHire!`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-outline-primary me-2 mb-2"
+                          onClick={() => {
+                            console.log('Sharing to Facebook');
+                            // Track sharing (optional)
+                            if (typeof window !== 'undefined' && window.gtag) {
+                              window.gtag('event', 'share', {
+                                method: 'facebook',
+                                content_type: 'certificate',
+                                item_id: certificate?._id
+                              });
+                            }
+                          }}
+                        >
                           <i className="fab fa-facebook"></i> Facebook
-                        </button>
-                        <button className="btn btn-outline-primary">
+                        </a>
+                        
+                        <a 
+                          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just earned a certificate in ${course?.title || 'this course'} from TuniHire! Check it out: ${typeof window !== 'undefined' ? window.location.href : ''}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-outline-primary me-2 mb-2"
+                          onClick={() => {
+                            console.log('Sharing to Twitter');
+                            // Track sharing (optional)
+                            if (typeof window !== 'undefined' && window.gtag) {
+                              window.gtag('event', 'share', {
+                                method: 'twitter',
+                                content_type: 'certificate',
+                                item_id: certificate?._id
+                              });
+                            }
+                          }}
+                        >
                           <i className="fab fa-twitter"></i> Twitter
+                        </a>
+                        
+                        <button
+                          className="btn btn-outline-success me-2 mb-2"
+                          onClick={() => {
+                            if (navigator.clipboard) {
+                              navigator.clipboard.writeText(typeof window !== 'undefined' ? window.location.href : '')
+                                .then(() => {
+                                  Swal.fire({
+                                    title: 'Success!',
+                                    text: 'Certificate link copied to clipboard',
+                                    icon: 'success',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                  });
+                                })
+                                .catch(err => {
+                                  console.error('Failed to copy:', err);
+                                  Swal.fire({
+                                    title: 'Error',
+                                    text: 'Failed to copy link',
+                                    icon: 'error',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                  });
+                                });
+                            }
+                          }}
+                        >
+                          <i className="fas fa-link"></i> Copy Link
                         </button>
                       </div>
                     </div>

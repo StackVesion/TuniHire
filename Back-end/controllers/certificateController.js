@@ -1,6 +1,7 @@
 const Certificate = require('../models/Certificate');
 const User = require('../models/User');
 const Course = require('../models/Course');
+const jwt = require('jsonwebtoken');
 
 // Get all certificates
 exports.getAllCertificates = async (req, res) => {
@@ -50,25 +51,64 @@ exports.getCertificateById = async (req, res) => {
   }
 };
 
-// Create new certificate
+// Create a new certificate
 exports.createCertificate = async (req, res) => {
   try {
-    // Get user from token (handles different token formats)
-    const userId = req.user.id || req.user._id;
+    // Get user ID from token with more robust validation
+    let userId;
     
-    console.log('DEBUG - User token info:', req.user);
-    console.log('DEBUG - Looking for user with ID:', userId);
+    // Check all possible locations for user ID
+    if (req.user) {
+      userId = req.user.id || req.user._id || req.user.userId;
+      console.log('DEBUG - User ID from token:', userId);
+    } else {
+      // No user in request - check for a user ID in the body as fallback
+      console.warn('WARNING: No user object in request. Authentication may have failed.');
+      userId = req.body.userId;
+      
+      if (!userId) {
+        // As a last resort, try to get user from localStorage via the request
+        try {
+          const token = req.headers.authorization?.split(' ')[1];
+          if (token) {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-jwt-secret');
+            userId = decoded.id || decoded._id;
+            console.log('Recovered userId from token:', userId);
+          }
+        } catch (tokenError) {
+          console.error('Token verification failed:', tokenError.message);
+        }
+      }
+    }
     
+    console.log('DEBUG - createCertificate - User token info:', req.user);
+    console.log('DEBUG - createCertificate - Final User ID:', userId);
+    
+    // Get course ID from request body
+    const courseId = req.body.courseId;
+    
+    if (!courseId) {
+      return res.status(400).json({ success: false, message: 'Course ID is required' });
+    }
+    
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Authentication failed - user ID could not be determined'
+      });
+    }
+    
+    // Find user and course
     const user = await User.findById(userId);
-    
-    console.log('DEBUG - User found:', user ? 'Yes' : 'No');
-    
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found', 
+        debug: { userId, courseId, headers: req.headers }
+      });
     }
     
     // Get course details
-    const courseId = req.body.courseId;
     const course = await Course.findById(courseId);
     
     if (!course) {
@@ -274,12 +314,36 @@ exports.verifyCertificate = async (req, res) => {
     
     if (certificate) {
       console.log('Certificate found:', certificate._id);
+      
+      // Ensure we're returning a proper certificate ID, not a course ID
+      // This helps prevent the common issue of returning course ID instead of certificate ID
+      const certificateId = certificate._id.toString();
+      const courseId = certificate.course ? 
+                      (typeof certificate.course === 'object' ? certificate.course._id.toString() : certificate.course.toString()) 
+                      : null;
+      
+      // Add warning if somehow the certificate ID equals the course ID (should never happen)
+      if (certificateId === courseId) {
+        console.warn('WARNING: Certificate ID matches Course ID, this is likely an error!');
+      }
+      
       return res.status(200).json({ 
         success: true, 
         message: 'Certificate exists', 
         exists: true,
-        certificateId: certificate._id,
-        _id: certificate._id // Adding _id for consistency with other endpoints
+        certificateId: certificateId,
+        _id: certificateId, // Adding _id for consistency with other endpoints
+        // Add explicit mapping for client-side safety
+        certificate: {
+          _id: certificateId,
+          id: certificateId
+        },
+        // Include certificate data for debugging
+        debug: {
+          certificateId: certificateId,
+          courseId: courseId,
+          userId: certificate.user ? (typeof certificate.user === 'object' ? certificate.user._id.toString() : certificate.user.toString()) : null
+        }
       });
     } else {
       console.log('No certificate found for this user and course');
