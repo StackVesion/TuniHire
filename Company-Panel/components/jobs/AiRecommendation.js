@@ -382,7 +382,7 @@ const AiRecommendation = ({ userId, jobId, subscription, authAxios, onViewDetail
         
         <button 
           className="btn btn-outline-primary w-100"
-          onClick={() => onViewDetails('details', recommendation)}
+          onClick={() => window.location.href = `/ai-job-analysis?jobId=${jobId}`}
         >
           <i className="fas fa-chart-line me-2"></i>
           View Detailed Analysis

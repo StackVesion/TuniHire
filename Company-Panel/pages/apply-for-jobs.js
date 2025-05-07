@@ -9,7 +9,6 @@ import { createAuthAxios } from '../utils/authUtils'
 import withAuth from '../utils/withAuth'
 import ApplicationDialog from '../components/jobs/ApplicationDialog'
 import AiRecommendation from '../components/jobs/AiRecommendation'
-import DetailedRecommendationDialog from '../components/jobs/DetailedRecommendationDialog'
 
 function ApplyForJobs({ user }) {
   const router = useRouter()
@@ -824,12 +823,7 @@ function ApplyForJobs({ user }) {
         />
         
         {/* Detailed AI Recommendation Dialog */}
-        <DetailedRecommendationDialog
-          isOpen={showRecommendationDialog}
-          onClose={() => setShowRecommendationDialog(false)}
-          recommendation={recommendationData}
-          subscription={user?.subscription || 'Free'}
-        />
+        
       </div>
     </Layout>
   )
