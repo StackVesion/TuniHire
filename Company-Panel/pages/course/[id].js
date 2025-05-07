@@ -24,6 +24,7 @@ export default function CourseDetail() {
   const [quizAnswers, setQuizAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [quizResults, setQuizResults] = useState(null);
+  const [certificateLoading, setCertificateLoading] = useState(false);
 
   // Function to get badge color based on subscription level
   const getBadgeColor = (subscriptionLevel) => {
@@ -1095,14 +1096,83 @@ export default function CourseDetail() {
                     ) : (
                       <button 
                         className="btn btn-success" 
-                        onClick={() => {
+                        onClick={async () => {
                           // Check if all steps are completed
                           const allStepsCompleted = course.steps.every((step) => 
                             course.userProgress?.completedSteps?.includes(step._id)
                           );
                           
                           if (allStepsCompleted) {
-                            router.push(`/certificate/${course._id}`);
+                            // Show loading animation
+                            Swal.fire({
+                              title: 'Generating Certificate',
+                              text: 'Please wait while we prepare your certificate...',
+                              allowOutsideClick: false,
+                              didOpen: () => {
+                                Swal.showLoading();
+                              }
+                            });
+                            
+                            try {
+                              // Check if user already has a certificate for this course
+                              const certificateCheckResponse = await authAxios.get(`${API_BASE_URL}/api/certificates/verify/${course._id}`);
+                              
+                              if (certificateCheckResponse.data && certificateCheckResponse.data.exists) {
+                                // Certificate already exists, show it
+                                Swal.close();
+                                router.push(`/certificate/${certificateCheckResponse.data.certificateId}`);
+                                return;
+                              }
+                              
+                              // Create certificate
+                              const certResponse = await authAxios.post(`${API_BASE_URL}/api/certificates`, {
+                                courseId: course._id,
+                                courseName: course.title,
+                                skills: course.skills || [],
+                                score: 100, // Default score for completion
+                                grade: 'A' // Default grade for completion
+                              });
+                              
+                              if (certResponse.data && certResponse.data._id) {
+                                // Show success animation
+                                Swal.fire({
+                                  title: 'Congratulations!',
+                                  text: 'You have successfully completed this course!',
+                                  icon: 'success',
+                                  confirmButtonColor: '#3085d6',
+                                  showConfirmButton: true,
+                                  backdrop: `
+                                    rgba(0,0,123,0.4)
+                                    url("/images/confetti.gif")
+                                    center top
+                                    no-repeat
+                                  `,
+                                  customClass: {
+                                    popup: 'certificate-popup'
+                                  }
+                                }).then((result) => {
+                                  // Navigate to certificate page
+                                  router.push(`/certificate/${certResponse.data._id}`);
+                                });
+                                
+                                // Update course data to show certificate badge
+                                setCourse({
+                                  ...course,
+                                  isCertified: true,
+                                  certificateId: certResponse.data._id
+                                });
+                              } else {
+                                throw new Error('Failed to create certificate');
+                              }
+                            } catch (error) {
+                              console.error('Error creating certificate:', error);
+                              Swal.fire({
+                                title: 'Error',
+                                text: 'There was a problem generating your certificate. Please try again.',
+                                icon: 'error',
+                                confirmButtonColor: '#3085d6'
+                              });
+                            }
                           } else {
                             Swal.fire({
                               title: 'Course Incomplete',
@@ -1129,64 +1199,41 @@ export default function CourseDetail() {
           </div>
         </div>
       )}
-      
-      <style jsx>{`
+            <style jsx>{`
         .step-item {
           border-radius: 0.5rem;
           background-color: #f8f9fa;
           cursor: pointer;
           transition: all 0.2s ease;
-        }
-        
-        .step-item:hover {
-          background-color: #e9ecef;
-        }
-        
-        .step-item.active {
-          background-color: #e7f1ff;
-          border-left: 3px solid #007bff;
-        }
-        
-        .step-item.completed {
-          background-color: #e9fff5;
-        }
-        
-        .step-item.locked {
-          background-color: #f8f9fa;
-          opacity: 0.7;
-          cursor: not-allowed;
-        }
-        
-        .sticky-top {
-          position: sticky;
-          top: 100px;
-        }
-        
-        .video-wrapper {
-          box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-          transition: all 0.3s ease;
-        }
-        
-        .video-wrapper:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.15);
-        }
-        
-        .list-group-item.active {
-          z-index: 2;
-          color: #fff;
-          background-color: #007bff;
-          border-color: #007bff;
-        }
-        
-        .list-group-item.disabled {
-          color: #6c757d;
-          pointer-events: none;
-          background-color: #f8f9fa;
+{{ ... }}
         }
         
         .badge.rounded-pill {
           border-radius: 50rem;
+        }
+        
+        .certificate-popup {
+          animation: scaleUp 0.5s ease-in-out;
+        }
+        
+        @keyframes scaleUp {
+          0% { transform: scale(0.8); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .certified-course-badge {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          z-index: 10;
+          transform: rotate(15deg);
+          animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+          0% { transform: rotate(15deg) scale(1); }
+          50% { transform: rotate(15deg) scale(1.1); }
+          100% { transform: rotate(15deg) scale(1); }
         }
       `}</style>
     </Layout>

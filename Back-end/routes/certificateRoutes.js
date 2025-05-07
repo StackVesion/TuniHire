@@ -14,8 +14,12 @@ router.delete('/:id', verifyToken, certificateController.deleteCertificate);
 
 // User-specific routes
 router.get('/user/:userId', verifyToken, certificateController.getCertificatesByUser);
+router.get('/user', verifyToken, certificateController.getCertificatesByUser); // Get current user's certificates
 
 // Course-specific routes
 router.get('/course/:courseId', verifyToken, certificateController.getCertificatesByCourse);
+
+// Certificate verification
+router.get('/verify/:courseId', verifyToken, certificateController.verifyCertificate);
 
 module.exports = router;

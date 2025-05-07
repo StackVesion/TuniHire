@@ -93,6 +93,10 @@ export default function CoursePage() {
                             const progressResponse = await authAxios.get(`${API_BASE_URL}/api/courses/user/progress`);
                             const userProgress = progressResponse.data.data || [];
                             
+                            // Get user's certificates
+                            const certificatesResponse = await authAxios.get(`${API_BASE_URL}/api/certificates/user`);
+                            const userCertificates = certificatesResponse.data.data || [];
+                            
                             // Create maps for fast lookup
                             const progressMap = {};
                             const certificateMap = {};
@@ -100,32 +104,30 @@ export default function CoursePage() {
                             // Process progress data to extract certificates too
                             userProgress.forEach(progress => {
                                 progressMap[progress.course._id] = progress;
-                                if (progress.certificateIssued && progress.certificateId) {
-                                    certificateMap[progress.course._id] = progress.certificateId;
+                            });
+                            
+                            // Create certificate mapping
+                            userCertificates.forEach(cert => {
+                                // Use course ID from certificate data
+                                const courseId = cert.course._id || cert.course;
+                                if (courseId) {
+                                    certificateMap[courseId] = cert._id;
                                 }
                             });
                             
-                            // Add progress and certificate info to each course
+                            // Update course data with progress information and certificate status
                             coursesWithStatus = coursesWithStatus.map(course => {
-                                const courseObj = typeof course.toObject === 'function' ? course.toObject() : course;
-                                const userProgressForCourse = progressMap[course._id];
-                                
-                                if (userProgressForCourse) {
-                                    courseObj.isEnrolled = true;
-                                    courseObj.progress = userProgressForCourse.progressPercentage || 0;
-                                    courseObj.completed = userProgressForCourse.completed || false;
-                                    courseObj.certificateId = certificateMap[course._id] || null;
-                                } else {
-                                    courseObj.isEnrolled = false;
-                                    courseObj.progress = 0;
-                                    courseObj.completed = false;
-                                    courseObj.certificateId = null;
-                                }
-                                
-                                return courseObj;
+                                const progress = progressMap[course._id];
+                                const certificateId = certificateMap[course._id];
+                                return {
+                                    ...course,
+                                    progress: progress ? progress.progressPercentage : 0,
+                                    enrolled: !!progress,
+                                    currentStep: progress ? progress.currentStep : 0,
+                                    isCertified: !!certificateId,
+                                    certificateId: certificateId
+                                };
                             });
-                            
-                            console.log('Enhanced courses with user progress and certificates');
                         } catch (progressError) {
                             console.error('Error fetching user progress:', progressError);
                         }
@@ -525,15 +527,15 @@ export default function CoursePage() {
                             courses.map((course) => (
                                 <div key={course._id} className="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-30">
                                     <div 
-                                        className={`card-grid-2 card-course ${!course.isEnrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] ? 'course-locked' : ''}`} 
-                                        onClick={() => handleCourseClick(course)}
+                                        className={`card-grid-2 card-course ${!course.enrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] ? 'course-locked' : ''}`} 
+                                        onClick={() => course.enrolled ? handleCourseClick(course) : null}
                                     >
                                         <div className="card-grid-2-image-wrap course-card-image position-relative">
                                             {course.thumbnail ? (
                                                 <img 
                                                     src={course.thumbnail} 
                                                     alt={course.title} 
-                                                    className={`${!course.isEnrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] ? 'locked-image' : ''}`}
+                                                    className={`${!course.enrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] ? 'locked-image' : ''}`}
                                                     onError={(e) => {
                                                         e.target.src = "/assets/imgs/page/dashboard/course-placeholder.jpg";
                                                     }}
@@ -542,12 +544,12 @@ export default function CoursePage() {
                                                 <img 
                                                     src="/assets/imgs/page/dashboard/course-placeholder.jpg" 
                                                     alt={course.title} 
-                                                    className={`${!course.isEnrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] ? 'locked-image' : ''}`}
+                                                    className={`${!course.enrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] ? 'locked-image' : ''}`}
                                                 />
                                             )}
                                             
                                             {/* Show subscription lock overlay if needed */}
-                                            {!course.isEnrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] && (
+                                            {!course.enrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] && (
                                                 <div className="course-lock-overlay">
                                                     <div className="lock-icon">
                                                         <i className="fi-rr-lock" style={{ fontSize: '24px' }}></i>
@@ -558,7 +560,7 @@ export default function CoursePage() {
                                             
                                             {/* Enrollment Status and Completion Badges */}
                                             <div className="course-badge-container">
-                                                {course.isEnrolled && (
+                                                {course.enrolled && (
                                                     <div className="course-badge enrolled">
                                                         <i className="fi-rr-check-circle mr-5"></i> Enrolled
                                                     </div>
@@ -566,6 +568,16 @@ export default function CoursePage() {
                                                 {course.completed && (
                                                     <div className="course-badge completed">
                                                         <i className="fi-rr-diploma mr-5"></i> Completed
+                                                    </div>
+                                                )}
+                                                {course.isCertified && (
+                                                    <div className="course-certified-badge">
+                                                        <img 
+                                                            src="/images/certified-badge.png" 
+                                                            alt="Certified" 
+                                                            width="50" 
+                                                            height="50"
+                                                        />
                                                     </div>
                                                 )}
                                             </div>
@@ -596,7 +608,7 @@ export default function CoursePage() {
                                             </div>
                                             
                                             {/* Progress Bar for Enrolled Courses */}
-                                            {course.isEnrolled && (
+                                            {course.enrolled && (
                                                 <div className="mt-15">
                                                     <div className="progress">
                                                         <div 
@@ -928,6 +940,21 @@ export default function CoursePage() {
                 
                 .btn-view-certificate:hover {
                     background-color: #3e8e41;
+                }
+                
+                .course-certified-badge {
+                    position: absolute;
+                    top: 10px;
+                    right: 10px;
+                    z-index: 10;
+                    transform: rotate(15deg);
+                    animation: pulse-badge 2s infinite;
+                }
+                
+                @keyframes pulse-badge {
+                    0% { transform: rotate(15deg) scale(1); }
+                    50% { transform: rotate(15deg) scale(1.1); }
+                    100% { transform: rotate(15deg) scale(1); }
                 }
             `}</style>
         </Layout>
