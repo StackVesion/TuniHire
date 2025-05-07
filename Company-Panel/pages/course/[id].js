@@ -1119,10 +1119,28 @@ export default function CourseDetail() {
                               
                               if (certificateCheckResponse.data && certificateCheckResponse.data.exists) {
                                 // Certificate already exists, show it
+                                console.log('Certificate exists response:', certificateCheckResponse.data);
                                 Swal.close();
-                                router.push(`/certificate/${certificateCheckResponse.data.certificateId}`);
+                                
+                                // Use certificateId or _id, whichever is available
+                                const certId = certificateCheckResponse.data.certificateId || certificateCheckResponse.data._id;
+                                
+                                if (certId) {
+                                  console.log('Redirecting to certificate page with ID:', certId);
+                                  router.push(`/certificate/${certId}`);
+                                } else {
+                                  console.error('Certificate ID not found in response:', certificateCheckResponse.data);
+                                  Swal.fire({
+                                    title: 'Error',
+                                    text: 'Certificate found but ID is missing. Please try again.',
+                                    icon: 'error'
+                                  });
+                                }
                                 return;
                               }
+                              
+                              console.log('Creating certificate for course:', course._id);
+                              console.log('User from localStorage:', JSON.parse(localStorage.getItem('user') || '{}'));
                               
                               // Create certificate
                               const certResponse = await authAxios.post(`${API_BASE_URL}/api/certificates`, {
@@ -1132,6 +1150,8 @@ export default function CourseDetail() {
                                 score: 100, // Default score for completion
                                 grade: 'A' // Default grade for completion
                               });
+                              
+                              console.log('Certificate creation response:', certResponse.data);
                               
                               if (certResponse.data && certResponse.data._id) {
                                 // Show success animation

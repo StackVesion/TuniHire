@@ -136,16 +136,33 @@ export const getToken = () => {
 // Create authenticated axios instance with token refresh
 export const createAuthAxios = () => {
   const axiosInstance = axios.create({
+    // Common configuration
     baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
+    timeout: 30000, // 30 seconds timeout
+    headers: {
+      'Content-Type': 'application/json',
+    }
   });
-
-  // Request interceptor to add token to all requests
+  
+  // Add token to requests
   axiosInstance.interceptors.request.use(
     (config) => {
       const token = getToken();
+      
+      // Add debugging for token issues
       if (token) {
+        console.log('AUTH DEBUG - Adding token to request:', {
+          tokenLength: token.length,
+          tokenStart: token.substring(0, 10) + '...',
+          url: config.url
+        });
+        
+        // Ensure proper token format
         config.headers.Authorization = `Bearer ${token}`;
+      } else {
+        console.warn('AUTH DEBUG - No token available for request:', config.url);
       }
+      
       return config;
     },
     (error) => Promise.reject(error)

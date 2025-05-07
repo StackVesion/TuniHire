@@ -40,23 +40,96 @@ export default function CertificatePage() {
   const fetchCertificateData = async () => {
     setLoading(true);
     try {
-      // Try to get certificate from API
+      console.log(`Fetching certificate with ID: ${id} from ${API_BASE_URL}/api/certificates/${id}`);
+      
+      // Try multiple approaches to get the certificate
       try {
-        console.log(`Fetching certificate from ${API_BASE_URL}/api/certificates/${id}`);
+        // First attempt - direct ID lookup
         const response = await authAxios.get(`${API_BASE_URL}/api/certificates/${id}`);
-        setCertificate(response.data);
+        console.log('Certificate API response:', response.data);
         
-        // Also fetch the course data
-        if (response.data.courseId) {
-          const courseResponse = await authAxios.get(`${API_BASE_URL}/api/courses/${response.data.courseId}`);
-          setCourse(courseResponse.data);
+        if (response.data) {
+          let certData = null;
+          
+          // Handle different response formats
+          if (response.data.success === true && response.data.data) {
+            // New format with success/data structure
+            certData = response.data.data;
+          } else if (response.data._id) {
+            // Direct object response
+            certData = response.data;
+          }
+          
+          if (certData) {
+            console.log('Certificate data extracted:', certData);
+            setCertificate(certData);
+            
+            // Handle course data
+            if (certData.course && typeof certData.course === 'object') {
+              console.log('Course data found in certificate response');
+              setCourse(certData.course);
+            } else {
+              // Try to get course ID from various possible properties
+              const courseId = certData.courseId || certData.course;
+              
+              if (courseId) {
+                console.log('Fetching course with ID:', courseId);
+                try {
+                  const courseResponse = await authAxios.get(`${API_BASE_URL}/api/courses/${courseId}`);
+                  
+                  if (courseResponse.data.success && courseResponse.data.data) {
+                    setCourse(courseResponse.data.data);
+                  } else if (courseResponse.data) {
+                    setCourse(courseResponse.data);
+                  }
+                } catch (courseErr) {
+                  console.error('Error fetching course data:', courseErr);
+                }
+              }
+            }
+          } else {
+            throw new Error('Invalid certificate data format');
+          }
+        } else {
+          throw new Error('No data returned from certificate API');
         }
       } catch (apiError) {
-        console.warn('API not available for certificates, using mock data', apiError);
-        // Use mock data as fallback
-        const mockData = generateMockCertificate(id);
-        setCertificate(mockData.certificate);
-        setCourse(mockData.course);
+        console.warn('Error in primary certificate fetch method:', apiError);
+        
+        // Fallback - try course ID lookup to find certificate
+        try {
+          console.log('Attempting alternative certificate lookup methods...');
+          
+          // If the ID is a course ID, try to get certificate by course
+          const verifyCertResponse = await authAxios.get(`${API_BASE_URL}/api/certificates/verify/${id}`);
+          
+          if (verifyCertResponse.data && verifyCertResponse.data.exists) {
+            console.log('Found certificate through verify endpoint:', verifyCertResponse.data);
+            
+            // Get the actual certificate ID
+            const actualCertId = verifyCertResponse.data.certificateId || verifyCertResponse.data._id;
+            
+            if (actualCertId) {
+              // Re-fetch with correct ID
+              const correctResponse = await authAxios.get(`${API_BASE_URL}/api/certificates/${actualCertId}`);
+              
+              if (correctResponse.data.success && correctResponse.data.data) {
+                setCertificate(correctResponse.data.data);
+                if (correctResponse.data.data.course) {
+                  setCourse(correctResponse.data.data.course);
+                }
+              }
+            }
+          } else {
+            throw new Error('Certificate not found via verification endpoint');
+          }
+        } catch (fallbackError) {
+          console.warn('All certificate lookup methods failed, using mock data', fallbackError);
+          // Use mock data as final fallback
+          const mockData = generateMockCertificate(id);
+          setCertificate(mockData.certificate);
+          setCourse(mockData.course);
+        }
       }
     } catch (error) {
       console.error('Error fetching certificate:', error);

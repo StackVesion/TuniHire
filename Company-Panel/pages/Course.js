@@ -93,39 +93,87 @@ export default function CoursePage() {
                             const progressResponse = await authAxios.get(`${API_BASE_URL}/api/courses/user/progress`);
                             const userProgress = progressResponse.data.data || [];
                             
-                            // Get user's certificates
-                            const certificatesResponse = await authAxios.get(`${API_BASE_URL}/api/certificates/user`);
-                            const userCertificates = certificatesResponse.data.data || [];
-                            
                             // Create maps for fast lookup
                             const progressMap = {};
                             const certificateMap = {};
                             
+                            // Try to get user's certificates, but continue if it fails
+                            try {
+                                const certificatesResponse = await authAxios.get(`${API_BASE_URL}/api/certificates/user`);
+                                const userCertificates = certificatesResponse.data?.data || [];
+                                
+                                // Create certificate mapping
+                                console.log('Processing certificate data:', userCertificates);
+                                userCertificates.forEach(cert => {
+                                    // Handle different certificate data formats
+                                    let courseId;
+                                    
+                                    // If course is a populated object
+                                    if (cert.course && typeof cert.course === 'object') {
+                                        courseId = cert.course._id;
+                                    }
+                                    // If course is a string ID
+                                    else if (cert.course) {
+                                        courseId = cert.course.toString();
+                                    }
+                                    // Fall back to courseId property if it exists
+                                    else if (cert.courseId) {
+                                        courseId = cert.courseId.toString();
+                                    }
+                                    
+                                    // Only map if we have a valid course ID and certificate ID
+                                    if (courseId && cert._id) {
+                                        console.log(`Mapping certificate ${cert._id} to course ${courseId}`);
+                                        certificateMap[courseId] = cert._id;
+                                    }
+                                });
+                            } catch (certError) {
+                                console.error('Error fetching certificates, continuing without them:', certError);
+                                // Continue without certificates
+                            }
+                            
                             // Process progress data to extract certificates too
                             userProgress.forEach(progress => {
-                                progressMap[progress.course._id] = progress;
-                            });
-                            
-                            // Create certificate mapping
-                            userCertificates.forEach(cert => {
-                                // Use course ID from certificate data
-                                const courseId = cert.course._id || cert.course;
-                                if (courseId) {
-                                    certificateMap[courseId] = cert._id;
+                                if (progress && progress.course && progress.course._id) {
+                                    progressMap[progress.course._id] = progress;
                                 }
                             });
                             
                             // Update course data with progress information and certificate status
                             coursesWithStatus = coursesWithStatus.map(course => {
+                                // Get progress for this course
                                 const progress = progressMap[course._id];
-                                const certificateId = certificateMap[course._id];
+                                
+                                // Calculate progress percentage if available
+                                let progressPercentage = 0;
+                                if (progress && progress.completedSteps && course.steps) {
+                                    progressPercentage = (progress.completedSteps.length / course.steps.length) * 100;
+                                }
+                                
+                                // Check if course has a certificate - try multiple ID formats
+                                // This ensures we catch certificates regardless of ID format issues
+                                let certificateId = null;
+                                
+                                // Try direct lookup first
+                                if (certificateMap[course._id]) {
+                                    certificateId = certificateMap[course._id];
+                                } 
+                                // Then try with toString() to handle ObjectID vs string comparisons
+                                else if (course._id && certificateMap[course._id.toString()]) {
+                                    certificateId = certificateMap[course._id.toString()];
+                                }
+                                
+                                if (certificateId) {
+                                    console.log(`Course ${course.title} (${course._id}) has certificate: ${certificateId}`);
+                                }
+                                
                                 return {
                                     ...course,
-                                    progress: progress ? progress.progressPercentage : 0,
-                                    enrolled: !!progress,
-                                    currentStep: progress ? progress.currentStep : 0,
-                                    isCertified: !!certificateId,
-                                    certificateId: certificateId
+                                    progress: progressPercentage,
+                                    enrolled: progress ? true : false,
+                                    completed: progressPercentage === 100,
+                                    certificateId: certificateId,
+                                    isCertified: !!certificateId
                                 };
                             });
                         } catch (progressError) {
@@ -623,7 +671,14 @@ export default function CoursePage() {
                                                     <div className="d-flex justify-content-between">
                                                         <small className="text-muted">{Math.round(course.progress)}% Complete</small>
                                                         {course.certificateId && (
-                                                            <Link href={`/certificate/${course.certificateId}`} onClick={(e) => e.stopPropagation()} className="btn-view-certificate">
+                                                            <Link 
+                                                                href={`/certificate/${course.certificateId}`} 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    console.log('Navigating to certificate:', course.certificateId);
+                                                                }} 
+                                                                className="btn-view-certificate"
+                                                            >
                                                                 View Certificate
                                                             </Link>
                                                         )}
