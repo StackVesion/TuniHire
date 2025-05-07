@@ -315,7 +315,7 @@ const AiRecommendation = ({ userId, jobId, subscription, authAxios, onViewDetail
   if (recommendation) {
     return (
       <motion.div 
-        className="ai-recommendation mb-4 p-0 rounded shadow-sm overflow-hidden"
+        className="ai-recommendation mb-4 p-3 bg-light rounded"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
