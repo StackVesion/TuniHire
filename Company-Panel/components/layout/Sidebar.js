@@ -47,91 +47,47 @@ export default function Sidebar() {
         setShowDropdown(!showDropdown);
     };
 
-    // Function to handle logout
+    // Function to handle logout - directed through the Front-End logout page
     const handleLogout = async () => {
-        try {
-            // Import SweetAlert dynamically
-            const Swal = (await import('sweetalert2')).default;
-            
-            // Confirm logout with the user
-            const result = await Swal.fire({
-                title: 'Logout',
-                text: 'Are you sure you want to logout?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, Logout',
-                cancelButtonText: 'Cancel'
-            });
-            
-            if (result.isConfirmed) {
-                try {
-                    // Clear any cookies by setting expiration in the past
-                    document.cookie.split(";").forEach(function(c) {
-                        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-                    });
-                    
-                    // Use axios with credentials for proper cookie handling
-                    const axiosInstance = axios.create({
-                        withCredentials: true,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${localStorage.getItem('token')}`
-                        }
-                    });
-                    
-                    // Check authentication type (same as Front-End)
-                    if (user && user.googleId) {
-                        // Google logout
-                        await axiosInstance.get("http://localhost:5000/api/users/google/logout");
-                    } else if (user && user.githubId) {
-                        // GitHub logout
-                        await axiosInstance.get("http://localhost:5000/api/users/github/logout");
-                    } else {
-                        // Regular logout - use the exact same endpoint as Front-End
-                        await axiosInstance.post("http://localhost:5000/api/users/signout");
-                    }
-                    
-                    // Success message
-                    Swal.fire({
-                        title: 'Logged Out!',
-                        text: 'You have been successfully logged out',
-                        icon: 'success',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                } catch (error) {
-                    console.error("Logout API error:", error);
-                    
-                    // Show a message indicating local logout only
-                    Swal.fire({
-                        title: 'Logged Out',
-                        text: 'You have been logged out locally, but there was an issue contacting the server.',
-                        icon: 'info',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                } finally {
-                    // Always clear localStorage data
-                    localStorage.clear(); // Clear all localStorage, not just user data
-                    sessionStorage.clear(); // Clear session storage too
-                    
-                    // Force a reload of all open windows with the same origin
-                    // This ensures both apps lose their session
-                    setTimeout(() => {
-                        // Redirect to sign-in page on Front-End project with a forced reload
-                        window.location.href = `http://localhost:3000/page-signin?forceLogout=true&timestamp=${new Date().getTime()}`;
-                    }, 500);
-                }
+        // Confirm logout
+        const Swal = (await import('sweetalert2')).default;
+        const result = await Swal.fire({
+            title: 'Logout',
+            text: 'Are you sure you want to logout?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Logout',
+            cancelButtonText: 'Cancel'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                // Instead of directly calling logout API, redirect to Front-End's logout page
+                // This ensures the Front-End application also handles the logout properly
+                
+                // First clear local data
+                clearUserData();
+                
+                // Show a brief message
+                Swal.fire({
+                    title: 'Logging Out...',
+                    text: 'Redirecting to sign-in page',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+
+                // Redirect to Front-End's logout page which will handle the API call
+                // This ensures both applications are in sync
+                window.location.href = 'http://localhost:3000/logout-redirect';
+                
+            } catch (error) {
+                console.error("Logout error:", error);
+                
+                // Fallback: clear data and redirect to signin
+                clearUserData();
+                window.location.href = 'http://localhost:3000/page-signin';
             }
-        } catch (error) {
-            console.error('Error during logout process:', error);
-            
-            // Fallback: clear all data and hard redirect
-            localStorage.clear();
-            sessionStorage.clear();
-            
-            // Use a timestamp to force a fresh load
-            window.location.href = `http://localhost:3000/page-signin?forceLogout=true&timestamp=${new Date().getTime()}`;
         }
     };
     

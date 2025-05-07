@@ -71,9 +71,37 @@ export const getRefreshToken = () => {
 // Clear user data from localStorage
 export const clearUserData = () => {
   try {
+    // Clear all authentication-related items
     localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('expiresAt');
+    
+    // Clear all localStorage items that might contain user data
+    localStorage.removeItem('subscription');
+    localStorage.removeItem('subscriptionExpiryDate');
+    localStorage.removeItem('subscriptionPendingSync');
+    localStorage.removeItem('userProfile');
+    localStorage.removeItem('lastLogin');
+    
+    // Clear any session storage
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.clear();
+    }
+    
+    // Clear all cookies by setting expired date
+    // This is crucial for shared authentication across different ports
+    const cookies = document.cookie.split(";");
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i];
+      const eqPos = cookie.indexOf("=");
+      const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+      // Set multiple paths to cover all bases
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=localhost`;
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.localhost`;
+    }
+    
     return true;
   } catch (error) {
     console.error('Error clearing user data:', error);

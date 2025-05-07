@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { createAuthAxios } from '../utils/authUtils'
 import withAuth from '../utils/withAuth'
 import ApplicationDialog from '../components/jobs/ApplicationDialog'
+import AiRecommendation from '../components/jobs/AiRecommendation'
+import DetailedRecommendationDialog from '../components/jobs/DetailedRecommendationDialog'
 
 function ApplyForJobs({ user }) {
   const router = useRouter()
@@ -28,6 +30,8 @@ function ApplyForJobs({ user }) {
   const [hrContact, setHrContact] = useState(null)
   const [loadingHrContact, setLoadingHrContact] = useState(false)
   const [userApplications, setUserApplications] = useState({})
+  const [showRecommendationDialog, setShowRecommendationDialog] = useState(false)
+  const [recommendationData, setRecommendationData] = useState(null)
 
   useEffect(() => {
     fetchJobs()
@@ -250,6 +254,16 @@ function ApplyForJobs({ user }) {
       transition: { duration: 0.3 }
     }
   }
+
+  const handleViewRecommendationDetails = (type, data) => {
+    if (type === 'upgrade') {
+      // Navigate to subscription upgrade page
+      router.push('/subscription-plans');
+    } else if (type === 'details' && data) {
+      setRecommendationData(data);
+      setShowRecommendationDialog(true);
+    }
+  };
 
   return (
     <Layout>
@@ -583,6 +597,15 @@ function ApplyForJobs({ user }) {
                   </div>
                 </div>
                 
+                {/* AI Recommendation Section */}
+                <AiRecommendation 
+                  userId={user?.id}
+                  jobId={selectedJob._id}
+                  subscription={user?.subscription || 'Free'}
+                  authAxios={authAxios}
+                  onViewDetails={handleViewRecommendationDetails}
+                />
+                
                 {/* HR Contact Section */}
                 <motion.div 
                   className="hr-contact-section mb-4 p-3 bg-light rounded"
@@ -791,6 +814,14 @@ function ApplyForJobs({ user }) {
           job={selectedJob || {}}
           onSubmit={handleApplicationAction}
           userId={user?.id}
+        />
+        
+        {/* Detailed AI Recommendation Dialog */}
+        <DetailedRecommendationDialog
+          isOpen={showRecommendationDialog}
+          onClose={() => setShowRecommendationDialog(false)}
+          recommendation={recommendationData}
+          subscription={user?.subscription || 'Free'}
         />
       </div>
     </Layout>
