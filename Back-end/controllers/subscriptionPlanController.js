@@ -229,8 +229,11 @@ exports.confirmPayment = async (req, res) => {
     const { paymentIntentId, planId } = req.body;
     const userId = req.user.id;
     
+    console.log(`Confirming payment for user ${userId}, plan ${planId}, payment intent ${paymentIntentId}`);
+    
     // Verify the payment intent
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    console.log(`Payment intent status: ${paymentIntent.status}`);
     
     if (paymentIntent.status !== 'succeeded') {
       // Find and update transaction record
@@ -250,38 +253,47 @@ exports.confirmPayment = async (req, res) => {
     if (!plan) {
       return res.status(404).json({ message: 'Subscription plan not found' });
     }
+    console.log(`Found plan: ${plan.name}, duration: ${plan.duration} days`);
     
     // Find the user
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
+    console.log(`Current user subscription: ${user.subscription}, updating to: ${plan.name}`);
     
     // Calculate expiry date
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + plan.duration);
     
-    // Update user subscription
+    // Update user subscription - IMPORTANT: This is the critical update that wasn't working
     user.subscription = plan.name;
     user.subscriptionId = plan._id;
     user.subscriptionExpiryDate = expiryDate;
     
-    await user.save();
+    // Save user with updated subscription
+    const savedUser = await user.save();
+    console.log(`Updated user subscription to: ${savedUser.subscription}, expires: ${savedUser.subscriptionExpiryDate}`);
+    
+    // Double-check that user was updated
+    const verifiedUser = await User.findById(userId);
+    if (verifiedUser.subscription !== plan.name) {
+      console.error(`SUBSCRIPTION UPDATE FAILED! User subscription is still ${verifiedUser.subscription} instead of ${plan.name}`);
+      // Try updating with findByIdAndUpdate as a fallback
+      await User.findByIdAndUpdate(userId, {
+        subscription: plan.name,
+        subscriptionId: plan._id,
+        subscriptionExpiryDate: expiryDate
+      }, { new: true });
+      console.log('Attempted fallback update method');
+    }
     
     // Update transaction record
-    const transaction = await PaymentTransaction.findOneAndUpdate(
-      { paymentIntentId: paymentIntentId },
-      { 
-        status: 'succeeded',
-        receiptUrl: paymentIntent.charges?.data[0]?.receipt_url || '',
-        updatedAt: Date.now()
-      },
-      { new: true }
-    );
+    let transaction = await PaymentTransaction.findOne({ paymentIntentId: paymentIntentId });
     
     if (!transaction) {
       // If the transaction doesn't exist, create it
-      const newTransaction = new PaymentTransaction({
+      transaction = new PaymentTransaction({
         userId: userId,
         planId: planId,
         amount: plan.price,
@@ -295,17 +307,25 @@ exports.confirmPayment = async (req, res) => {
         }
       });
       
-      await newTransaction.save();
-      console.log(`Created payment transaction record after confirmation: ${newTransaction._id}`);
+      await transaction.save();
+      console.log(`Created payment transaction record: ${transaction._id}`);
     } else {
+      // Update existing transaction
+      transaction.status = 'succeeded';
+      transaction.receiptUrl = paymentIntent.charges?.data[0]?.receipt_url || '';
+      transaction.updatedAt = Date.now();
+      await transaction.save();
       console.log(`Updated payment transaction record: ${transaction._id}`);
     }
     
+    // Return success with explicit subscription information
     res.status(200).json({
       message: `Successfully subscribed to ${plan.name} plan`,
-      subscription: user.subscription,
-      expiryDate: user.subscriptionExpiryDate,
-      transactionId: transaction?._id
+      subscription: plan.name, // Use plan name directly to ensure consistency
+      expiryDate: expiryDate,
+      transactionId: transaction._id,
+      userId: userId,
+      planId: planId
     });
   } catch (error) {
     console.error('Error confirming payment:', error);

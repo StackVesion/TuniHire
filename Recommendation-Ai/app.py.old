@@ -1,0 +1,42 @@
+from flask import Flask
+from flask_cors import CORS
+import os
+
+# Create the Flask application
+app = Flask(__name__)
+
+# Enable CORS for all routes
+CORS(app)
+
+# Ensure models directory exists
+models_dir = os.path.join(os.path.dirname(__file__), 'app', 'models')
+if not os.path.exists(models_dir):
+    os.makedirs(models_dir)
+
+# Ensure training history directory exists
+history_dir = os.path.join(os.path.dirname(__file__), 'training_history')
+if not os.path.exists(history_dir):
+    os.makedirs(history_dir)
+
+# Import and register routes
+from app.routes import register_routes
+register_routes(app)
+
+# If running the file directly
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('DEBUG', 'True').lower() == 'true'
+    
+    # Print startup information
+    print("\n" + "="*80)
+    print("TuniHire AI Recommendation Engine")
+    print("="*80)
+    print(f"API running at: http://localhost:{port}")
+    print("Endpoints:")
+    print("- GET /api/recommendation?user_id=<user_id>&job_id=<job_id>")
+    print("- GET /api/better-matches/<user_id>")
+    print("- GET /api/health")
+    print("- GET /api/training/stats")
+    print("="*80 + "\n")
+    
+    app.run(debug=debug, host='0.0.0.0', port=port)
