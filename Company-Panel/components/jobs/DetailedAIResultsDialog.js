@@ -209,49 +209,62 @@ const DetailedAIResultsDialog = ({
           {/* Horizontal Navigation */}
           <div className="px-4 pt-3 bg-white border-bottom">
             <div className="container-fluid">
-              <div className="nav-container d-flex">
-                <div 
+              <motion.div 
+                className="nav-container d-flex"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.4 }}
+              >
+                <motion.div 
                   className={`nav-tab me-4 pb-3 ${activeTab === 'overview' ? 'active' : ''}`}
                   onClick={() => setActiveTab('overview')}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   <span className="d-flex align-items-center">
                     <i className="fas fa-chart-pie me-2"></i>
                     Overview
                   </span>
-                </div>
-                <div 
+                </motion.div>
+                <motion.div 
                   className={`nav-tab me-4 pb-3 ${activeTab === 'skills' ? 'active' : ''}`}
                   onClick={() => setActiveTab('skills')}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   <span className="d-flex align-items-center">
                     <i className="fas fa-lightbulb me-2"></i>
                     Skills Analysis
                   </span>
-                </div>
-                <div 
+                </motion.div>
+                <motion.div 
                   className={`nav-tab me-4 pb-3 ${activeTab === 'recommendations' ? 'active' : ''}`}
                   onClick={() => setActiveTab('recommendations')}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   <span className="d-flex align-items-center">
                     <i className="fas fa-award me-2"></i>
                     Recommendations
                   </span>
-                </div>
-                <div 
+                </motion.div>
+                <motion.div 
                   className={`nav-tab me-4 pb-3 ${activeTab === 'report' ? 'active' : ''}`}
                   onClick={() => setActiveTab('report')}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   <span className="d-flex align-items-center">
                     <i className="fas fa-file-alt me-2"></i>
                     Full Report
                   </span>
-                </div>
-              </div>
+                </motion.div>
+              </motion.div>
             </div>
           </div>
 
           {/* Content area */}
-          <div className="tab-content-area p-4 bg-light" style={{ height: 'calc(100vh - 170px)', overflowY: 'auto' }}>
+          <div className="tab-content-area p-4 bg-light content-area" style={{ height: 'calc(100vh - 170px)', overflowY: 'auto' }}>
             <div className="container-fluid">
 
               {/* OVERVIEW TAB */}
@@ -270,16 +283,20 @@ const DetailedAIResultsDialog = ({
                         className="card border-0 shadow-sm h-100"
                       >
                         <div className="card-body p-4">
-                          <div className="text-center mb-4">
-                            <motion.h5 
-                              className="fw-bold mb-2"
+                          <div className="mb-4">
+                            <motion.div 
+                              className="inline-title justify-content-center"
                               initial={{ opacity: 0, y: 20 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: 0.2 }}
                             >
-                              AI has analyzed your profile against this job
-                            </motion.h5>
-                            <p className="text-muted">Here's a summary of how well you match this position</p>
+                              <div className="title-icon">
+                                <i className="fas fa-magic"></i>
+                              </div>
+                              <h5 className="title-text">AI Analysis Results</h5>
+                              <span className="title-badge">{matchPercentage}% Match</span>
+                            </motion.div>
+                            <p className="text-center text-muted">Here's a summary of how well you match this position</p>
                             
                             <div className="match-score-container my-4">
                               <div className="position-relative d-inline-block" style={{ width: '200px', height: '200px' }}>
@@ -389,14 +406,17 @@ const DetailedAIResultsDialog = ({
                         className="card border-0 shadow-sm h-100"
                       >
                         <div className="card-body p-4">
-                          <motion.h5 
-                            className="fw-bold border-start border-primary ps-3 border-4 mb-4"
+                          <motion.div 
+                            className="inline-title mb-4"
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.3 }}
                           >
-                            Top Skills to Highlight
-                          </motion.h5>
+                            <div className="title-icon" style={{ background: 'linear-gradient(45deg, #28a745, #20c997)' }}>
+                              <i className="fas fa-star"></i>
+                            </div>
+                            <h5 className="title-text" style={{ background: 'linear-gradient(90deg, #28a745, #20c997)' }}>Top Skills to Highlight</h5>
+                          </motion.div>
                           
                           {recommendation.strengths && recommendation.strengths.length > 0 ? (
                             <ul className="list-group list-group-flush">
@@ -449,14 +469,17 @@ const DetailedAIResultsDialog = ({
                         className="card border-0 shadow-sm h-100"
                       >
                         <div className="card-body p-4">
-                          <motion.h5 
-                            className="fw-bold border-start border-primary ps-3 border-4 mb-4"
+                          <motion.div 
+                            className="inline-title mb-4"
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.2 }}
                           >
-                            Skills Radar Analysis
-                          </motion.h5>
+                            <div className="title-icon" style={{ background: 'linear-gradient(45deg, #6f42c1, #007bff)' }}>
+                              <i className="fas fa-chart-radar"></i>
+                            </div>
+                            <h5 className="title-text" style={{ background: 'linear-gradient(90deg, #6f42c1, #007bff)' }}>Skills Radar Analysis</h5>
+                          </motion.div>
                           
                           <div className="d-flex justify-content-end mb-3">
                             <div>
@@ -530,10 +553,12 @@ const DetailedAIResultsDialog = ({
                             style={{ background: 'linear-gradient(45deg, #38b368, #2c9862)' }}
                           >
                             <div className="card-body p-4 text-white">
-                              <h5 className="fw-bold mb-3">
-                                <i className="fas fa-check-circle me-2"></i>
-                                Key Strengths
-                              </h5>
+                              <div className="d-flex align-items-center mb-3">
+                                <div className="rounded-circle bg-white d-flex align-items-center justify-content-center me-2" style={{ width: '28px', height: '28px' }}>
+                                  <i className="fas fa-check-circle text-success"></i>
+                                </div>
+                                <h5 className="fw-bold mb-0">Key Strengths</h5>
+                              </div>
                               
                               {recommendation.strengths && recommendation.strengths.length > 0 ? (
                                 <ul className="list-unstyled mb-0">
@@ -567,10 +592,12 @@ const DetailedAIResultsDialog = ({
                             style={{ background: 'linear-gradient(45deg, #ffc107, #ffbb00)' }}
                           >
                             <div className="card-body p-4 text-dark">
-                              <h5 className="fw-bold mb-3">
-                                <i className="fas fa-arrow-up me-2"></i>
-                                Areas to Improve
-                              </h5>
+                              <div className="d-flex align-items-center mb-3">
+                                <div className="rounded-circle bg-white d-flex align-items-center justify-content-center me-2" style={{ width: '28px', height: '28px' }}>
+                                  <i className="fas fa-arrow-up text-warning"></i>
+                                </div>
+                                <h5 className="fw-bold mb-0">Areas to Improve</h5>
+                              </div>
                               
                               {recommendation.weaknesses && recommendation.weaknesses.length > 0 ? (
                                 <ul className="list-unstyled mb-0">
