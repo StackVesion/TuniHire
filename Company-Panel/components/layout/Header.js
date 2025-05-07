@@ -71,10 +71,40 @@ export default function Header() {
         // Set initial window width
         setWindowWidth(window.innerWidth);
         
-        // Get user data using auth utils for consistency
+        // Always refresh user data from localStorage on component mount
+        refreshUserData();
+        
+        // Register a storage event listener to detect changes to localStorage
+        // This ensures subscription changes are reflected immediately
+        window.addEventListener('storage', handleStorageChange);
+        
+        // ENHANCEMENT: Set up a periodic check for subscription status
+        // This helps ensure the subscription badge stays up-to-date
+        const subscriptionRefreshInterval = setInterval(() => {
+            console.log('Periodic subscription refresh check');
+            fetchUserSubscription(true); // Force refresh from API
+        }, 30000); // Check every 30 seconds
+        
+        return () => {
+            window.removeEventListener("scroll", handleScroll);
+            window.removeEventListener("resize", handleResize);
+            window.removeEventListener('storage', handleStorageChange);
+            clearInterval(subscriptionRefreshInterval);
+        };
+    }, []);
+    
+    // Handle localStorage changes (particularly useful for subscription updates)
+    const handleStorageChange = (e) => {
+        if (e.key === 'user') {
+            refreshUserData();
+        }
+    };
+    
+    // Refresh user data from localStorage
+    const refreshUserData = () => {
         const currentUser = getCurrentUser();
         if (currentUser) {
-            console.log('Header: User found', currentUser.firstName, currentUser.role);
+            console.log('Header: User data refreshed', currentUser.firstName, currentUser.role, currentUser.subscription);
             setUser(currentUser);
             
             // Fetch company status for the user
@@ -83,13 +113,7 @@ export default function Header() {
             // Fetch user subscription
             fetchUserSubscription();
         }
-        
-        // Clean up event listeners on unmount
-        return () => {
-            window.removeEventListener("scroll", handleScroll);
-            window.removeEventListener("resize", handleResize);
-        };
-    }, []);
+    };
     
     // Function to fetch company status for the current user
     const fetchCompanyStatus = async (userId) => {
@@ -110,12 +134,48 @@ export default function Header() {
     };
     
     // Function to fetch user's current subscription
-    const fetchUserSubscription = async () => {
+    const fetchUserSubscription = async (forceApiRefresh = false) => {
         try {
+            // Forcefully get fresh data from the API
             const response = await authAxios.get('/api/subscriptions/user-subscription');
-            console.log('User subscription data:', response.data);
-            if (response.data) {
+            console.log('User subscription data from API:', response.data);
+            
+            if (response.data && response.data.subscription) {
+                // Set the subscription state for display
                 setSubscription(response.data);
+                
+                // CRITICAL: Update the user state with the latest subscription info
+                setUser(prevUser => {
+                    if (!prevUser) return prevUser;
+                    
+                    return {
+                        ...prevUser,
+                        subscription: response.data.subscription
+                    };
+                });
+                
+                // IMPORTANT: Also update localStorage to match the backend data
+                try {
+                    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+                    
+                    // Only update if the subscription from API is different from localStorage
+                    if (userData.subscription !== response.data.subscription) {
+                        console.log(`Updating localStorage subscription from ${userData.subscription} to ${response.data.subscription}`);
+                        
+                        userData.subscription = response.data.subscription;
+                        userData.subscriptionExpiryDate = response.data.expiryDate;
+                        localStorage.setItem('user', JSON.stringify(userData));
+                        
+                        // Dispatch storage event to notify other components
+                        window.dispatchEvent(new StorageEvent('storage', {
+                            key: 'user',
+                            newValue: JSON.stringify(userData),
+                            url: window.location.href
+                        }));
+                    }
+                } catch (localStorageError) {
+                    console.error('Error updating localStorage with subscription:', localStorageError);
+                }
             }
         } catch (error) {
             console.log('Error fetching subscription:', error);
@@ -129,7 +189,6 @@ export default function Header() {
                     setSubscription({
                         subscription: userData.subscription,
                         mockData: true,
-                        pendingSync: userData.subscriptionPendingSync,
                         expiryDate: userData.subscriptionExpiryDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
                     });
                 }
@@ -325,17 +384,42 @@ export default function Header() {
                                         <div className="subscription-buttons d-flex mr-15" style={{ marginLeft: 'auto' }}>
                                             {/* Current subscription badge, clickable to redirect to pricing page */}
                                             {subscription && subscription.subscription && (
-                                                <div 
-                                                    className="subscription-badge"
-                                                    style={{
-                                                        ...getSubscriptionButtonStyle(subscription.subscription),
-                                                        animation: 'fadeIn 0.5s ease-in-out',
-                                                    }}
-                                                    onClick={handleGoToPricing}
-                                                    title="Click to upgrade your subscription"
-                                                >
-                                                    {renderSubscriptionIcon(subscription.subscription)}
-                                                    <span>{subscription.subscription} Plan</span>
+                                                <div className="d-flex align-items-center">
+                                                    <div 
+                                                        className="subscription-badge"
+                                                        style={{
+                                                            ...getSubscriptionButtonStyle(subscription.subscription),
+                                                            animation: 'fadeIn 0.5s ease-in-out',
+                                                        }}
+                                                        onClick={handleGoToPricing}
+                                                        title="Click to upgrade your subscription"
+                                                    >
+                                                        {renderSubscriptionIcon(subscription.subscription)}
+                                                        <span>{subscription.subscription} Plan</span>
+                                                    </div>
+                                                    {/* Manual refresh button */}
+                                                    <button
+                                                        className="btn btn-sm btn-icon ms-2"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            console.log('Manual subscription refresh requested');
+                                                            fetchUserSubscription(true); // Force refresh from API
+                                                        }}
+                                                        title="Refresh subscription status"
+                                                        style={{
+                                                            width: '24px',
+                                                            height: '24px',
+                                                            borderRadius: '50%',
+                                                            padding: 0,
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            backgroundColor: 'rgba(0,0,0,0.05)',
+                                                            border: 'none'
+                                                        }}
+                                                    >
+                                                        <i className="fas fa-sync-alt" style={{ fontSize: '12px' }}></i>
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>
@@ -347,17 +431,41 @@ export default function Header() {
                                                     onClick={toggleDropdown}
                                                 >
                                                     <div 
-                                                        className="user-avatar"
+                                                        className="user-avatar position-relative"
                                                         style={{
                                                             width: '40px',
                                                             height: '40px',
                                                             borderRadius: '50%',
                                                             overflow: 'hidden',
-                                                            border: '2px solid #3c65f5',
-                                                            boxShadow: '0 4px 10px rgba(60,101,245,0.2)',
+                                                            border: `2px solid ${user.subscription && user.subscription !== 'Free' ? '#ffd700' : '#3c65f5'}`,
+                                                            boxShadow: `0 4px 10px ${user.subscription && user.subscription !== 'Free' ? 'rgba(255, 215, 0, 0.3)' : 'rgba(60,101,245,0.2)'}`,
                                                             transition: 'all 0.3s ease',
                                                         }}
                                                     >
+                                                        {user.subscription && user.subscription !== 'Free' && (
+                                                            <div 
+                                                                className="premium-indicator"
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    top: -5,
+                                                                    right: -5,
+                                                                    backgroundColor: '#ffd700',
+                                                                    color: '#000',
+                                                                    borderRadius: '50%',
+                                                                    width: '18px',
+                                                                    height: '18px',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    fontSize: '10px',
+                                                                    border: '1px solid #fff',
+                                                                    zIndex: 2,
+                                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                                                }}
+                                                            >
+                                                                <i className="fas fa-crown"></i>
+                                                            </div>
+                                                        )}
                                                         <img 
                                                             alt="User profile" 
                                                             src={user.profilePicture || "/assets/imgs/page/dashboard/profile.png"} 

@@ -598,8 +598,15 @@ function ApplyForJobs({ user }) {
                 </div>
                 
                 {/* AI Recommendation Section */}
+                {/* AI Recommendation Section - Debug info */}
+                <div className="d-none">
+                  <p>User ID: {user?._id}</p>
+                  <p>Job ID: {selectedJob._id}</p>
+                  <p>Subscription: {user?.subscription || 'Free'}</p>
+                </div>
+                
                 <AiRecommendation 
-                  userId={user?.id}
+                  userId={user?._id} 
                   jobId={selectedJob._id}
                   subscription={user?.subscription || 'Free'}
                   authAxios={authAxios}

@@ -7,31 +7,111 @@ import { Doughnut, Bar } from 'react-chartjs-2';
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const AiRecommendation = ({ userId, jobId, subscription, authAxios, onViewDetails }) => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start with loading state true
   const [error, setError] = useState(null);
   const [recommendation, setRecommendation] = useState(null);
-  const [showUnlockForm, setShowUnlockForm] = useState(false);
+  const [animatedPercentage, setAnimatedPercentage] = useState(0);
 
   const isPremium = ['Golden', 'Platinum', 'Master'].includes(subscription);
+  
+  // Debug logging 
+  console.log('AI Recommendation Component:', { userId, jobId, subscription, isPremium });
 
+  // Trigger API call when component mounts or when IDs change
   useEffect(() => {
-    if (isPremium && userId && jobId) {
+    if (userId && jobId) {
+      console.log('AiRecommendation: userId and jobId available, triggering API call');
+      console.log('User ID:', userId);
+      console.log('Job ID:', jobId);
       fetchRecommendation();
+    } else {
+      console.log('AiRecommendation: Missing required IDs', { userId, jobId });
     }
-  }, [userId, jobId, subscription]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, jobId]);
 
-  const fetchRecommendation = async () => {
+  // Animation effect for percentage counter when recommendation is loaded
+  useEffect(() => {
+    if (recommendation && recommendation.pass_percentage) {
+      const targetPercentage = Math.round(recommendation.pass_percentage);
+      let startValue = 0;
+      const duration = 1500; // milliseconds
+      const frameDuration = 1000 / 60; // 60fps
+      const totalFrames = Math.round(duration / frameDuration);
+      const incrementPerFrame = targetPercentage / totalFrames;
+      
+      let currentFrame = 0;
+      const counter = setInterval(() => {
+        currentFrame++;
+        const progress = Math.min(incrementPerFrame * currentFrame, targetPercentage);
+        setAnimatedPercentage(Math.floor(progress));
+        
+        if (currentFrame === totalFrames) {
+          clearInterval(counter);
+          setAnimatedPercentage(targetPercentage);
+        }
+      }, frameDuration);
+      
+      return () => clearInterval(counter);
+    }
+  }, [userId, jobId, recommendation]);
+
+  const fetchRecommendation = () => {
+    if (!userId || !jobId) {
+      console.error('Cannot fetch recommendation: Missing user ID or job ID');
+      setError('Missing required data to analyze this job');
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     setError(null);
-    try {
-      const response = await authAxios.get(`http://localhost:5001/api/recommendation?user_id=${userId}&job_id=${jobId}`);
-      setRecommendation(response.data.data);
-    } catch (err) {
-      console.error('Error fetching AI recommendation:', err);
-      setError('Failed to load AI insights. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
+    
+    // Log the API call attempt for debugging
+    console.log(`⚡ CALLING AI API: http://localhost:5001/api/recommendation?user_id=${userId}&job_id=${jobId}`);
+    
+    // Use XMLHttpRequest for better browser compatibility and network monitoring
+    const xhr = new XMLHttpRequest();
+    const url = `http://localhost:5001/api/recommendation?user_id=${userId}&job_id=${jobId}`;
+    
+    xhr.open('GET', url, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('Accept', 'application/json');
+    
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            console.log('✅ AI recommendation data received:', data);
+            
+            if (data.success && data.data) {
+              setRecommendation(data.data);
+            } else {
+              throw new Error(data.message || 'Failed to get recommendation data');
+            }
+          } catch (err) {
+            console.error('❌ Error parsing AI recommendation response:', err);
+            setError('Failed to parse AI insights data. Please try again.');
+          }
+        } else {
+          console.error(`❌ API request failed with status ${xhr.status}: ${xhr.statusText}`);
+          setError(`Failed to load AI insights (Status: ${xhr.status}). Please check if the recommendation service is running.`);
+        }
+        
+        // Show loading animation for at least 1.5 seconds for better UX
+        setTimeout(() => setLoading(false), 1500);
+      }
+    };
+    
+    xhr.onerror = function() {
+      console.error('❌ Network error occurred when trying to fetch AI recommendation');
+      setError('Network error. Please check if the recommendation service is running on port 5001.');
+      setTimeout(() => setLoading(false), 1500);
+    };
+    
+    // Send the request
+    xhr.send();
   };
 
   // Chart data for premium users
@@ -44,11 +124,15 @@ const AiRecommendation = ({ userId, jobId, subscription, authAxios, onViewDetail
         {
           data: [recommendation.pass_percentage, 100 - recommendation.pass_percentage],
           backgroundColor: [
-            'rgba(54, 162, 235, 0.8)',
+            recommendation.pass_percentage > 70 ? 'rgba(40, 167, 69, 0.8)' :  // Green for high score
+            recommendation.pass_percentage > 50 ? 'rgba(255, 193, 7, 0.8)' :   // Yellow for medium
+            'rgba(220, 53, 69, 0.8)',                                         // Red for low
             'rgba(211, 211, 211, 0.3)',
           ],
           borderColor: [
-            'rgba(54, 162, 235, 1)',
+            recommendation.pass_percentage > 70 ? 'rgba(40, 167, 69, 1)' :  
+            recommendation.pass_percentage > 50 ? 'rgba(255, 193, 7, 1)' :   
+            'rgba(220, 53, 69, 1)',
             'rgba(211, 211, 211, 1)',
           ],
           borderWidth: 1,
@@ -59,7 +143,7 @@ const AiRecommendation = ({ userId, jobId, subscription, authAxios, onViewDetail
 
   // Rankings chart data
   const getRankingChartData = () => {
-    if (!recommendation) return null;
+    if (!recommendation || !recommendation.ranking) return null;
     
     return {
       labels: ['Your Score'],
@@ -75,23 +159,45 @@ const AiRecommendation = ({ userId, jobId, subscription, authAxios, onViewDetail
     };
   };
 
-  // Render loading state
+  // Determine the color for match percentage
+  const getMatchColor = (percentage) => {
+    if (percentage > 70) return 'text-success';
+    if (percentage > 50) return 'text-warning';
+    return 'text-danger';
+  };
+
+  // Render loading state with animated AI loader
   if (loading) {
     return (
       <motion.div 
         className="ai-recommendation mb-4 p-3 bg-light rounded"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.2 }}
       >
         <h6 className="mb-3 d-flex align-items-center">
           <i className="fas fa-robot me-2 text-primary"></i>
-          AI Job Match
+          AI Job Match Analysis
         </h6>
-        <div className="d-flex justify-content-center py-4">
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
+        <div className="text-center py-4">
+          <div className="ai-loader mb-3">
+            <div className="ai-brain-animation">
+              <i className="fas fa-brain" style={{
+                fontSize: '2.5rem',
+                color: '#3c65f5',
+                animation: 'pulse 1.5s infinite'
+              }}></i>
+              <style jsx>{`
+                @keyframes pulse {
+                  0% { opacity: 0.6; transform: scale(0.95); }
+                  50% { opacity: 1; transform: scale(1.05); }
+                  100% { opacity: 0.6; transform: scale(0.95); }
+                }
+              `}</style>
+            </div>
           </div>
+          <p className="mb-0">Analyzing job compatibility...</p>
+          <p className="text-muted small">Using AI to match your profile with job requirements</p>
         </div>
       </motion.div>
     );
@@ -104,27 +210,35 @@ const AiRecommendation = ({ userId, jobId, subscription, authAxios, onViewDetail
         className="ai-recommendation mb-4 p-3 bg-light rounded"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.2 }}
       >
         <h6 className="mb-3 d-flex align-items-center">
           <i className="fas fa-robot me-2 text-primary"></i>
           AI Job Match
         </h6>
         <div className="alert alert-danger" role="alert">
+          <i className="fas fa-exclamation-triangle me-2"></i>
           {error}
+          <button 
+            className="btn btn-sm btn-outline-danger mt-2" 
+            onClick={fetchRecommendation}
+          >
+            <i className="fas fa-sync-alt me-2"></i>
+            Try Again
+          </button>
         </div>
       </motion.div>
     );
   }
 
-  // Free subscription view with blur effect
+  // Free subscription view with blur effect and premium badge
   if (!isPremium) {
     return (
       <motion.div 
         className="ai-recommendation mb-4 p-3 bg-light rounded position-relative overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.2 }}
       >
         <h6 className="mb-3 d-flex align-items-center">
           <i className="fas fa-robot me-2 text-primary"></i>
@@ -153,64 +267,55 @@ const AiRecommendation = ({ userId, jobId, subscription, authAxios, onViewDetail
               </div>
             </div>
             <div className="col-md-6">
-              <div style={{ height: '160px' }} className="d-flex flex-column justify-content-center">
-                <h3 className="text-center mb-0">65%</h3>
-                <p className="text-center text-muted mb-0">Match Rate</p>
-                <p className="text-center mt-2">
-                  <i className="fas fa-users me-1"></i> Rank: <span className="badge bg-success">Top 25%</span>
-                </p>
+              <div className="text-center mt-2">
+                <h3>65%</h3>
+                <p className="mb-0">Match Score</p>
               </div>
-            </div>
-          </div>
-          <div className="row">
-            <div className="col-12">
-              <h6 className="border-bottom pb-2">Key Strengths</h6>
-              <div className="d-flex flex-wrap gap-1 mb-3">
-                <span className="badge bg-light text-dark p-2">JavaScript</span>
-                <span className="badge bg-light text-dark p-2">React</span>
-                <span className="badge bg-light text-dark p-2">Node.js</span>
+              <div className="mt-3">
+                <p className="mb-1">Position: #3 of 12 applicants</p>
+                <div className="progress">
+                  <div className="progress-bar" role="progressbar" style={{ width: '75%' }}></div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-        
+
         {/* Unlock overlay */}
         <div 
-          className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center"
-          style={{ background: 'rgba(255,255,255,0.7)', zIndex: 2 }}
+          className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center bg-light bg-opacity-90"
+          style={{ backdropFilter: 'blur(4px)' }}
         >
-          <div className="text-center px-4">
-            <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              transition={{ 
-                repeat: Infinity, 
-                repeatType: "reverse", 
-                duration: 1.5 
-              }}
-            >
-              <i className="fas fa-crown text-warning" style={{ fontSize: '3rem' }}></i>
-            </motion.div>
-            <h5 className="mt-3">Unlock AI Insights</h5>
-            <p className="text-muted mb-3">Upgrade to a premium plan to access AI-powered job match analysis and improve your chances.</p>
-            <button 
-              className="btn btn-warning"
-              onClick={() => onViewDetails('upgrade')}
-            >
-              <i className="fas fa-unlock-alt me-2"></i>
-              Upgrade Now
-            </button>
-          </div>
+          <motion.div
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            transition={{ 
+              repeat: Infinity, 
+              repeatType: "reverse", 
+              duration: 1.5 
+            }}
+          >
+            <i className="fas fa-crown text-warning" style={{ fontSize: '2rem' }}></i>
+          </motion.div>
+          <h5 className="mt-3 mb-2">Premium Feature</h5>
+          <p className="text-center mb-3">Unlock AI-powered job match insights<br />with a premium subscription</p>
+          <button 
+            className="btn btn-primary" 
+            onClick={() => onViewDetails('upgrade')}
+          >
+            <i className="fas fa-unlock-alt me-2"></i>
+            Upgrade Now
+          </button>
         </div>
       </motion.div>
     );
   }
 
-  // Premium subscription view with actual data
+  // Premium user view with detailed analysis
   if (recommendation) {
     return (
       <motion.div 
-        className="ai-recommendation mb-4 p-3 bg-light rounded"
+        className="ai-recommendation mb-4 p-0 rounded shadow-sm overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}

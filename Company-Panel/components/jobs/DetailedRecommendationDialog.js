@@ -118,7 +118,7 @@ const DetailedRecommendationDialog = ({ isOpen, onClose, recommendation, subscri
 
           {/* Dialog */}
           <motion.div
-            className="modal-dialog modal-dialog-centered modal-lg"
+            className="modal-dialog modal-dialog-centered modal-xl"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
@@ -130,7 +130,11 @@ const DetailedRecommendationDialog = ({ isOpen, onClose, recommendation, subscri
               transform: 'translate(-50%, -50%)',
               zIndex: 1051,
               width: '100%',
-              maxWidth: '900px',
+              maxWidth: '1100px',
+              margin: '0 auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             <div className="modal-content border-0 shadow-lg">
@@ -242,6 +246,25 @@ const DetailedRecommendationDialog = ({ isOpen, onClose, recommendation, subscri
                                   )}
                                 </div>
                               </div>
+                              
+                              {/* Match Score Interpretation Guide */}
+                              <div className="mt-3 pt-3 border-top">
+                                <h6 className="card-subtitle mb-2">What This Means:</h6>
+                                <div className="d-flex align-items-center mb-2">
+                                  <div className="legend-item" style={{ width: '14px', height: '14px', backgroundColor: 'rgba(54, 162, 235, 0.8)', borderRadius: '50%', marginRight: '8px' }}></div>
+                                  <span className="small"><strong>Match Score</strong> - How well your profile matches this job</span>
+                                </div>
+                                <div className="match-scale d-flex justify-content-between align-items-center mt-2 px-2">
+                                  <span className="small text-danger">Low Match<br/>&lt; 60%</span>
+                                  <span className="small text-warning">Average<br/>60-75%</span>
+                                  <span className="small text-success">Strong Match<br/>&gt; 75%</span>
+                                </div>
+                                <div className="progress mt-1" style={{ height: '6px' }}>
+                                  <div className="progress-bar bg-danger" style={{ width: '33%' }}></div>
+                                  <div className="progress-bar bg-warning" style={{ width: '33%' }}></div>
+                                  <div className="progress-bar bg-success" style={{ width: '34%' }}></div>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -255,6 +278,28 @@ const DetailedRecommendationDialog = ({ isOpen, onClose, recommendation, subscri
                                 <p className="text-muted">of {recommendation.ranking.total_applicants} applicants</p>
                                 <div className="badge bg-success p-2 mb-2">
                                   Top {recommendation.ranking.percentile.toFixed(0)}%
+                                </div>
+                                
+                                {/* Visual ranking indicator */}
+                                <div className="position-relative my-3" style={{ height: '8px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
+                                  <div 
+                                    className="position-absolute top-0 start-0 bg-primary" 
+                                    style={{ 
+                                      width: `${100 - recommendation.ranking.percentile}%`, 
+                                      height: '8px', 
+                                      borderRadius: '4px',
+                                      maxWidth: '100%'
+                                    }}
+                                  ></div>
+                                  <div 
+                                    className="position-absolute top-0 start-0 translate-middle-y" 
+                                    style={{ 
+                                      left: `${100 - recommendation.ranking.percentile}%`, 
+                                      marginTop: '4px'
+                                    }}
+                                  >
+                                    <div className="bg-primary rounded-circle" style={{ width: '14px', height: '14px' }}></div>
+                                  </div>
                                 </div>
                                 <div className="mt-2">
                                   <small className="text-muted">
@@ -311,23 +356,60 @@ const DetailedRecommendationDialog = ({ isOpen, onClose, recommendation, subscri
                           <div className="card h-100">
                             <div className="card-body">
                               <h6 className="card-title">Skills Radar</h6>
-                              <div className="chart-container" style={{ height: '400px' }}>
-                                <Radar
-                                  data={getSkillsRadarData()}
-                                  options={{
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    scales: {
-                                      r: {
-                                        angleLines: {
-                                          display: true
-                                        },
-                                        suggestedMin: 0,
-                                        suggestedMax: 100
+                              <div className="radar-chart-container position-relative">
+                                <div className="mb-3 d-flex justify-content-center">
+                                  <div className="legend-box d-flex align-items-center me-3">
+                                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgba(54, 162, 235, 0.2)', border: '1px solid rgba(54, 162, 235, 1)', marginRight: '5px' }}></div>
+                                    <small>Your Skills</small>
+                                  </div>
+                                  <div className="legend-hint d-flex align-items-center">
+                                    <i className="fas fa-info-circle text-muted me-1"></i>
+                                    <small className="text-muted">Higher scores (outer edges) are better</small>
+                                  </div>
+                                </div>
+                                <div className="chart-container" style={{ height: '350px' }}>
+                                  <Radar
+                                    data={getSkillsRadarData()}
+                                    options={{
+                                      responsive: true,
+                                      maintainAspectRatio: false,
+                                      scales: {
+                                        r: {
+                                          angleLines: {
+                                            display: true,
+                                            color: 'rgba(0, 0, 0, 0.1)'
+                                          },
+                                          grid: {
+                                            color: 'rgba(0, 0, 0, 0.1)'
+                                          },
+                                          pointLabels: {
+                                            font: {
+                                              size: 12,
+                                              weight: 'bold'
+                                            },
+                                            color: '#333'
+                                          },
+                                          suggestedMin: 0,
+                                          suggestedMax: 100,
+                                          ticks: {
+                                            display: false,
+                                            stepSize: 20
+                                          }
+                                        }
+                                      },
+                                      plugins: {
+                                        tooltip: {
+                                          callbacks: {
+                                            label: function(context) {
+                                              return `Skill Level: ${context.raw}/100`;
+                                            }
+                                          }
+                                        }
                                       }
-                                    }
-                                  }}
-                                />
+                                    }}
+                                  />
+                                </div>
+                              </div>
                               </div>
                             </div>
                           </div>

@@ -55,11 +55,25 @@ export const confirmPayment = async (paymentIntentId, planId) => {
       // Update user data in localStorage with new subscription
       try {
         const userData = JSON.parse(localStorage.getItem('user') || '{}');
-        userData.subscription = response.data.subscription || response.data.message?.includes('Gold') ? 'Golden' : 
-                               response.data.message?.includes('Platinum') ? 'Platinum' : 
-                               response.data.message?.includes('Master') ? 'Master' : 'Free';
+        
+        // Get subscription name from response data or extract from message
+        const subscriptionName = response.data.subscription || 
+                               (response.data.message && response.data.message.includes('Golden') ? 'Golden' : 
+                               response.data.message && response.data.message.includes('Platinum') ? 'Platinum' : 
+                               response.data.message && response.data.message.includes('Master') ? 'Master' : 'Free');
+        
+        console.log(`Setting subscription in localStorage to: ${subscriptionName}`);
+        userData.subscription = subscriptionName;
         userData.subscriptionExpiryDate = response.data.expiryDate;
         localStorage.setItem('user', JSON.stringify(userData));
+        
+        // Force a storage event to notify other components
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'user',
+          newValue: JSON.stringify(userData),
+          url: window.location.href
+        }));
+        
         console.log('Updated user subscription data in localStorage:', userData.subscription);
       } catch (e) {
         console.error('Error updating localStorage:', e);
