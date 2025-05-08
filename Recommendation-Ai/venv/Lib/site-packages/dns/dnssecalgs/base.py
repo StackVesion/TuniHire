@@ -65,12 +65,7 @@ class GenericPrivateKey(ABC):
         pass
 
     @abstractmethod
-    def sign(
-        self,
-        data: bytes,
-        verify: bool = False,
-        deterministic: bool = True,
-    ) -> bytes:
+    def sign(self, data: bytes, verify: bool = False) -> bytes:
         """Sign DNSSEC data"""
 
     @abstractmethod

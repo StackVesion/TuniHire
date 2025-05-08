@@ -47,17 +47,9 @@ class PrivateECDSA(CryptographyPrivateKey):
     key_cls = ec.EllipticCurvePrivateKey
     public_cls = PublicECDSA
 
-    def sign(
-        self,
-        data: bytes,
-        verify: bool = False,
-        deterministic: bool = True,
-    ) -> bytes:
+    def sign(self, data: bytes, verify: bool = False) -> bytes:
         """Sign using a private key per RFC 6605, section 4."""
-        algorithm = ec.ECDSA(
-            self.public_cls.chosen_hash, deterministic_signing=deterministic
-        )
-        der_signature = self.key.sign(data, algorithm)
+        der_signature = self.key.sign(data, ec.ECDSA(self.public_cls.chosen_hash))
         dsa_r, dsa_s = utils.decode_dss_signature(der_signature)
         signature = int.to_bytes(
             dsa_r, length=self.public_cls.octets, byteorder="big"

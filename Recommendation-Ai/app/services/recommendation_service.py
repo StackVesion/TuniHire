@@ -1,4 +1,5 @@
 from bson.objectid import ObjectId
+from datetime import datetime
 from app.utils.portfolio_analyzer import PortfolioAnalyzer
 
 class RecommendationService:
@@ -19,150 +20,236 @@ class RecommendationService:
     
     def generate_recommendation(self, user_id, job_id):
         """
-        Generate detailed recommendation for a user applying to a job
+        Generate a detailed recommendation for a user applying to a specific job
+        Includes scores for skills, experience, education, and languages
         
-        Parameters:
-        - user_id: The MongoDB ObjectId of the user
-        - job_id: The MongoDB ObjectId of the job posting
-        
-        Returns a dictionary containing:
-        - pass_percentage: Likelihood of passing ATS (0-100)
-        - ranking: Position compared to other applicants
-        - strengths: List of matching skills/qualifications
-        - weaknesses: List of missing skills/qualifications
-        - similar_jobs: List of similar job postings that match user skills
-        - text_report: Detailed text report for human-readable insights
-        - subscription_bonus: Applied bonus based on user's subscription tier
+        Args:
+            user_id (str): MongoDB ID for the user
+            job_id (str): MongoDB ID for the job post
+            
+        Returns:
+            dict: Complete recommendation data
         """
         try:
             # Convert string IDs to ObjectId
-            user_object_id = ObjectId(user_id)
-            job_object_id = ObjectId(job_id)
+            user_id_obj = ObjectId(user_id)
+            job_id_obj = ObjectId(job_id)
             
             # Get user data
-            user_data = self.db.users.find_one({'_id': user_object_id})
-            if not user_data:
-                raise Exception(f"User with ID {user_id} not found")
+            user = self.db.users.find_one({"_id": user_id_obj})
+            if not user:
+                return {"error": "User not found"}
+            
+            # Get job data
+            job = self.db.jobposts.find_one({"_id": job_id_obj})
+            if not job:
+                return {"error": "Job not found"}
             
             # Get user portfolio
-            user_portfolio = self.db.portfolios.find_one({'userId': user_object_id})
-            if not user_portfolio:
-                raise Exception(f"Portfolio for user with ID {user_id} not found")
+            portfolio = self.db.portfolios.find_one({"userId": user_id_obj})
+            if not portfolio:
+                portfolio = {}  # Default empty portfolio
             
-            # Get job posting data
-            job_data = self.db.jobposts.find_one({'_id': job_object_id})
-            if not job_data:
-                raise Exception(f"Job posting with ID {job_id} not found")
+            # Calculate match percentage
+            skills_match = self._calculate_skills_match(portfolio, job)
+            experience_match = self._calculate_experience_match(portfolio, job)
+            education_match = self._calculate_education_match(portfolio, job)
+            language_match = self._calculate_language_match(portfolio, job)
             
-            # Add company name to job data if available
-            if 'companyId' in job_data:
-                company = self.db.companies.find_one({'_id': job_data['companyId']})
-                if company and 'name' in company:
-                    job_data['companyName'] = company['name']
+            # Apply weighting to each score component
+            skills_weight = 0.4
+            experience_weight = 0.3
+            education_weight = 0.2
+            language_weight = 0.1
             
-            # Get all applications for this job
-            applications = list(self.db.applications.find({'jobId': job_object_id}))
-            
-            # Get all applicant portfolios (excluding current user)
-            other_applicant_ids = [app['userId'] for app in applications if str(app['userId']) != str(user_object_id)]
-            other_portfolios = list(self.db.portfolios.find({'userId': {'$in': other_applicant_ids}}))
-            
-            # Train the model with historical application data if available
-            all_applications = list(self.db.applications.find({'status': {'$in': ['Accepted', 'Rejected']}}))
-            all_portfolios = list(self.db.portfolios.find())
-            all_jobs = list(self.db.jobposts.find())
-            
-            # Try to train the model with existing data
-            self.analyzer.train_on_application_results(all_applications, all_portfolios, all_jobs)
-            
-            # Predict success rate using ML model
-            pass_percentage = self.analyzer.predict_application_success(user_portfolio, job_data)
-            
-            # Apply subscription tier bonus if available
-            subscription_tier = user_data.get('subscription', 'Free')
-            subscription_bonus = self.SUBSCRIPTION_TIERS.get(subscription_tier, 1.0)
-            
-            # Apply subscription bonus to pass percentage (but cap at 100%)
-            adjusted_pass_percentage = min(pass_percentage * subscription_bonus, 100)
-            
-            # Compare with other portfolios to get ranking
-            ranking = self.analyzer.compare_portfolios(user_portfolio, other_portfolios, job_data)
-            
-            # Identify strengths and weaknesses
-            strengths_weaknesses = self.analyzer.identify_strengths_weaknesses(user_portfolio, job_data)
-            
-            # Find all available jobs (excluding current one)
-            available_jobs = list(self.db.jobposts.find({'_id': {'$ne': job_object_id}}))
-            
-            # Find better matching jobs for this user
-            # Include subscription tier in the filtering logic
-            recommended_jobs = self._find_subscription_appropriate_jobs(
-                user_portfolio, 
-                available_jobs, 
-                subscription_tier
+            # Calculate the weighted average score
+            global_score = (
+                skills_match * skills_weight +
+                experience_match * experience_weight +
+                education_match * education_weight +
+                language_match * language_weight
             )
             
-            # Generate detailed text report
-            text_report = self.analyzer.generate_detailed_report(
-                user_data, 
-                job_data, 
-                user_portfolio, 
-                ranking, 
-                strengths_weaknesses['strengths'], 
-                strengths_weaknesses['weaknesses'],
-                recommended_jobs
-            )
+            # Round to nearest integer
+            global_score = round(global_score)
             
-            # Record this recommendation for future learning
-            self.analyzer.record_recommendation(user_id, job_id, {
-                'pass_percentage': pass_percentage,
-                'ranking': ranking,
-                'portfolio_score': ranking['score'],
-                'subscription_tier': subscription_tier
-            })
+            # Get subscription tier for bonus
+            subscription_tier = user.get('subscription', 'Free')
+            subscription_bonus = self._calculate_subscription_bonus(subscription_tier)
             
-            # Format the job recommendations for API response
-            formatted_jobs = []
-            for job, score in recommended_jobs:
-                job_info = {
-                    'id': str(job['_id']),
-                    'title': job.get('title', ''),
-                    'match_percentage': score
-                }
-                
-                # Add company info if available
-                if 'companyId' in job:
-                    job_info['company_id'] = str(job['companyId'])
-                    company = self.db.companies.find_one({'_id': job['companyId']})
-                    if company and 'name' in company:
-                        job_info['company_name'] = company['name']
-                
-                formatted_jobs.append(job_info)
-            
-            # Save the trained model
-            self.analyzer.save_models()
-            
-            # Prepare final recommendation result
+            # Prepare recommendation result
             recommendation = {
-                'pass_percentage': round(adjusted_pass_percentage, 2),
-                'base_percentage': round(pass_percentage, 2),
-                'subscription_tier': subscription_tier,
-                'subscription_bonus': round((subscription_bonus - 1) * 100, 1),  # Convert to percentage bonus
-                'ranking': ranking,
-                'strengths': strengths_weaknesses['strengths'],
-                'weaknesses': strengths_weaknesses['weaknesses'],
-                'similar_jobs': formatted_jobs,
-                'text_report': text_report
+                "match_percentage": global_score,
+                "skills_match_percentage": skills_match,
+                "experience_match": experience_match,
+                "education_match": education_match,
+                "language_match": language_match,
+                "job_title": job.get("title", ""),
+                "job_id": str(job["_id"]),
+                "user_id": str(user["_id"]),
+                "subscription_tier": subscription_tier,
+                "subscription_bonus": subscription_bonus,
+                "recommendation_date": datetime.now().isoformat(),
+                "strengths": self._identify_strengths(portfolio, job),
+                "weaknesses": self._identify_weaknesses(portfolio, job)
             }
             
+            # Add company information
+            if "companyId" in job:
+                company = self.db.companies.find_one({"_id": job["companyId"]})
+                if company:
+                    recommendation["company_name"] = company.get("name", "")
+                    recommendation["company_id"] = str(company["_id"])
+            
             return recommendation
-        
+            
         except Exception as e:
-            # Log the error
             print(f"Error generating recommendation: {str(e)}")
-            # Re-raise to be handled by the API endpoint
-            raise
-    
+            return {"error": str(e)}
+
+    def _calculate_skills_match(self, portfolio, job):
+        """Calculate percentage match between user skills and job requirements"""
+        if not portfolio or "skills" not in portfolio or not portfolio["skills"]:
+            return 15  # Default value if no skills in portfolio
+        
+        if "requirements" not in job or not job["requirements"]:
+            return 15  # Default value if no requirements specified
+        
+        user_skills = [skill.lower() for skill in portfolio.get("skills", [])]
+        job_skills = [req.lower() for req in job.get("requirements", [])]
+        
+        if not job_skills:
+            return 15  # Default value if no skills required
+        
+        # Calculate matches
+        matches = sum(1 for skill in job_skills if any(user_skill in skill for user_skill in user_skills))
+        
+        # Calculate percentage
+        match_percentage = (matches / len(job_skills)) * 100
+        
+        # Ensure we don't go below the minimum 15%
+        return max(15, min(100, round(match_percentage)))
+
+    def _calculate_experience_match(self, portfolio, job):
+        """Calculate experience match percentage"""
+        # Start with base score of 15%
+        experience_score = 15
+        
+        if not portfolio or "experience" not in portfolio or not portfolio["experience"]:
+            return experience_score  # Default value
+        
+        if "yearsOfExperienceRequired" not in job:
+            return experience_score  # Default if no experience required
+        
+        # Calculate user's total years of experience
+        user_experience = sum(exp.get("years", 0) for exp in portfolio.get("experience", []))
+        
+        # Get required years of experience
+        required_exp = job.get("yearsOfExperienceRequired", 0)
+        
+        if required_exp <= 0:
+            return 100  # If no experience required, give full score
+        
+        # Calculate percentage
+        if user_experience >= required_exp:
+            experience_score = 100  # Full match
+        else:
+            # Partial match with minimum 15%
+            experience_score = max(15, min(100, round((user_experience / required_exp) * 100)))
+        
+        return experience_score
+
+    def _calculate_education_match(self, portfolio, job):
+        """Calculate education match percentage"""
+        # Start with full score
+        education_score = 100
+        
+        if not portfolio or "education" not in portfolio or not portfolio["education"]:
+            return 15  # Default if no education listed
+        
+        if "requiredEducationLevel" not in job:
+            return 100  # Default if no education required
+        
+        # Education levels with corresponding values
+        education_levels = {
+            "high-school": 1,
+            "associate": 2,
+            "bachelor": 3,
+            "master": 4,
+            "phd": 5
+        }
+        
+        # Get user's highest education level
+        user_education_level = 0
+        for education in portfolio.get("education", []):
+            degree = education.get("degree", "").lower()
+            for level, value in education_levels.items():
+                if level in degree:
+                    user_education_level = max(user_education_level, value)
+        
+        # Get job required education level
+        required_level = education_levels.get(job.get("requiredEducationLevel", "").lower(), 0)
+        
+        # Calculate match
+        if user_education_level >= required_level:
+            education_score = 100  # Full match
+        elif user_education_level > 0:  # Some education but not enough
+            education_score = max(15, min(100, round((user_education_level / required_level) * 100)))
+        else:
+            education_score = 15  # Minimum score
+        
+        return education_score
+
+    def _calculate_language_match(self, portfolio, job):
+        """Calculate language proficiency match percentage"""
+        # Start with minimum score
+        language_score = 15
+        
+        if not portfolio or "languages" not in portfolio or not portfolio["languages"]:
+            return language_score  # Default if no languages listed
+        
+        if "requiredLanguages" not in job or not job["requiredLanguages"]:
+            return 100  # Default if no languages required
+        
+        # Proficiency levels with corresponding values
+        proficiency_levels = {
+            "basic": 1,
+            "intermediate": 2,
+            "advanced": 3,
+            "fluent": 4,
+            "native": 5
+        }
+        
+        # Get user languages
+        user_languages = {lang["name"].lower(): proficiency_levels.get(lang.get("level", "").lower(), 0) 
+                         for lang in portfolio.get("languages", [])}
+        
+        # Get required languages
+        required_languages = {lang["name"].lower(): proficiency_levels.get(lang.get("level", "").lower(), 0) 
+                             for lang in job.get("requiredLanguages", [])}
+        
+        if not required_languages:
+            return 100  # If no languages required
+        
+        # Calculate matches
+        total_points = 0
+        possible_points = 0
+        
+        for lang, req_level in required_languages.items():
+            possible_points += req_level
+            if lang in user_languages:
+                user_level = user_languages[lang]
+                if user_level >= req_level:
+                    total_points += req_level  # Full match for this language
+                else:
+                    total_points += user_level  # Partial match
+        
+        # Calculate percentage
+        if possible_points > 0:
+            language_score = max(15, min(100, round((total_points / possible_points) * 100)))
+        
+        return language_score
+
     def _find_subscription_appropriate_jobs(self, portfolio, all_jobs, subscription_tier):
         """
         Find jobs that match both the user's skills and their subscription tier

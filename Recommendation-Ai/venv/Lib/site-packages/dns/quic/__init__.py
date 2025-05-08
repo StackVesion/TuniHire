@@ -1,7 +1,5 @@
 # Copyright (C) Dnspython Contributors, see LICENSE for text of ISC license
 
-from typing import List, Tuple
-
 import dns._features
 import dns.asyncbackend
 
@@ -75,6 +73,3 @@ else:  # pragma: no cover
     class SyncQuicConnection:  # type: ignore
         def make_stream(self) -> Any:
             raise NotImplementedError
-
-
-Headers = List[Tuple[bytes, bytes]]

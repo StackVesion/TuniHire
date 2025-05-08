@@ -26,10 +26,6 @@ class NullContext:
 
 
 class Socket:  # pragma: no cover
-    def __init__(self, family: int, type: int):
-        self.family = family
-        self.type = type
-
     async def close(self):
         pass
 
@@ -50,6 +46,9 @@ class Socket:  # pragma: no cover
 
 
 class DatagramSocket(Socket):  # pragma: no cover
+    def __init__(self, family: int):
+        self.family = family
+
     async def sendto(self, what, destination, timeout):
         raise NotImplementedError
 

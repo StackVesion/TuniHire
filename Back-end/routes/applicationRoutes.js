@@ -107,8 +107,8 @@ router.get("/job/:jobId", verifyToken, async (req, res) => {
   }
 });
 
-// Apply for a job - use the controller
-router.post("/apply/:jobId", verifyToken, applicationController.applyForJob);
+// Apply for a job - use the controller with upload middleware
+router.post("/apply/:jobId", verifyToken, applicationController.uploadResume, applicationController.applyForJob);
 
 // Update application status (for HR)
 router.put("/:applicationId/status", verifyToken, async (req, res) => {
