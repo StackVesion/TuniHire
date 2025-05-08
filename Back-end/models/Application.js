@@ -13,6 +13,15 @@ const ApplicationSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  // Resume data for Cloudinary uploads
+  resume: {
+    originalName: { type: String },
+    fileType: { type: String },
+    size: { type: Number },
+    uploadDate: { type: Date, default: Date.now },
+    publicId: { type: String },
+    url: { type: String }
+  },
   status: { 
     type: String, 
     enum: ["Pending", "Accepted", "Rejected"], 

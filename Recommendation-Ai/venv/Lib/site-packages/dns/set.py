@@ -21,11 +21,10 @@ import itertools
 class Set:
     """A simple set class.
 
-    This class was originally used to deal with python not having a set class, and
-    originally the class used lists in its implementation.  The ordered and indexable
-    nature of RRsets and Rdatasets is unfortunately widely used in dnspython
-    applications, so for backwards compatibility sets continue to be a custom class, now
-    based on an ordered dictionary.
+    This class was originally used to deal with sets being missing in
+    ancient versions of python, but dnspython will continue to use it
+    as these sets are based on lists and are thus indexable, and this
+    ability is widely used in dnspython applications.
     """
 
     __slots__ = ["items"]
@@ -44,7 +43,7 @@ class Set:
                 self.add(item)  # lgtm[py/init-calls-subclass]
 
     def __repr__(self):
-        return f"dns.set.Set({repr(list(self.items.keys()))})"  # pragma: no cover
+        return "dns.set.Set(%s)" % repr(list(self.items.keys()))
 
     def add(self, item):
         """Add an item to the set."""

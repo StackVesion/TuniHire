@@ -36,7 +36,6 @@ import dns.ipv4
 import dns.ipv6
 import dns.message
 import dns.name
-import dns.rdata
 import dns.nameserver
 import dns.query
 import dns.rcode
@@ -46,7 +45,7 @@ import dns.rdtypes.svcbbase
 import dns.reversename
 import dns.tsig
 
-if sys.platform == "win32":  # pragma: no cover
+if sys.platform == "win32":
     import dns.win32util
 
 
@@ -84,7 +83,7 @@ class NXDOMAIN(dns.exception.DNSException):
         else:
             msg = "The DNS query name does not exist"
         qnames = ", ".join(map(str, qnames))
-        return f"{msg}: {qnames}"
+        return "{}: {}".format(msg, qnames)
 
     @property
     def canonical_name(self):
@@ -97,7 +96,7 @@ class NXDOMAIN(dns.exception.DNSException):
                 cname = response.canonical_name()
                 if cname != qname:
                     return cname
-            except Exception:  # pragma: no cover
+            except Exception:
                 # We can just eat this exception as it means there was
                 # something wrong with the response.
                 pass
@@ -155,7 +154,7 @@ def _errors_to_text(errors: List[ErrorTuple]) -> List[str]:
     """Turn a resolution errors trace into a list of text."""
     texts = []
     for err in errors:
-        texts.append(f"Server {err[0]} answered {err[3]}")
+        texts.append("Server {} answered {}".format(err[0], err[3]))
     return texts
 
 
@@ -163,7 +162,7 @@ class LifetimeTimeout(dns.exception.Timeout):
     """The resolution lifetime expired."""
 
     msg = "The resolution lifetime expired."
-    fmt = f"{msg[:-1]} after {{timeout:.3f}} seconds: {{errors}}"
+    fmt = "%s after {timeout:.3f} seconds: {errors}" % msg[:-1]
     supp_kwargs = {"timeout", "errors"}
 
     # We do this as otherwise mypy complains about unexpected keyword argument
@@ -212,7 +211,7 @@ class NoNameservers(dns.exception.DNSException):
     """
 
     msg = "All nameservers failed to answer the query."
-    fmt = f"{msg[:-1]} {{query}}: {{errors}}"
+    fmt = "%s {query}: {errors}" % msg[:-1]
     supp_kwargs = {"request", "errors"}
 
     # We do this as otherwise mypy complains about unexpected keyword argument
@@ -298,7 +297,7 @@ class Answer:
     def __len__(self) -> int:
         return self.rrset and len(self.rrset) or 0
 
-    def __iter__(self) -> Iterator[dns.rdata.Rdata]:
+    def __iter__(self):
         return self.rrset and iter(self.rrset) or iter(tuple())
 
     def __getitem__(self, i):
@@ -335,7 +334,7 @@ class HostAnswers(Answers):
             answers[dns.rdatatype.A] = v4
         return answers
 
-    # Returns pairs of (address, family) from this result, potentially
+    # Returns pairs of (address, family) from this result, potentiallys
     # filtering by address family.
     def addresses_and_families(
         self, family: int = socket.AF_UNSPEC
@@ -348,7 +347,7 @@ class HostAnswers(Answers):
             answer = self.get(dns.rdatatype.AAAA)
         elif family == socket.AF_INET:
             answer = self.get(dns.rdatatype.A)
-        else:  # pragma: no cover
+        else:
             raise NotImplementedError(f"unknown address family {family}")
         if answer:
             for rdata in answer:
@@ -939,7 +938,7 @@ class BaseResolver:
 
         self.reset()
         if configure:
-            if sys.platform == "win32":  # pragma: no cover
+            if sys.platform == "win32":
                 self.read_registry()
             elif filename:
                 self.read_resolv_conf(filename)
@@ -948,7 +947,7 @@ class BaseResolver:
         """Reset all resolver configuration to the defaults."""
 
         self.domain = dns.name.Name(dns.name.from_text(socket.gethostname())[1:])
-        if len(self.domain) == 0:  # pragma: no cover
+        if len(self.domain) == 0:
             self.domain = dns.name.root
         self._nameservers = []
         self.nameserver_ports = {}
@@ -1041,7 +1040,7 @@ class BaseResolver:
         # setter logic, with additonal checking and enrichment.
         self.nameservers = nameservers
 
-    def read_registry(self) -> None:  # pragma: no cover
+    def read_registry(self) -> None:
         """Extract resolver configuration from the Windows registry."""
         try:
             info = dns.win32util.get_dns_info()  # type: ignore
@@ -1206,7 +1205,9 @@ class BaseResolver:
                 enriched_nameservers.append(enriched_nameserver)
         else:
             raise ValueError(
-                f"nameservers must be a list or tuple (not a {type(nameservers)})"
+                "nameservers must be a list or tuple (not a {})".format(
+                    type(nameservers)
+                )
             )
         return enriched_nameservers
 
@@ -1430,7 +1431,7 @@ class Resolver(BaseResolver):
         elif family == socket.AF_INET6:
             v6 = self.resolve(name, dns.rdatatype.AAAA, **modified_kwargs)
             return HostAnswers.make(v6=v6)
-        elif family != socket.AF_UNSPEC:  # pragma: no cover
+        elif family != socket.AF_UNSPEC:
             raise NotImplementedError(f"unknown address family {family}")
 
         raise_on_no_answer = modified_kwargs.pop("raise_on_no_answer", True)
@@ -1514,7 +1515,7 @@ class Resolver(BaseResolver):
             nameservers = dns._ddr._get_nameservers_sync(answer, timeout)
             if len(nameservers) > 0:
                 self.nameservers = nameservers
-        except Exception:  # pragma: no cover
+        except Exception:
             pass
 
 
@@ -1639,7 +1640,7 @@ def canonical_name(name: Union[dns.name.Name, str]) -> dns.name.Name:
     return get_default_resolver().canonical_name(name)
 
 
-def try_ddr(lifetime: float = 5.0) -> None:  # pragma: no cover
+def try_ddr(lifetime: float = 5.0) -> None:
     """Try to update the default resolver's nameservers using Discovery of Designated
     Resolvers (DDR).  If successful, the resolver will subsequently use
     DNS-over-HTTPS or DNS-over-TLS for future queries.
@@ -1925,7 +1926,7 @@ def _getnameinfo(sockaddr, flags=0):
         family = socket.AF_INET
     tuples = _getaddrinfo(host, port, family, socket.SOCK_STREAM, socket.SOL_TCP, 0)
     if len(tuples) > 1:
-        raise OSError("sockaddr resolved to multiple addresses")
+        raise socket.error("sockaddr resolved to multiple addresses")
     addr = tuples[0][4][0]
     if flags & socket.NI_DGRAM:
         pname = "udp"
@@ -1960,7 +1961,7 @@ def _getfqdn(name=None):
         (name, _, _) = _gethostbyaddr(name)
         # Python's version checks aliases too, but our gethostbyname
         # ignores them, so we do so here as well.
-    except Exception:  # pragma: no cover
+    except Exception:
         pass
     return name
 

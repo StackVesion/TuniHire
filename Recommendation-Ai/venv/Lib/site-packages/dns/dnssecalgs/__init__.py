@@ -26,7 +26,6 @@ AlgorithmPrefix = Optional[Union[bytes, dns.name.Name]]
 
 algorithms: Dict[Tuple[Algorithm, AlgorithmPrefix], Type[GenericPrivateKey]] = {}
 if _have_cryptography:
-    # pylint: disable=possibly-used-before-assignment
     algorithms.update(
         {
             (Algorithm.RSAMD5, None): PrivateRSAMD5,
@@ -60,7 +59,7 @@ def get_algorithm_cls(
     if cls:
         return cls
     raise UnsupportedAlgorithm(
-        f'algorithm "{Algorithm.to_text(algorithm)}" not supported by dnspython'
+        'algorithm "%s" not supported by dnspython' % Algorithm.to_text(algorithm)
     )
 
 

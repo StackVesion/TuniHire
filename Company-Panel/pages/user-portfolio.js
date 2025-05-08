@@ -462,7 +462,7 @@ function UserPortfolio() {
               )}
               
               {/* Resume/CV */}
-              {portfolio?.cvFile && (
+              {(application?.resume?.url || portfolio?.cvFile) && (
                 <motion.div 
                   variants={sectionVariants}
                   className="card p-4 mb-30 shadow-sm"
@@ -474,14 +474,25 @@ function UserPortfolio() {
                   <div className="text-center p-4 bg-light rounded">
                     <i className="fi-rr-file-pdf text-danger" style={{ fontSize: '48px' }}></i>
                     <h5 className="mt-3">Candidate Resume</h5>
-                    <a 
-                      href={`http://localhost:5000${portfolio.cvFile.path}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-primary mt-2"
-                    >
-                      <i className="fi-rr-download me-1"></i> View Resume
-                    </a>
+                    {application?.resume?.url ? (
+                      <a 
+                        href={application.resume.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-primary mt-2"
+                      >
+                        <i className="fi-rr-download me-1"></i> View Resume from Application
+                      </a>
+                    ) : portfolio?.cvFile ? (
+                      <a 
+                        href={portfolio.cvFile.downloadUrl || portfolio.cvFile}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-primary mt-2"
+                      >
+                        <i className="fi-rr-download me-1"></i> View Resume from Portfolio
+                      </a>
+                    ) : null}
                   </div>
                 </motion.div>
               )}

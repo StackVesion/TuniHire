@@ -105,8 +105,6 @@ class RdataType(dns.enum.IntEnum):
     CAA = 257
     AVC = 258
     AMTRELAY = 260
-    RESINFO = 261
-    WALLET = 262
     TA = 32768
     DLV = 32769
 
@@ -127,7 +125,7 @@ class RdataType(dns.enum.IntEnum):
         if text.find("-") >= 0:
             try:
                 return cls[text.replace("-", "_")]
-            except KeyError:  # pragma: no cover
+            except KeyError:
                 pass
         return _registered_by_text.get(text)
 
@@ -328,8 +326,6 @@ URI = RdataType.URI
 CAA = RdataType.CAA
 AVC = RdataType.AVC
 AMTRELAY = RdataType.AMTRELAY
-RESINFO = RdataType.RESINFO
-WALLET = RdataType.WALLET
 TA = RdataType.TA
 DLV = RdataType.DLV
 

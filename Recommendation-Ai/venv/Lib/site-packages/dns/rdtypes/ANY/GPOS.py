@@ -75,9 +75,8 @@ class GPOS(dns.rdata.Rdata):
             raise dns.exception.FormError("bad longitude")
 
     def to_text(self, origin=None, relativize=True, **kw):
-        return (
-            f"{self.latitude.decode()} {self.longitude.decode()} "
-            f"{self.altitude.decode()}"
+        return "{} {} {}".format(
+            self.latitude.decode(), self.longitude.decode(), self.altitude.decode()
         )
 
     @classmethod

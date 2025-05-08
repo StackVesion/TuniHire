@@ -118,7 +118,6 @@ def key_id(key: Union[DNSKEY, CDNSKEY]) -> int:
     """
 
     rdata = key.to_wire()
-    assert rdata is not None  # for mypy
     if key.algorithm == Algorithm.RSAMD5:
         return (rdata[-3] << 8) + rdata[-2]
     else:
@@ -225,7 +224,7 @@ def make_ds(
         if isinstance(algorithm, str):
             algorithm = DSDigest[algorithm.upper()]
     except Exception:
-        raise UnsupportedAlgorithm(f'unsupported algorithm "{algorithm}"')
+        raise UnsupportedAlgorithm('unsupported algorithm "%s"' % algorithm)
     if validating:
         check = policy.ok_to_validate_ds
     else:
@@ -241,15 +240,14 @@ def make_ds(
     elif algorithm == DSDigest.SHA384:
         dshash = hashlib.sha384()
     else:
-        raise UnsupportedAlgorithm(f'unsupported algorithm "{algorithm}"')
+        raise UnsupportedAlgorithm('unsupported algorithm "%s"' % algorithm)
 
     if isinstance(name, str):
         name = dns.name.from_text(name, origin)
     wire = name.canonicalize().to_wire()
-    kwire = key.to_wire(origin=origin)
-    assert wire is not None and kwire is not None  # for mypy
+    assert wire is not None
     dshash.update(wire)
-    dshash.update(kwire)
+    dshash.update(key.to_wire(origin=origin))
     digest = dshash.digest()
 
     dsrdata = struct.pack("!HBB", key_id(key), key.algorithm, algorithm) + digest
@@ -325,7 +323,6 @@ def _get_rrname_rdataset(
 
 
 def _validate_signature(sig: bytes, data: bytes, key: DNSKEY) -> None:
-    # pylint: disable=possibly-used-before-assignment
     public_cls = get_algorithm_cls_from_dnskey(key).public_cls
     try:
         public_key = public_cls.from_dnskey(key)
@@ -390,7 +387,6 @@ def _validate_rrsig(
 
     data = _make_rrsig_signature_data(rrset, rrsig, origin)
 
-    # pylint: disable=possibly-used-before-assignment
     for candidate_key in candidate_keys:
         if not policy.ok_to_validate(candidate_key):
             continue
@@ -488,7 +484,6 @@ def _sign(
     verify: bool = False,
     policy: Optional[Policy] = None,
     origin: Optional[dns.name.Name] = None,
-    deterministic: bool = True,
 ) -> RRSIG:
     """Sign RRset using private key.
 
@@ -527,10 +522,6 @@ def _sign(
     *origin*, a ``dns.name.Name`` or ``None``.  If ``None``, the default, then all
     names in the rrset (including its owner name) must be absolute; otherwise the
     specified origin will be used to make names absolute when signing.
-
-    *deterministic*, a ``bool``. If ``True``, the default, use deterministic
-    (reproducible) signatures when supported by the algorithm used for signing.
-    Currently, this only affects ECDSA.
 
     Raises ``DeniedByPolicy`` if the signature is denied by policy.
     """
@@ -589,7 +580,6 @@ def _sign(
 
     data = dns.dnssec._make_rrsig_signature_data(rrset, rrsig_template, origin)
 
-    # pylint: disable=possibly-used-before-assignment
     if isinstance(private_key, GenericPrivateKey):
         signing_key = private_key
     else:
@@ -599,7 +589,7 @@ def _sign(
         except UnsupportedAlgorithm:
             raise TypeError("Unsupported key algorithm")
 
-    signature = signing_key.sign(data, verify, deterministic)
+    signature = signing_key.sign(data, verify)
 
     return cast(RRSIG, rrsig_template.replace(signature=signature))
 
@@ -639,9 +629,7 @@ def _make_rrsig_signature_data(
     rrname, rdataset = _get_rrname_rdataset(rrset)
 
     data = b""
-    wire = rrsig.to_wire(origin=signer)
-    assert wire is not None  # for mypy
-    data += wire[:18]
+    data += rrsig.to_wire(origin=signer)[:18]
     data += rrsig.signer.to_digestable(signer)
 
     # Derelativize the name before considering labels.
@@ -698,7 +686,6 @@ def _make_dnskey(
 
     algorithm = Algorithm.make(algorithm)
 
-    # pylint: disable=possibly-used-before-assignment
     if isinstance(public_key, GenericPublicKey):
         return public_key.to_dnskey(flags=flags, protocol=protocol)
     else:
@@ -845,7 +832,7 @@ def make_ds_rdataset(
             if isinstance(algorithm, str):
                 algorithm = DSDigest[algorithm.upper()]
         except Exception:
-            raise UnsupportedAlgorithm(f'unsupported algorithm "{algorithm}"')
+            raise UnsupportedAlgorithm('unsupported algorithm "%s"' % algorithm)
         _algorithms.add(algorithm)
 
     if rdataset.rdtype == dns.rdatatype.CDS:
@@ -963,7 +950,6 @@ def default_rrset_signer(
     lifetime: Optional[int] = None,
     policy: Optional[Policy] = None,
     origin: Optional[dns.name.Name] = None,
-    deterministic: bool = True,
 ) -> None:
     """Default RRset signer"""
 
@@ -989,7 +975,6 @@ def default_rrset_signer(
             signer=signer,
             policy=policy,
             origin=origin,
-            deterministic=deterministic,
         )
         txn.add(rrset.name, rrset.ttl, rrsig)
 
@@ -1006,7 +991,6 @@ def sign_zone(
     nsec3: Optional[NSEC3PARAM] = None,
     rrset_signer: Optional[RRsetSigner] = None,
     policy: Optional[Policy] = None,
-    deterministic: bool = True,
 ) -> None:
     """Sign zone.
 
@@ -1046,10 +1030,6 @@ def sign_zone(
     function requires two arguments: transaction and RRset. If the not specified,
     ``dns.dnssec.default_rrset_signer`` will be used.
 
-    *deterministic*, a ``bool``. If ``True``, the default, use deterministic
-    (reproducible) signatures when supported by the algorithm used for signing.
-    Currently, this only affects ECDSA.
-
     Returns ``None``.
     """
 
@@ -1076,9 +1056,6 @@ def sign_zone(
     else:
         cm = zone.writer()
 
-    if zone.origin is None:
-        raise ValueError("no zone origin")
-
     with cm as _txn:
         if add_dnskey:
             if dnskey_ttl is None:
@@ -1104,7 +1081,6 @@ def sign_zone(
                 lifetime=lifetime,
                 policy=policy,
                 origin=zone.origin,
-                deterministic=deterministic,
             )
             return _sign_zone_nsec(zone, _txn, _rrset_signer)
 
