@@ -260,7 +260,7 @@ pipeline {
             when { expression { !params.SKIP_DOCKER_BUILD_PUSH } }
             steps {
                 sh 'docker-compose -f docker-compose.yml build'
-                withDockerRegistry(credentialsId: env.NEXUS_CREDENTIALS_ID, registry: "http://${env.NEXUS_REGISTRY_URL}") {
+                withDockerRegistry(credentialsId: env.NEXUS_CREDENTIALS_ID, url: "http://${env.NEXUS_REGISTRY_URL}") {
                     sh 'docker-compose -f docker-compose.yml push'
                 }
             }
