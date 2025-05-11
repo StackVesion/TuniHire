@@ -74,9 +74,18 @@ pipeline {
                         SONAR_PROJECT_KEY= 'TuniHire_Backend'
                     }
                     stages {
-                        stage('Install Dependencies') {
+                        stage('Checkout & Install') {
                             steps {
                                 dir(MODULE_DIR) {
+                                    checkout([
+                                        $class: 'GitSCM',
+                                        branches: scm.branches,
+                                        userRemoteConfigs: scm.userRemoteConfigs,
+                                        extensions:[
+                                            [$class:'RelativeTargetDirectory',relativeTargetDir:MODULE_DIR],
+                                            [$class: 'CloneOption', shallow: true, depth: 1, timeout: 30]
+                                        ]
+                                    ])
                                     sh 'npm install'
                                 }
                             }
@@ -110,9 +119,18 @@ pipeline {
                         SONAR_PROJECT_KEY= 'TuniHire_Frontend'
                     }
                     stages {
-                        stage('Install Dependencies') {
+                        stage('Checkout & Install') {
                             steps {
                                 dir(MODULE_DIR) {
+                                    checkout([
+                                        $class: 'GitSCM', 
+                                        branches: scm.branches, 
+                                        userRemoteConfigs: scm.userRemoteConfigs,
+                                        extensions:[
+                                            [$class:'RelativeTargetDirectory',relativeTargetDir:MODULE_DIR],
+                                            [$class: 'CloneOption', shallow: true, depth: 1, timeout: 30]
+                                        ]
+                                    ])
                                     sh 'npm install'
                                 }
                             }
@@ -139,16 +157,25 @@ pipeline {
                     }
                 }
 
-                // Company-Panel CI
+                // Company-Panel CI (same pattern)
                 stage('Company-Panel CI') {
                     environment {
                         MODULE_DIR       = 'Company-Panel'
                         SONAR_PROJECT_KEY= 'TuniHire_CompanyPanel'
                     }
                     stages {
-                        stage('Install Dependencies') {
+                        stage('Checkout & Install') {
                             steps {
                                 dir(MODULE_DIR) {
+                                    checkout([
+                                        $class: 'GitSCM', 
+                                        branches: scm.branches, 
+                                        userRemoteConfigs: scm.userRemoteConfigs,
+                                        extensions:[
+                                            [$class:'RelativeTargetDirectory',relativeTargetDir:MODULE_DIR],
+                                            [$class: 'CloneOption', shallow: true, depth: 1, timeout: 30]
+                                        ]
+                                    ])
                                     sh 'npm install'
                                 }
                             }
@@ -182,9 +209,18 @@ pipeline {
                         SONAR_PROJECT_KEY= 'TuniHire_AdminPanel'
                     }
                     stages {
-                        stage('Install Dependencies') {
+                        stage('Checkout & Install') {
                             steps {
                                 dir(MODULE_DIR) {
+                                    checkout([
+                                        $class: 'GitSCM', 
+                                        branches: scm.branches, 
+                                        userRemoteConfigs: scm.userRemoteConfigs,
+                                        extensions:[
+                                            [$class:'RelativeTargetDirectory',relativeTargetDir:MODULE_DIR],
+                                            [$class: 'CloneOption', shallow: true, depth: 1, timeout: 30]
+                                        ]
+                                    ])
                                     sh 'npm install'
                                 }
                             }
