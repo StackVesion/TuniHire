@@ -52,9 +52,8 @@ pipeline {
                         url: 'https://github.com/StackVesion/TuniHire.git'
                     ]]
                 ])
-            }
-        }
-        
+            }        }
+
         stage('Setup Environment') {
             steps {
                 script {
@@ -89,9 +88,8 @@ pipeline {
                                     sh "npm install"
                                 }
                             }
-        }
-        
-        stage('Run Tests') {
+                        }
+                        stage('Run Tests') {
                             when { expression { return !params.SKIP_TESTS } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -143,9 +141,8 @@ EOL
                                     }
                                 }
                             }
-        }
-        
-        stage('SonarQube Analysis') {
+                        }
+                        stage('SonarQube Analysis') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -163,9 +160,8 @@ EOL
                                     }
                                 }
                             }
-        }
-        
-        stage('SonarQube Quality Gate') {
+                        }
+                        stage('SonarQube Quality Gate') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 script {
@@ -200,9 +196,8 @@ EOL
                                     sh "npm install"
                                 }
                             }
-        }
-        
-        stage('Run Tests') {
+                        }
+                        stage('Run Tests') {
                             when { expression { return !params.SKIP_TESTS } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -236,9 +231,8 @@ EOL
                                     }
                                 }
                             }
-        }
-        
-        stage('SonarQube Analysis') {
+                        }
+                        stage('SonarQube Analysis') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -256,9 +250,8 @@ EOL
                                     }
                                 }
                             }
-        }
-        
-        stage('SonarQube Quality Gate') {
+                        }
+                        stage('SonarQube Quality Gate') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 script {
@@ -294,9 +287,8 @@ EOL
                                     sh "npm install"
                                 }
                             }
-        }
-        
-        stage('Run Tests') {
+                        }
+                        stage('Run Tests') {
                             when { expression { return !params.SKIP_TESTS } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -330,9 +322,8 @@ EOL
                                     }
                                 }
                             }
-        }
-        
-        stage('SonarQube Analysis') {
+                        }
+                        stage('SonarQube Analysis') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -350,9 +341,8 @@ EOL
                                     }
                                 }
                             }
-        }
-        
-        stage('SonarQube Quality Gate') {
+                        }
+                        stage('SonarQube Quality Gate') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 script {
@@ -385,9 +375,8 @@ EOL
                                     sh "npm install"
                                 }
                             }
-        }
-        
-        stage('Run Tests') {
+                        }
+                        stage('Run Tests') {
                             when { expression { return !params.SKIP_TESTS } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -421,9 +410,8 @@ EOL
                                     }
                                 }
                             }
-        }
-        
-        stage('SonarQube Analysis') {
+                        }
+                        stage('SonarQube Analysis') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -441,9 +429,8 @@ EOL
                                     }
                                 }
                             }
-        }
-        
-        stage('SonarQube Quality Gate') {
+                        }
+                        stage('SonarQube Quality Gate') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 script {
@@ -483,9 +470,8 @@ EOL
                                     """
                                 }
                             }
-        }
-        
-        stage('Run Tests') {
+                        }
+                        stage('Run Tests') {
                             when { expression { return !params.SKIP_TESTS } }
                             steps {                                echo "Running ${MODULE_NAME} (Python) tests..."
                                 script {
@@ -510,18 +496,15 @@ EOL
                                     junit allowEmptyResults: true, testResults: "${MODULE_DIR}/test-results.xml"
                                 }
                             }
-        }
-        
-        stage('SonarQube Analysis') {
+                        }
+                        stage('SonarQube Analysis') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {                                script {
                                     echo "SonarQube analysis for ${MODULE_NAME} skipped"
                                     echo "To run SonarQube analysis for Python, configure a SonarScanner in the image or use a different approach"
                                 }
                             }
-        }
-        
-        stage('SonarQube Quality Gate') {
+                        }                        stage('SonarQube Quality Gate') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 script {
@@ -629,6 +612,5 @@ EOL
         }
     }
 }
-
 
 
