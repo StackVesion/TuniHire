@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  tunihire_backend:
+    build:
+      context: ./Back-End
+      dockerfile: Dockerfile
+    container_name: tunihire_backend_app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    depends_on:
+      - tunihire_db
+    environment:
+      MONGODB_URI: mongodb://tunihire_db:27017/tunihire_prod
+      NODE_ENV: production
+      PORT: 5000
+      # Secrets injected by Jenkins
+      SESSION_SECRET: ${SESSION_SECRET}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      EMAIL_APP_USER: ${EMAIL_APP_USER}
+      EMAIL_APP_PASSWORD: ${EMAIL_APP_PASSWORD}
+      # Fixed URLs (can be overridden by Jenkins if needed)
+      GITHUB_CALLBACK_URL: "http://localhost:5000/auth/github/callback"
+      FRONTEND_URL: "http://localhost:3000"
+      SMTP_PORT: "587"
+    networks:
+      - tunihire_network
+
+  tunihire_db:
+    image: mongo:4.4
+    container_name: tunihire_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - tunihire_network
+
+  tunihire_frontend:
+    build:
+      context: ./Front-End
+      dockerfile: Dockerfile
+    container_name: tunihire_frontend_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - tunihire_backend
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: "http://localhost:5000" # Example, adjust if needed
+    networks:
+      - tunihire_network
+
+  tunihire_company_panel:
+    build:
+      context: ./Company-Panel
+      dockerfile: Dockerfile
+    container_name: tunihire_company_panel_app
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    depends_on:
+      - tunihire_backend
+    environment:
+      NODE_ENV: production
+      PORT: 3001 
+      NEXT_PUBLIC_API_URL: "http://localhost:5000" # Example, adjust if needed
+    networks:
+      - tunihire_network
+
+  tunihire_admin_panel:
+    build:
+      context: ./Admin-Panel
+      dockerfile: Dockerfile
+    container_name: tunihire_admin_panel_app
+    restart: unless-stopped
+    ports:
+      - "3002:80"
+    depends_on:
+      - tunihire_backend
+    environment:
+      NODE_ENV: production
+      REACT_APP_API_URL: "http://localhost:5000" # Example, adjust if needed
+    networks:
+      - tunihire_network
+
+  tunihire_ai_service:
+    build:
+      context: ./AI-Service
+      dockerfile: Dockerfile
+    container_name: tunihire_ai_service_app
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      PYTHONUNBUFFERED: 1
+      # Add other AI service specific env vars here if needed (non-secret)
+      # Secrets for AI service (if any) should be managed via Jenkins credentials too
+    networks:
+      - tunihire_network
+
+volumes:
+  mongo_data:
+    driver: local
+
+networks:
+  tunihire_network:
+    driver: bridge
+

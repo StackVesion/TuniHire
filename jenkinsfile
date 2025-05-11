@@ -1,430 +1,425 @@
 pipeline {
     agent any
-    
+
     environment {
-        // Environment variables
-        NODE_VERSION = 'node:18'
-        MONGODB_CONNECTION = credentials('mongodb://127.0.0.1:27017/TuniHireDB')
-        JWT_SECRET = credentials('129a49a5-dda6-49f9-8b5f-86a39c5cd7d9')
-        FRONTEND_URL = 'http://localhost:3000'
-        BACKEND_URL = 'http://localhost:5000'
-        COMPANY_PANEL_URL = 'http://localhost:3001'
-        ADMIN_PANEL_URL = 'http://localhost:3002'
-        
-        // Docker & Nexus configuration
-        DOCKER_REGISTRY = '172.23.202.74:8083'
-        DOCKER_CREDENTIALS = credentials('nexus')
-        registryCredentials = "nexus"
-        registry = "172.23.202.74:8083"
-        
-        // SonarQube configuration
-        SONAR_HOST_URL = 'http://172.23.202.74:9000'
-        SONAR_TOKEN = credentials('sonar')
-        
-        // Version info (using Jenkins BUILD_NUMBER)
-        APP_VERSION = "1.0.${BUILD_NUMBER}"
+        // WSL & Docker Configuration
+        SONAR_HOST_URL = "http://localhost:9000"
+        NEXUS_REGISTRY_URL = "localhost:8083" // Nexus Docker hosted repo (HTTP)
+        NEXUS_CREDENTIALS_ID = "nexus"
+        SONAR_TOKEN_ID = "scanner"
+        GITHUB_CREDENTIALS_ID = "98a74c8f-9f44-4e31-aa6a-6eec112c23f4"
+
+        // Base App Version
+        BASE_APP_VERSION = "1.0.${BUILD_NUMBER}"
+
+        // Fixed URLs for Backend (can be overridden in stage if needed)
+        GITHUB_CALLBACK_URL_CONFIG = "http://localhost:5000/auth/github/callback"
+        FRONTEND_URL_CONFIG = "http://localhost:3000"
+        SMTP_PORT_CONFIG = "587"
     }
-    
+
+    tools {
+        nodejs "NodeJS18"
+        jdk "JDK17"
+    }
+
     options {
-        timeout(time: 1, unit: 'HOURS')
+        timeout(time: 2, unit: 'HOURS')
         buildDiscarder(logRotator(numToKeepStr: '10'))
+        timestamps()
+        parallelsAlwaysFailFast()
     }
-    
+
+    parameters {
+        booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Skip running tests for all modules')
+        booleanParam(name: 'SKIP_SONAR', defaultValue: false, description: 'Skip SonarQube analysis for all modules')
+        booleanParam(name: 'SKIP_DOCKER_BUILD_PUSH', defaultValue: false, description: 'Skip Docker build and push stages for all modules')
+        booleanParam(name: 'SKIP_DEPLOY', defaultValue: false, description: 'Skip final Docker Compose deployment')
+    }
+
     stages {
         stage('Checkout') {
             steps {
+                echo "Checking out SCM..."
                 checkout scm
             }
         }
-        
-        // Ensure we have the necessary tools
-        stage('Setup Tools') {
+
+        stage('Setup Environment') {
             steps {
                 script {
-                    // Check if we need to install Node.js
-                    def nodeInstalled = sh(script: 'which node || echo "not found"', returnStdout: true).trim()
-                    if (nodeInstalled == "not found") {post {
-                        success {
-                            node {  // Added node block
-                                echo 'Pipeline completed successfully!'
-                                sh '...'
-                            }
-                        }
-                        failure {
-                            node {  // Added node block
-                                echo 'Pipeline failed!'
-                                sh '...'
-                            }
-                        }
-                        always {
-                            node {  // Added node block
-                                echo 'Cleaning up workspace...'
-                                cleanWs()
-                            }
-                        }
-                    }
-                        echo "Installing Node.js..."
-                        sh 'curl -fsSL https://deb.nodesource.com/setup_18.x | bash -'
-                        sh 'apt-get install -y nodejs'
-                    }
-                    
-                    // Install SonarScanner for Node.js projects
-                    sh 'npm install -post {
-                        success {
-                            node {  // Added node block
-                                echo 'Pipeline completed successfully!'
-                                sh '...'
-                            }
-                        }
-                        failure {
-                            node {  // Added node block
-                                echo 'Pipeline failed!'
-                                sh '...'
-                            }
-                        }
-                        always {
-                            node {  // Added node block
-                                echo 'Cleaning up workspace...'
-                                cleanWs()
-                            }
-                        }
-                    }post {
-                        success {
-                            node {  // Added node block
-                                echo 'Pipeline completed successfully!'
-                                sh '...'
-                            }
-                        }
-                        failure {
-                            node {  // Added node block
-                                echo 'Pipeline failed!'
-                                sh '...'
-                            }
-                        }
-                        always {
-                            node {  // Added node block
-                                echo 'Cleaning up workspace...'
-                                cleanWs()
-                            }
-                        }
-                    }post {
-                        success {
-                            node {  // Added node block
-                                echo 'Pipeline completed successfully!'
-                                sh '...'
-                            }
-                        }
-                        failure {
-                            node {  // Added node block
-                                echo 'Pipeline failed!'
-                                sh '...'
-                            }
-                        }
-                        always {
-                            node {  // Added node block
-                                echo 'Cleaning up workspace...'
-                                cleanWs()
-                            }
-                        }
-                    }g sonar-scanner'
-                    
-                    // Display versions for logging
-                    sh 'node --version'
-                    sh 'npm --version'
-                    sh 'sonar-scanner --version || echo "SonarScanner installation may have issues"'
+                    echo "Node.js Version:"
+                    sh "node --version"
+                    echo "NPM Version:"
+                    sh "npm --version"
+                    echo "Java Version:"
+                    sh "java --version"
+                    sh "docker --version"
+                    sh "docker-compose --version"
                 }
             }
         }
-        
-        stage('SonarQube Analysis') {
-            when {
-                expression { return !params.SKIP_SONAR }
-            }
+
+        stage('Modules CI') {
+            failFast true
             parallel {
-                stage('Backend Analysis') {
-                    steps {
-                        dir('Back-end') {
-                            sh """
-                                sonar-scanner \
-                                  -Dsonar.projectKey=tunihire-backend \
-                                  -Dsonar.projectName='TuniHire Backend' \
-                                  -Dsonar.host.url=${SONAR_HOST_URL} \
-                                  -Dsonar.login=${SONAR_TOKEN} \
-                                  -Dsonar.sources=. \
-                                  -Dsonar.exclusions=node_modules/**,test/**,coverage/** \
-                                  -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-                            """
+                // --- Backend Module ---
+                stage('Backend CI') {
+                    environment {
+                        MODULE_DIR = "Back-End"
+                        MODULE_NAME = "tunihire-backend"
+                        SONAR_PROJECT_KEY = "TuniHire_Backend"
+                    }
+                    stages {
+                        stage('Install Dependencies') {
+                            steps {
+                                dir(MODULE_DIR) {
+                                    echo "Installing ${MODULE_NAME} dependencies..."
+                                    sh "npm install"
+                                }
+                            }
+                        }
+                        stage('Run Tests') {
+                            when { expression { return !params.SKIP_TESTS } }
+                            steps {
+                                dir(MODULE_DIR) {
+                                    echo "Running ${MODULE_NAME} tests..."
+                                    sh "npm test"
+                                }
+                            }
+                            post {
+                                always {
+                                    dir(MODULE_DIR) {
+                                        junit allowEmptyResults: true, testResults: 'test-results.xml'
+                                    }
+                                }
+                            }
+                        }
+                        stage('SonarQube Analysis') {
+                            when { expression { return !params.SKIP_SONAR } }
+                            steps {
+                                dir(MODULE_DIR) {
+                                    echo "Running SonarQube analysis for ${MODULE_NAME}..."
+                                    withSonarQubeEnv('SonarQubeServer') {
+                                        sh "${tool('SonarScanner')}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}"
+                                    }
+                                }
+                            }
+                        }
+                        stage('SonarQube Quality Gate') {
+                            when { expression { return !params.SKIP_SONAR } }
+                            steps {
+                                echo "Checking SonarQube Quality Gate for ${MODULE_NAME}..."
+                                timeout(time: 5, unit: 'MINUTES') {
+                                    waitForQualityGate abortPipeline: true
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // --- Front-End Module ---
+                stage('Front-End CI') {
+                    environment {
+                        MODULE_DIR = "Front-End"
+                        MODULE_NAME = "tunihire-frontend"
+                        SONAR_PROJECT_KEY = "TuniHire_Frontend"
+                    }
+                    stages {
+                        stage('Install Dependencies') {
+                            steps {
+                                dir(MODULE_DIR) {
+                                    echo "Installing ${MODULE_NAME} dependencies..."
+                                    sh "npm install"
+                                }
+                            }
+                        }
+                        stage('Run Tests') {
+                            when { expression { return !params.SKIP_TESTS } }
+                            steps {
+                                dir(MODULE_DIR) {
+                                    echo "Running ${MODULE_NAME} tests..."
+                                    sh "npm test"
+                                }
+                            }
+                            post {
+                                always {
+                                    dir(MODULE_DIR) {
+                                        junit allowEmptyResults: true, testResults: 'test-results.xml'
+                                    }
+                                }
+                            }
+                        }
+                        stage('SonarQube Analysis') {
+                            when { expression { return !params.SKIP_SONAR } }
+                            steps {
+                                dir(MODULE_DIR) {
+                                    echo "Running SonarQube analysis for ${MODULE_NAME}..."
+                                    withSonarQubeEnv('SonarQubeServer') {
+                                        sh "${tool('SonarScanner')}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}"
+                                    }
+                                }
+                            }
+                        }
+                        stage('SonarQube Quality Gate') {
+                            when { expression { return !params.SKIP_SONAR } }
+                            steps {
+                                echo "Checking SonarQube Quality Gate for ${MODULE_NAME}..."
+                                timeout(time: 5, unit: 'MINUTES') {
+                                    waitForQualityGate abortPipeline: true
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // --- Company-Panel Module ---
+                stage('Company-Panel CI') {
+                    environment {
+                        MODULE_DIR = "Company-Panel"
+                        MODULE_NAME = "tunihire-company-panel"
+                        SONAR_PROJECT_KEY = "TuniHire_CompanyPanel"
+                    }
+                    stages {
+                        stage('Install Dependencies') {
+                            steps {
+                                dir(MODULE_DIR) {
+                                    echo "Installing ${MODULE_NAME} dependencies..."
+                                    sh "npm install"
+                                }
+                            }
+                        }
+                        stage('Run Tests') {
+                            when { expression { return !params.SKIP_TESTS } }
+                            steps {
+                                dir(MODULE_DIR) {
+                                    echo "Running ${MODULE_NAME} tests..."
+                                    sh "npm test"
+                                }
+                            }
+                            post {
+                                always {
+                                    dir(MODULE_DIR) {
+                                        junit allowEmptyResults: true, testResults: 'test-results.xml'
+                                    }
+                                }
+                            }
+                        }
+                        stage('SonarQube Analysis') {
+                            when { expression { return !params.SKIP_SONAR } }
+                            steps {
+                                dir(MODULE_DIR) {
+                                    echo "Running SonarQube analysis for ${MODULE_NAME}..."
+                                    withSonarQubeEnv('SonarQubeServer') {
+                                        sh "${tool('SonarScanner')}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}"
+                                    }
+                                }
+                            }
+                        }
+                        stage('SonarQube Quality Gate') {
+                            when { expression { return !params.SKIP_SONAR } }
+                            steps {
+                                echo "Checking SonarQube Quality Gate for ${MODULE_NAME}..."
+                                timeout(time: 5, unit: 'MINUTES') {
+                                    waitForQualityGate abortPipeline: true
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // --- Admin-Panel Module ---
+                stage('Admin-Panel CI') {
+                    environment {
+                        MODULE_DIR = "Admin-Panel"
+                        MODULE_NAME = "tunihire-admin-panel"
+                        SONAR_PROJECT_KEY = "TuniHire_AdminPanel"
+                    }
+                    stages {
+                        stage('Install Dependencies') {
+                            steps {
+                                dir(MODULE_DIR) {
+                                    echo "Installing ${MODULE_NAME} dependencies..."
+                                    sh "npm install"
+                                }
+                            }
+                        }
+                        stage('Run Tests') {
+                            when { expression { return !params.SKIP_TESTS } }
+                            steps {
+                                dir(MODULE_DIR) {
+                                    echo "Running ${MODULE_NAME} tests..."
+                                    sh "npm test"
+                                }
+                            }
+                            post {
+                                always {
+                                    dir(MODULE_DIR) {
+                                        junit allowEmptyResults: true, testResults: 'test-results.xml'
+                                    }
+                                }
+                            }
+                        }
+                        stage('SonarQube Analysis') {
+                            when { expression { return !params.SKIP_SONAR } }
+                            steps {
+                                dir(MODULE_DIR) {
+                                    echo "Running SonarQube analysis for ${MODULE_NAME}..."
+                                    withSonarQubeEnv('SonarQubeServer') {
+                                        sh "${tool('SonarScanner')}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}"
+                                    }
+                                }
+                            }
+                        }
+                        stage('SonarQube Quality Gate') {
+                            when { expression { return !params.SKIP_SONAR } }
+                            steps {
+                                echo "Checking SonarQube Quality Gate for ${MODULE_NAME}..."
+                                timeout(time: 5, unit: 'MINUTES') {
+                                    waitForQualityGate abortPipeline: true
+                                }
+                            }
                         }
                     }
                 }
                 
-                stage('Frontend Analysis') {
-                    steps {
-                        dir('Front-End') {
-                            sh """
-                                sonar-scanner \
-                                  -Dsonar.projectKey=tunihire-frontend \
-                                  -Dsonar.projectName='TuniHire Frontend' \
-                                  -Dsonar.host.url=${SONAR_HOST_URL} \
-                                  -Dsonar.login=${SONAR_TOKEN} \
-                                  -Dsonar.sources=. \
-                                  -Dsonar.exclusions=node_modules/**,.next/**,out/**,coverage/** \
-                                  -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-                            """
+                // --- AI-Service Module (Python) ---
+                stage('AI-Service CI') {
+                    environment {
+                        MODULE_DIR = "AI-Service"
+                        MODULE_NAME = "tunihire-ai-service"
+                        SONAR_PROJECT_KEY = "TuniHire_AIService"
+                    }
+                    stages {
+                        stage('Install Dependencies') {
+                            steps {
+                                dir(MODULE_DIR) {
+                                    echo "Installing ${MODULE_NAME} (Python) dependencies..."
+                                    sh "pip install -r requirements.txt"
+                                }
+                            }
+                        }
+                        stage('Run Tests') {
+                            when { expression { return !params.SKIP_TESTS } }
+                            steps {
+                                dir(MODULE_DIR) {
+                                    echo "Running ${MODULE_NAME} (Python) tests..."
+                                    sh "python test_face_recognition.py"
+                                }
+                            }
+                        }
+                        stage('SonarQube Analysis') {
+                            when { expression { return !params.SKIP_SONAR } }
+                            steps {
+                                dir(MODULE_DIR) {
+                                    echo "Running SonarQube analysis for ${MODULE_NAME}..."
+                                    withSonarQubeEnv('SonarQubeServer') {
+                                        sh "${tool('SonarScanner')}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}"
+                                    }
+                                }
+                            }
+                        }
+                        stage('SonarQube Quality Gate') {
+                            when { expression { return !params.SKIP_SONAR } }
+                            steps {
+                                echo "Checking SonarQube Quality Gate for ${MODULE_NAME}..."
+                                timeout(time: 5, unit: 'MINUTES') {
+                                    waitForQualityGate abortPipeline: true
+                                }
+                            }
                         }
                     }
                 }
             }
         }
-        
-        stage('Quality Gate') {
-            when {
-                expression { return !params.SKIP_SONAR }
-            }
+
+        stage('Build & Push Docker Images') {
+            when { expression { return !params.SKIP_DOCKER_BUILD_PUSH } }
             steps {
-                timeout(time: 10, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
-        
-        // Back-end pipeline
-        stage('Backend') {
-            stages {
-                stage('Install Dependencies') {
-                    when {
-                        expression { return !params.SKIP_TESTS }
-                    }
-                    steps {
-                        dir('Back-end') {
-                            sh 'npm install'
-                        }
-                    }
-                }
-                
-                stage('Run Tests with Mocha') {
-                    when {
-                        expression { return !params.SKIP_TESTS }
-                    }
-                    steps {
-                        dir('Back-end') {
-                            sh '''
-                                npm install -g mocha nyc
-                                nyc --reporter=lcov --reporter=text-summary mocha --recursive './test/**/*.test.js'
-                            '''
-                        }
-                    }
-                    post {
-                        always {
-                            junit 'Back-end/test-results.xml'
-                            publishHTML(target: [
-                                allowMissing: false,
-                                alwaysLinkToLastBuild: false,
-                                keepAll: true,
-                                reportDir: 'Back-end/coverage',
-                                reportFiles: 'index.html',
-                                reportName: 'Backend Test Coverage'
-                            ])
-                        }
-                    }
-                }
-                
-                stage('Build application') {
-                    steps {
-                        dir('Back-end') {
-                            sh 'npm run build-dev'
-                        }
+                script {
+                    def backendImage = "${env.NEXUS_REGISTRY_URL}/tunihire-backend:${env.BASE_APP_VERSION}"
+                    def frontendImage = "${env.NEXUS_REGISTRY_URL}/tunihire-frontend:${env.BASE_APP_VERSION}"
+                    def companyPanelImage = "${env.NEXUS_REGISTRY_URL}/tunihire-company-panel:${env.BASE_APP_VERSION}"
+                    def adminPanelImage = "${env.NEXUS_REGISTRY_URL}/tunihire-admin-panel:${env.BASE_APP_VERSION}"
+                    def aiServiceImage = "${env.NEXUS_REGISTRY_URL}/tunihire-ai-service:${env.BASE_APP_VERSION}"
+
+                    echo "Building all Docker images via docker-compose..."
+                    sh "docker-compose -f docker-compose.yml build"
+
+                    echo "Tagging Docker images for Nexus..."
+                    sh "docker tag tunihire_tunihire_backend ${backendImage}"
+                    sh "docker tag tunihire_tunihire_frontend ${frontendImage}"
+                    sh "docker tag tunihire_tunihire_company_panel ${companyPanelImage}"
+                    sh "docker tag tunihire_tunihire_admin_panel ${adminPanelImage}"
+                    sh "docker tag tunihire_tunihire_ai_service ${aiServiceImage}"
+
+                    echo "Pushing Docker images to Nexus registry ${env.NEXUS_REGISTRY_URL}"
+                    withDockerRegistry(credentialsId: env.NEXUS_CREDENTIALS_ID, registry: "http://${env.NEXUS_REGISTRY_URL}") {
+                        sh "docker push ${backendImage}"
+                        sh "docker push ${frontendImage}"
+                        sh "docker push ${companyPanelImage}"
+                        sh "docker push ${adminPanelImage}"
+                        sh "docker push ${aiServiceImage}"
                     }
                 }
             }
         }
-        
-        // Front-End pipeline
-        stage('Front-End') {
-            stages {
-                stage('Install Dependencies') {
-                    when {
-                        expression { return !params.SKIP_TESTS }
-                    }
-                    steps {
-                        dir('Front-End') {
-                            sh 'npm install'
-                        }
-                    }
-                }
-                
-                stage('Run Tests') {
-                    when {
-                        expression { return !params.SKIP_TESTS }
-                    }
-                    steps {
-                        dir('Front-End') {
-                            sh 'npm test'
-                        }
-                    }
-                }
-                
-                stage('Build') {
-                    steps {
-                        dir('Front-End') {
-                            sh 'npm run build-dev'
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Admin Panel pipeline
-        stage('Admin Panel') {
-            stages {
-                stage('Install Dependencies') {
-                    when {
-                        expression { return !params.SKIP_TESTS }
-                    }
-                    steps {
-                        dir('Admin-Panel') {
-                            sh 'npm install'
-                        }
-                    }
-                }
-                
-                stage('Run Tests') {
-                    when {
-                        expression { return !params.SKIP_TESTS }
-                    }
-                    steps {
-                        dir('Admin-Panel') {
-                            sh 'npm test -- --watchAll=false'
-                        }
-                    }
-                }
-                
-                stage('Build') {
-                    steps {
-                        dir('Admin-Panel') {
-                            sh 'npm run build-dev'
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Company Panel pipeline
-        stage('Company Panel') {
-            stages {
-                stage('Install Dependencies') {
-                    when {
-                        expression { return !params.SKIP_TESTS }
-                    }
-                    steps {
-                        dir('Company-Panel') {
-                            sh 'npm install'
-                        }
-                    }
-                }
-                
-                stage('Run Tests') {
-                    when {
-                        expression { return !params.SKIP_TESTS }
-                    }
-                    steps {
-                        dir('Company-Panel') {
-                            sh 'npm test || echo "No tests found"'
-                        }
-                    }
-                }
-                
-                stage('Build') {
-                    steps {
-                        dir('Company-Panel') {
-                            sh 'npm run build-dev'
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Building Docker images
-        stage('Building images (node and mongo)') {
+
+        stage('Deploy Application') {
+            when { expression { return !params.SKIP_DEPLOY } }
             steps {
                 script {
-                    sh('docker-compose build')
-                }
-            }
-        }
-        
-        // Uploading Docker images into Nexus Registry
-        stage('Deploy to Nexus') {
-            steps { 
-                script {
-                    docker.withRegistry("http://"+registry, registryCredentials) {
-                        sh('docker push $registry/nodemongoapp:6.0')
+                    echo "Deploying application using Docker Compose..."
+                    try {
+                        sh "docker-compose -f docker-compose.yml down --remove-orphans"
+                    } catch (err) {
+                        echo "No existing services to take down or error during takedown: ${err.getMessage()}"
                     }
-                }
-            }
-        }
-        
-        // Run the application
-        stage('Run application') {
-            steps { 
-                script {
-                    docker.withRegistry("http://"+registry, registryCredentials) {
-                        sh('docker pull $registry/nodemongoapp:6.0')
-                        sh('docker-compose up -d')
+                    
+                    withCredentials([
+                        string(credentialsId: 'SESSION_SECRET', variable: 'SESSION_SECRET'),
+                        string(credentialsId: 'OPENAI_API_KEY', variable: 'OPENAI_API_KEY'),
+                        string(credentialsId: 'JWT_SECRET', variable: 'JWT_SECRET'),
+                        string(credentialsId: 'GOOGLE_CLIENT_ID', variable: 'GOOGLE_CLIENT_ID'),
+                        string(credentialsId: 'GOOGLE_CLIENT_SECRET', variable: 'GOOGLE_CLIENT_SECRET'),
+                        string(credentialsId: 'GITHUB_CLIENT_ID', variable: 'GITHUB_CLIENT_ID'),
+                        string(credentialsId: 'GITHUB_CLIENT_SECRET', variable: 'GITHUB_CLIENT_SECRET'),
+                        string(credentialsId: 'EMAIL_USER', variable: 'EMAIL_USER'),
+                        string(credentialsId: 'EMAIL_PASSWORD', variable: 'EMAIL_PASSWORD'),
+                        string(credentialsId: 'EMAIL_APP_USER', variable: 'EMAIL_APP_USER'),
+                        string(credentialsId: 'EMAIL_APP_PASSWORD', variable: 'EMAIL_APP_PASSWORD')
+                    ]) {
+                        // Secrets are now available as environment variables
+                        // Fixed URLs are taken from Jenkinsfile environment block
+                        sh """
+                        export GITHUB_CALLBACK_URL=\"${env.GITHUB_CALLBACK_URL_CONFIG}\"
+                        export FRONTEND_URL=\"${env.FRONTEND_URL_CONFIG}\"
+                        export SMTP_PORT=\"${env.SMTP_PORT_CONFIG}\"
+                        docker-compose -f docker-compose.yml up -d
+                        """
                     }
-                }
-            }
-        }
-        
-        // Run Prometheus monitoring
-        stage('Run Prometheus') {
-            steps {
-                script {
-                    sh 'docker start prometheus || docker run -d --name prometheus -p 9090:9090 prom/prometheus'
-                }
-            }
-        }
-        
-        // Run Grafana
-        stage('Run Grafana') {
-            steps {
-                script {
-                    sh 'docker start grafana || docker run -d --name grafana -p 3000:3000 grafana/grafana'
+                    echo "Application deployed."
+                    echo "Backend: http://localhost:5000"
+                    echo "Frontend: http://localhost:3000"
+                    echo "Company Panel: http://localhost:3001"
+                    echo "Admin Panel: http://localhost:3002"
+                    echo "AI Service: http://localhost:5001"
                 }
             }
         }
     }
-    
+
     post {
+        always {
+            echo "Pipeline finished. Cleaning up workspace..."
+            cleanWs()
+        }
         success {
-            node {
-                echo 'Pipeline completed successfully!'
-                sh '''
-                    curl -X POST -H 'Content-Type: application/json' -d '{"text": "🚀 TuniHire deployment successful! Version: ${APP_VERSION}"}' ${SLACK_WEBHOOK_URL}
-                '''
-            }
+            echo "Pipeline completed successfully!"
         }
         failure {
-            node {
-                echo 'Pipeline failed!'
-                sh '''
-                    curl -X POST -H 'Content-Type: application/json' -d '{"text": "❌ TuniHire deployment failed! See ${BUILD_URL} for details."}' ${SLACK_WEBHOOK_URL}
-                '''
-            }
+            echo "Pipeline failed!"
         }
-        always {
-            node {
-                echo 'Cleaning up workspace...'
-                cleanWs()
-            }
-        }
-    }
-    
-    parameters {
-        booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Skip running tests')
-        booleanParam(name: 'SKIP_SONAR', defaultValue: false, description: 'Skip SonarQube analysis')
-        string(name: 'SLACK_WEBHOOK_URL', defaultValue: '', description: 'Slack webhook URL for notifications')
-        credentials(name: 'MONGO_CREDENTIALS', description: 'MongoDB credentials', defaultValue: 'mongodb-credentials', credentialType: 'Username with password')
-        password(name: 'GRAFANA_PASSWORD', defaultValue: 'admin', description: 'Grafana admin password')
     }
 }
+
