@@ -6,8 +6,7 @@ const path = require("path");
 const crypto = require("crypto");
 const jwt = require('jsonwebtoken'); // Add this line to import jwt
 const { sendVerificationEmail } = require('../config/emailService');
-const { getUsers, createUser, signIn, signInn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, updateUser, deleteUser, validateToken, generateNewVerificationToken, updateUserRole } = require("../controllers/userController");
-const { getAllUsers } = require("../controllers/userController");
+const { getUsers, createUser, signIn, signInn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, updateUser, deleteUser, validateToken, generateNewVerificationToken, updateUserRole, getAllUsers, getPublicUserProfile } = require("../controllers/userController");
 const fs = require('fs');
 
 const router = express.Router();
@@ -22,6 +21,141 @@ router.put("/update-profile", verifyToken, updateUserProfile);
 
 // Route to change user password
 router.put("/change-password", verifyToken, changeUserPassword);
+
+// Configure multer for profile picture uploads
+const profileStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../uploads/profile-pictures');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'profile-' + uniqueSuffix + ext);
+  }
+});
+
+const profileUpload = multer({
+  storage: profileStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  },
+  limits: {
+    fileSize: 2 * 1024 * 1024 // 2MB
+  }
+});
+
+// Profile picture upload route
+router.post('/upload-profile-picture', verifyToken, profileUpload.single('profilePicture'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No image file uploaded' });
+    }
+
+    const userId = req.user.userId;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Generate URL for the uploaded file
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+    const profilePicturePath = `/uploads/profile-pictures/${req.file.filename}`;
+    const profilePictureUrl = `${baseUrl}${profilePicturePath}`;
+
+    // Update user's profile picture URL in the database
+    user.profilePicture = profilePictureUrl;
+    await user.save();
+
+    res.status(200).json({
+      message: 'Profile picture uploaded successfully',
+      profilePicture: profilePictureUrl
+    });
+  } catch (error) {
+    console.error('Error uploading profile picture:', error);
+    res.status(500).json({ 
+      message: 'Server error during profile picture upload',
+      error: error.message
+    });
+  }
+});
+
+// Configure multer for verification photo uploads
+const verificationStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../uploads/verification-photos');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname) || '.png';
+    cb(null, 'verification-' + uniqueSuffix + ext);
+  }
+});
+
+const verificationUpload = multer({
+  storage: verificationStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  }
+});
+
+// Profile verification route
+router.post('/verify-profile', verifyToken, verificationUpload.single('verificationImage'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No verification image uploaded' });
+    }
+
+    const userId = req.user.userId;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Generate URL for the uploaded verification photo
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+    const verificationPhotoPath = `/uploads/verification-photos/${req.file.filename}`;
+    const verificationPhotoUrl = `${baseUrl}${verificationPhotoPath}`;
+
+    // Update user's verification status in the database
+    user.isVerified = true;
+    user.verifiedAt = new Date();
+    user.verificationPhoto = verificationPhotoUrl;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile verified successfully',
+      isVerified: true,
+      verifiedAt: user.verifiedAt
+    });
+  } catch (error) {
+    console.error('Error during profile verification:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error during profile verification',
+      error: error.message
+    });
+  }
+});
 
 // ==========================================
 // ROUTES WITH URL PARAMETERS (MUST BE AFTER SPECIFIC ROUTES)
@@ -355,6 +489,12 @@ router.get("/profile", verifyToken, async (req, res) => {
     }
 });
 
+// Public profile endpoint - accessible without auth
+router.get("/:id/public-profile", getPublicUserProfile);
+
+// Alternative format for public profile endpoint
+router.get("/public-profile/:id", getPublicUserProfile);
+
 // Refresh token endpoint
 router.post('/refresh-token', async (req, res) => {
   const { refreshToken } = req.body;
@@ -385,71 +525,6 @@ router.post('/refresh-token', async (req, res) => {
   } catch (error) {
     console.error('Error refreshing token:', error);
     return res.status(401).json({ message: 'Invalid refresh token' });
-  }
-});
-
-// Configure multer for profile picture uploads
-const profileStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, '../uploads/profile-pictures');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, 'profile-' + uniqueSuffix + ext);
-  }
-});
-
-const profileUpload = multer({
-  storage: profileStorage,
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed!'), false);
-    }
-  },
-  limits: {
-    fileSize: 2 * 1024 * 1024 // 2MB
-  }
-});
-
-// Profile picture upload route
-router.post('/upload-profile-picture', verifyToken, profileUpload.single('profilePicture'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: 'No image file uploaded' });
-    }
-
-    const userId = req.user.userId;
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Generate URL for the uploaded file
-    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
-    const profilePicturePath = `/uploads/profile-pictures/${req.file.filename}`;
-    const profilePictureUrl = `${baseUrl}${profilePicturePath}`;
-
-    // Update user's profile picture URL in the database
-    user.profilePicture = profilePictureUrl;
-    await user.save();
-
-    res.status(200).json({
-      message: 'Profile picture uploaded successfully',
-      profilePicture: profilePictureUrl
-    });
-  } catch (error) {
-    console.error('Error uploading profile picture:', error);
-    res.status(500).json({ 
-      message: 'Server error during profile picture upload',
-      error: error.message
-    });
   }
 });
 

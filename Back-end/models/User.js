@@ -54,7 +54,11 @@ const UserSchema = new mongoose.Schema({
   isOtpVerified: { type: Boolean, default: false },
   isEmailVerified: { type: Boolean, default: false },
   emailVerificationToken: String,
-  emailVerificationExpires: Date
+  emailVerificationExpires: Date,
+  // Profile verification fields
+  isVerified: { type: Boolean, default: false },
+  verifiedAt: { type: Date },
+  verificationPhoto: { type: String }
 });
 
 module.exports = mongoose.model("User", UserSchema);

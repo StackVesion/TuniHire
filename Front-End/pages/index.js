@@ -1,16 +1,20 @@
 /* eslint-disable @next/next/no-img-element */
 import Layout from "../components/Layout/Layout";
-import CategorySlider from "./../components/sliders/Category";
 import TopRekruterSlider from "./../components/sliders/TopRekruter";
 import BlogSlider from "./../components/sliders/Blog";
-import CategoryTab from "./../components/elements/CategoryTab";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import axios from "axios";
 
 export default function Home() {
     const router = useRouter();
     const [authMessage, setAuthMessage] = useState(null);
+    const [companies, setCompanies] = useState([]);
+    const [companyJobs, setCompanyJobs] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [activeCompanyIndex, setActiveCompanyIndex] = useState(0);
+    const [locationStats, setLocationStats] = useState([]);
 
     useEffect(() => {
         // Check if there's a token in the URL (from Google OAuth)
@@ -42,6 +46,65 @@ export default function Home() {
             }
         }
     }, [router.query, router]);
+
+    // Fetch companies and jobs from database
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                
+                // Fetch companies
+                const companiesResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/companies`);
+                const companiesData = companiesResponse.data.companies || [];
+                
+                // Get all companies with Approved or Pending status
+                const availableCompanies = companiesData.filter(company => 
+                    company.status === "Approved" || company.status === "Pending"
+                );
+                setCompanies(availableCompanies);
+                
+                if (availableCompanies.length > 0) {
+                    // Fetch jobs for each company
+                    const jobsPromises = availableCompanies.map(company => 
+                        axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/jobs/company/${company._id}`)
+                    );
+                    
+                    const jobsResponses = await Promise.all(jobsPromises);
+                    
+                    // Organize jobs by company
+                    const jobsByCompany = availableCompanies.map((company, index) => {
+                        return {
+                            company,
+                            jobs: jobsResponses[index].data || []
+                        };
+                    });
+                    
+                    setCompanyJobs(jobsByCompany);
+                }
+
+                // Fetch location statistics
+                try {
+                    const locationsResponse = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/jobs/locations`);
+                    setLocationStats(locationsResponse.data || []);
+                } catch (locationError) {
+                    console.error("Error fetching location data:", locationError);
+                    // Set empty array if API fails - don't let this error prevent other parts from loading
+                    setLocationStats([]);
+                }
+                
+                setLoading(false);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                setLoading(false);
+            }
+        };
+        
+        fetchData();
+    }, []);
+
+    const handleSelectCompany = (index) => {
+        setActiveCompanyIndex(index);
+    };
 
     return (
         <>
@@ -387,12 +450,64 @@ export default function Home() {
                     <div className="section-box wow animate__animated animate__fadeIn">
                         <div className="container">
                             <div className="text-center">
-                                <h2 className="section-title mb-10 wow animate__animated animate__fadeInUp">Browse by category</h2>
-                                <p className="font-lg color-text-paragraph-2 wow animate__animated animate__fadeInUp">Find the job that’s perfect for you. about 800+ new jobs everyday</p>
+                                <h2 className="section-title mb-10 wow animate__animated animate__fadeInUp">Browse by Companies</h2>
+                                <p className="font-lg color-text-paragraph-2 wow animate__animated animate__fadeInUp">Discover top employers hiring in Tunisia</p>
                             </div>
-                            <div className="box-swiper mt-50">
-                                <CategorySlider />
+                            {loading ? (
+                                <div className="text-center mt-50">
+                                    <div className="spinner-border text-primary" role="status">
+                                        <span className="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                            ) : companies.length > 0 ? (
+                                <div className="mt-50">
+                                    <div className="row">
+                                        {companies.map((company, index) => (
+                                            <div className="col-xl-3 col-lg-3 col-md-4 col-sm-6 col-12 mb-30" key={index}>
+                                                <div className="card-grid-1 hover-up">
+                                                    <div className="text-center card-grid-1-image">
+                                                        <Link legacyBehavior href={`/company-details?id=${company._id}`}>
+                                                            <a>
+                                                                <img 
+                                                                    src={company.logo || "assets/imgs/brands/brand-1.png"}
+                                                                    alt={company.name}
+                                                                    style={{ width: '80px', height: '80px', objectFit: 'contain' }}
+                                                                />
+                                                            </a>
+                                                        </Link>
+                                                    </div>
+                                                    <div className="text-center card-grid-1-content">
+                                                        <Link legacyBehavior href={`/company-details?id=${company._id}`}>
+                                                            <a>
+                                                                <h5 className="font-bold mb-5">{company.name}</h5>
+                                                            </a>
+                                                        </Link>
+                                                        <p className="font-xs color-text-paragraph-2 mb-10">{company.category || "Technology"}</p>
+                                                        <div className="text-center mt-5">
+                                                            <span className="card-location font-regular font-sm mr-10">
+                                                                <i className="fi-rr-marker mr-5 ml-0" />{company.location || "Tunisia"}
+                                                            </span>
+                                                            <span className="card-time font-regular font-sm">
+                                                                <i className="fi-rr-briefcase mr-5 ml-15" />
+                                                                {companyJobs.find(item => item.company._id === company._id)?.jobs.length || 0} jobs
+                                                            </span>
+                                                        </div>
+                                                        <div className="mt-20">
+                                                            <Link legacyBehavior href={`/company-details?id=${company._id}`}>
+                                                                <a className="btn btn-border btn-sm">View Company</a>
+                                                            </Link>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center mt-50">
+                                    <p>No companies found. Check back soon for new employers!</p>
                             </div>
+                            )}
                         </div>
                     </div>
                 </section>
@@ -404,7 +519,7 @@ export default function Home() {
                                 <span className="text-hiring">Hiring</span>
                             </div>
                             <div className="text-2">
-                                Let’s <span className="color-brand-1">Work</span> Together
+                                Let's <span className="color-brand-1">Work</span> Together
                                 <br /> &amp; <span className="color-brand-1">Explore</span> Opportunities
                             </div>
                             <div className="text-3">
@@ -418,12 +533,114 @@ export default function Home() {
                 <section className="section-box mt-50">
                     <div className="container">
                         <div className="text-center">
-                            <h2 className="section-title mb-10 wow animate__animated animate__fadeInUp">Jobs of the day</h2>
-                            <p className="font-lg color-text-paragraph-2 wow animate__animated animate__fadeInUp">Search and connect with the right candidates faster. </p>
+                            <h2 className="section-title mb-10 wow animate__animated animate__fadeInUp">Jobs by Company</h2>
+                            <p className="font-lg color-text-paragraph-2 wow animate__animated animate__fadeInUp">Find opportunities with top companies in Tunisia</p>
                         </div>
-                        <div className="mt-70">
-                            <CategoryTab />
+                        
+                        {loading ? (
+                            <div className="text-center mt-50">
+                                <div className="spinner-border text-primary" role="status">
+                                    <span className="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        ) : companyJobs.length > 0 ? (
+                            <div className="mt-50">
+                                <div className="list-tabs mt-40 text-center">
+                                    <ul className="nav nav-tabs" role="tablist">
+                                        {companyJobs.map((item, index) => (
+                                            <li key={index}>
+                                                <a 
+                                                    className={activeCompanyIndex === index ? "active" : ""} 
+                                                    onClick={() => handleSelectCompany(index)}
+                                                >
+                                                    <img 
+                                                        src={item.company.logo || "/assets/imgs/page/homepage1/management.svg"} 
+                                                        alt={item.company.name} 
+                                                        style={{ width: '24px', height: '24px', objectFit: 'contain' }}
+                                                    /> 
+                                                    {item.company.name}
+                                                </a>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                
+                                <div className="tab-content mt-70" id="myTabContent-1">
+                                    <div className="tab-pane fade show active">
+                                        <div className="row">
+                                            {companyJobs[activeCompanyIndex]?.jobs.length > 0 ? (
+                                                companyJobs[activeCompanyIndex].jobs.map((job, index) => (
+                                                    <div className="col-xl-3 col-lg-4 col-md-6 col-sm-12 col-12" key={index}>
+                                                        <div className="card-grid-2 hover-up">
+                                                            <div className="card-grid-2-image-left">
+                                                                <span className="flash" />
+                                                                <div className="image-box">
+                                                                    <img 
+                                                                        src={companyJobs[activeCompanyIndex].company.logo || "assets/imgs/brands/brand-1.png"} 
+                                                                        alt={companyJobs[activeCompanyIndex].company.name} 
+                                                                    />
+                                                                </div>
+                                                                <div className="right-info">
+                                                                    <Link legacyBehavior href={`/company-details?id=${companyJobs[activeCompanyIndex].company._id}`}>
+                                                                        <a className="name-job">{companyJobs[activeCompanyIndex].company.name}</a>
+                                                                    </Link>
+                                                                    <span className="location-small">{job.location || "Tunisia"}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="card-block-info">
+                                                                <h6>
+                                                                    <Link legacyBehavior href={`/job-details?id=${job._id}`}>
+                                                                        <a>{job.title}</a>
+                                                                    </Link>
+                                                                </h6>
+                                                                <div className="mt-5">
+                                                                    <span className="card-briefcase">{job.workplaceType}</span>
+                                                                    <span className="card-time">
+                                                                        <span>{new Date(job.createdAt).toLocaleDateString()}</span>
+                                                                    </span>
+                                                                </div>
+                                                                <p className="font-sm color-text-paragraph mt-15">
+                                                                    {job.description ? job.description.substring(0, 100) + "..." : "No description available"}
+                                                                </p>
+                                                                <div className="mt-30">
+                                                                    {job.requirements && job.requirements.slice(0, 3).map((req, reqIndex) => (
+                                                                        <Link legacyBehavior href="/jobs-grid" key={reqIndex}>
+                                                                            <a className="btn btn-grey-small mr-5">{req}</a>
+                                                                        </Link>
+                                                                    ))}
+                                                                </div>
+                                                                <div className="card-2-bottom mt-30">
+                                                                    <div className="row">
+                                                                        <div className="col-lg-7 col-7">
+                                                                            <span className="card-text-price">{job.salaryRange || "Competitive"}</span>
+                                                                        </div>
+                                                                        <div className="col-lg-5 col-5 text-end">
+                                                                            <Link legacyBehavior href={`/job-details?id=${job._id}`}>
+                                                                                <a className="btn btn-apply-now">
+                                                                                    Apply now
+                                                                                </a>
+                                                                            </Link>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="col-12 text-center">
+                                                    <p>No jobs available for this company.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center mt-50">
+                                <p>No companies or jobs found. Check back soon for new opportunities!</p>
                         </div>
+                        )}
                     </div>
                 </section>
                 <section className="section-box overflow-visible mt-100 mb-100">
@@ -442,7 +659,7 @@ export default function Home() {
                                 <div className="content-job-inner">
                                     <span className="color-text-mutted text-32">Millions Of Jobs. </span>
                                     <h2 className="text-52 wow animate__animated animate__fadeInUp">
-                                        Find The One That’s <span className="color-brand-2">Right</span> For You
+                                        Find The One That's <span className="color-brand-2">Right</span> For You
                                     </h2>
                                     <div className="mt-40 pr-50 text-md-lh28 wow animate__animated animate__fadeInUp">Search all the open positions on the web. Get your own personalized salary estimate. Read reviews on over 600,000 companies worldwide. The right job is out there.</div>
                                     <div className="mt-40">
@@ -526,187 +743,62 @@ export default function Home() {
                 <section className="section-box mt-50">
                     <div className="container">
                         <div className="text-center">
-                            <h2 className="section-title mb-10 wow animate__animated animate__fadeInUp">Top Recruiters</h2>
-                            <p className="font-lg color-text-paragraph-2 wow animate__animated animate__fadeInUp">Discover your next career move, freelance gig, or internship</p>
-                        </div>
-                    </div>
-                    <div className="container">
-                        <div className="box-swiper mt-50">
-                            <TopRekruterSlider />
-                        </div>
-                    </div>
-                </section>
-                <section className="section-box mt-50">
-                    <div className="container">
-                        <div className="text-center">
                             <h2 className="section-title mb-10 wow animate__animated animate__fadeInUp">Jobs by Location</h2>
-                            <p className="font-lg color-text-paragraph-2 wow animate__animated animate__fadeInUp">Find your favourite jobs and get the benefits of yourself</p>
+                            <p className="font-lg color-text-paragraph-2 wow animate__animated animate__fadeInUp">Find jobs available in different locations across Tunisia</p>
                         </div>
                     </div>
                     <div className="container">
                         <div className="row mt-50">
-                            <div className="col-xl-3 col-lg-3 col-md-5 col-sm-12 col-12">
+                            {loading ? (
+                                <div className="text-center mt-50">
+                                    <div className="spinner-border text-primary" role="status">
+                                        <span className="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                            ) : locationStats.length > 0 ? (
+                                locationStats.map((location, index) => (
+                                    <div 
+                                        key={index}
+                                        className={`col-xl-${index % 3 === 0 ? '3' : (index % 3 === 1 ? '4' : '5')} col-lg-${index % 3 === 0 ? '3' : (index % 3 === 1 ? '4' : '5')} col-md-${index % 2 === 0 ? '5' : '7'} col-sm-12 col-12`}
+                                    >
                                 <div className="card-image-top hover-up">
-                                    <Link legacyBehavior href="/jobs-grid">
-                                        <a>
-                                            <div className="image" style={{ backgroundImage: "url(assets/imgs/page/homepage1/location1.png)" }}>
-                                                <span className="lbl-hot">Hot</span>
+                                            <Link legacyBehavior href={`/jobs-grid?location=${encodeURIComponent(location.location)}`}>
+                                                <a>
+                                                    <div 
+                                                        className="image" 
+                                                        style={{ 
+                                                            backgroundImage: `url(assets/imgs/page/homepage1/location${(index % 6) + 1}.png)`
+                                                        }}
+                                                    >
+                                                        {index < 2 && <span className="lbl-hot">{index === 0 ? 'Hot' : 'Trending'}</span>}
                                             </div>
                                         </a>
                                     </Link>
 
                                     <div className="informations">
-                                        <Link legacyBehavior href="/jobs-grid">
+                                                <Link legacyBehavior href={`/jobs-grid?location=${encodeURIComponent(location.location)}`}>
                                             <a>
-                                                <h5>Paris, France</h5>
+                                                        <h5>{location.location}</h5>
                                             </a>
                                         </Link>
 
                                         <div className="row">
                                             <div className="col-lg-6 col-6">
-                                                <span className="text-14 color-text-paragraph-2">5 Vacancy</span>
+                                                        <span className="text-14 color-text-paragraph-2">{location.count} Vacancy</span>
                                             </div>
                                             <div className="col-lg-6 col-6 text-end">
-                                                <span className="color-text-paragraph-2 text-14">120 companies</span>
+                                                        <span className="color-text-paragraph-2 text-14">{location.companiesCount} companies</span>
+                                </div>
+                            </div>
                                             </div>
                                         </div>
                                     </div>
+                                ))
+                            ) : (
+                                <div className="text-center mt-30">
+                                    <p>No location data available yet.</p>
                                 </div>
-                            </div>
-                            <div className="col-xl-4 col-lg-4 col-md-7 col-sm-12 col-12">
-                                <div className="card-image-top hover-up">
-                                    <Link legacyBehavior href="/jobs-grid">
-                                        <a>
-                                            <div className="image" style={{ backgroundImage: "url(assets/imgs/page/homepage1/location2.png)" }}>
-                                                <span className="lbl-hot">Trending</span>
-                                            </div>
-                                        </a>
-                                    </Link>
-
-                                    <div className="informations">
-                                        <Link legacyBehavior href="/jobs-grid">
-                                            <a>
-                                                <h5>London, England</h5>
-                                            </a>
-                                        </Link>
-
-                                        <div className="row">
-                                            <div className="col-lg-6 col-6">
-                                                <span className="text-14 color-text-paragraph-2">7 Vacancy</span>
-                                            </div>
-                                            <div className="col-lg-6 col-6 text-end">
-                                                <span className="color-text-paragraph-2 text-14">68 companies</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="col-xl-5 col-lg-5 col-md-7 col-sm-12 col-12">
-                                <div className="card-image-top hover-up">
-                                    <Link legacyBehavior href="/jobs-grid">
-                                        <a>
-                                            <div className="image" style={{ backgroundImage: "url(assets/imgs/page/homepage1/location3.png)" }}>
-                                                <span className="lbl-hot">Hot</span>
-                                            </div>
-                                        </a>
-                                    </Link>
-
-                                    <div className="informations">
-                                        <Link legacyBehavior href="/jobs-grid">
-                                            <a>
-                                                <h5>New York, USA</h5>
-                                            </a>
-                                        </Link>
-
-                                        <div className="row">
-                                            <div className="col-lg-6 col-6">
-                                                <span className="text-14 color-text-paragraph-2">9 Vacancy</span>
-                                            </div>
-                                            <div className="col-lg-6 col-6 text-end">
-                                                <span className="color-text-paragraph-2 text-14">80 companies</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="col-xl-4 col-lg-4 col-md-5 col-sm-12 col-12">
-                                <div className="card-image-top hover-up">
-                                    <Link legacyBehavior href="/jobs-grid">
-                                        <a>
-                                            <div className="image" style={{ backgroundImage: "url(assets/imgs/page/homepage1/location4.png)" }} />
-                                        </a>
-                                    </Link>
-
-                                    <div className="informations">
-                                        <Link legacyBehavior href="/jobs-grid">
-                                            <a>
-                                                <h5>Amsterdam, Holland</h5>
-                                            </a>
-                                        </Link>
-
-                                        <div className="row">
-                                            <div className="col-lg-6 col-6">
-                                                <span className="text-14 color-text-paragraph-2">16 Vacancy</span>
-                                            </div>
-                                            <div className="col-lg-6 col-6 text-end">
-                                                <span className="color-text-paragraph-2 text-14">86 companies</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="col-xl-5 col-lg-5 col-md-7 col-sm-12 col-12">
-                                <div className="card-image-top hover-up">
-                                    <Link legacyBehavior href="/jobs-grid">
-                                        <a>
-                                            <div className="image" style={{ backgroundImage: "url(assets/imgs/page/homepage1/location5.png)" }} />
-                                        </a>
-                                    </Link>
-
-                                    <div className="informations">
-                                        <Link legacyBehavior href="/jobs-grid">
-                                            <a>
-                                                <h5>Copenhagen, Denmark</h5>
-                                            </a>
-                                        </Link>
-
-                                        <div className="row">
-                                            <div className="col-lg-6 col-6">
-                                                <span className="text-14 color-text-paragraph-2">39 Vacancy</span>
-                                            </div>
-                                            <div className="col-lg-6 col-6 text-end">
-                                                <span className="color-text-paragraph-2 text-14">186 companies</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="col-xl-3 col-lg-3 col-md-5 col-sm-12 col-12">
-                                <div className="card-image-top hover-up">
-                                    <Link legacyBehavior href="/jobs-grid">
-                                        <a>
-                                            <div className="image" style={{ backgroundImage: "url(assets/imgs/page/homepage1/location6.png)" }} />
-                                        </a>
-                                    </Link>
-
-                                    <div className="informations">
-                                        <Link legacyBehavior href="/jobs-grid">
-                                            <a>
-                                                <h5>Berlin, Germany</h5>
-                                            </a>
-                                        </Link>
-
-                                        <div className="row">
-                                            <div className="col-lg-6 col-6">
-                                                <span className="text-14 color-text-paragraph-2">15 Vacancy</span>
-                                            </div>
-                                            <div className="col-lg-6 col-6 text-end">
-                                                <span className="color-text-paragraph-2 text-14">632 companies</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 </section>

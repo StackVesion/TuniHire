@@ -78,7 +78,9 @@ export const getCompanies = async (filters = {}) => {
 // Get a single company by ID
 export const getCompanyById = async (id) => {
   try {
+    console.log('API calling getCompanyById with ID:', id);
     const response = await api.get(`/companies/${id}`);
+    console.log('API getCompanyById response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error fetching company details:', error);

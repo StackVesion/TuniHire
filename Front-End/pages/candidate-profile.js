@@ -1,8 +1,9 @@
 import Link from "next/link";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Layout from "../components/Layout/Layout";
 import { useRouter } from "next/router";
 import axios from "axios";
+import Modal from 'react-bootstrap/Modal';
 
 export default function CandidateProfile() {
     const [activeIndex, setActiveIndex] = useState(1);
@@ -10,6 +11,18 @@ export default function CandidateProfile() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const [selectedFile, setSelectedFile] = useState(null);
+    // Verification related states
+    const [showVerificationModal, setShowVerificationModal] = useState(false);
+    const [verifying, setVerifying] = useState(false);
+    const [verificationSuccess, setVerificationSuccess] = useState(false);
+    const [verificationError, setVerificationError] = useState("");
+    const [stream, setStream] = useState(null);
+    const [verificationImage, setVerificationImage] = useState(null);
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
+    // Profile form state
     const [profileForm, setProfileForm] = useState({
         firstName: "",
         lastName: "",
@@ -121,6 +134,182 @@ export default function CandidateProfile() {
             setError("Une erreur inattendue s'est produite");
         } finally {
             setLoading(false); // Hide loading indicator
+        }
+    };
+
+    // Fonction pour gérer le téléchargement de la photo de profil
+    const handleProfilePictureUpload = async (file) => {
+        setUploadingPhoto(true);
+        setError("");
+        setSuccess("");
+        
+        try {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                setError("Vous devez être connecté pour effectuer cette action");
+                setUploadingPhoto(false);
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append("profilePicture", file);
+            
+            const response = await axios.post(
+                "http://localhost:5000/api/users/upload-profile-picture",
+                formData,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'multipart/form-data'
+                    }
+                }
+            );
+            
+            if (response.status === 200) {
+                // Update user data with the new profile picture URL
+                const updatedUserData = {...userData, profilePicture: response.data.profilePicture};
+                setUserData(updatedUserData);
+                localStorage.setItem("user", JSON.stringify(updatedUserData));
+                setSuccess("Photo de profil mise à jour avec succès");
+                
+                // Refresh profile data after upload
+                fetchCompleteProfileData();
+            }
+        } catch (error) {
+            console.error("Error uploading profile picture:", error);
+            if (error.response) {
+                setError(`Erreur: ${error.response.data.message || error.response.statusText}`);
+            } else {
+                setError("Une erreur est survenue lors du téléchargement de la photo de profil");
+            }
+        } finally {
+            setUploadingPhoto(false);
+        }
+    };
+
+    // Handle opening verification modal
+    const openVerificationModal = () => {
+        setVerificationError("");
+        setVerificationSuccess(false);
+        setShowVerificationModal(true);
+        setTimeout(() => {
+            startCamera();
+        }, 500);
+    };
+
+    // Handle closing verification modal and cleanup
+    const closeVerificationModal = () => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            setStream(null);
+        }
+        setVerificationImage(null);
+        setShowVerificationModal(false);
+    };
+
+    // Start camera stream
+    const startCamera = async () => {
+        try {
+            const videoStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "user" }, 
+                audio: false 
+            });
+            
+            setStream(videoStream);
+            
+            if (videoRef.current) {
+                videoRef.current.srcObject = videoStream;
+            }
+        } catch (err) {
+            console.error("Error accessing camera:", err);
+            setVerificationError("Failed to access your camera. Please ensure you have granted camera access permission.");
+        }
+    };
+
+    // Capture image from camera
+    const captureImage = () => {
+        if (!videoRef.current || !canvasRef.current) return;
+        
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        const context = canvas.getContext('2d');
+        
+        // Set canvas dimensions to match video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Draw current video frame to canvas
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Convert to data URL
+        const imageDataUrl = canvas.toDataURL('image/png');
+        setVerificationImage(imageDataUrl);
+    };
+
+    // Submit verification to server
+    const submitVerification = async () => {
+        if (!verificationImage) {
+            setVerificationError("Please capture an image first");
+            return;
+        }
+
+        try {
+            setVerifying(true);
+            setVerificationError("");
+            
+            const token = localStorage.getItem("token");
+            if (!token) {
+                setVerificationError("You must be logged in to verify your profile");
+                setVerifying(false);
+                return;
+            }
+            
+            // Convert base64 image to blob for sending
+            const base64Response = await fetch(verificationImage);
+            const blob = await base64Response.blob();
+            
+            // Create a File object from the blob
+            const imageFile = new File([blob], "verification.png", { type: "image/png" });
+            
+            const formData = new FormData();
+            formData.append("verificationImage", imageFile);
+            
+            console.log("Sending verification image with token:", token.substring(0, 10) + "...");
+            
+            const response = await axios.post(
+                "http://localhost:5000/api/users/verify-profile",
+                formData,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        // Don't set Content-Type with FormData, axios will set it automatically with boundary
+                    }
+                }
+            );
+            
+            if (response.status === 200) {
+                setVerificationSuccess(true);
+                
+                // Update user data with verification status
+                const updatedUserData = {...userData, isVerified: true, verifiedAt: new Date()};
+                setUserData(updatedUserData);
+                localStorage.setItem("user", JSON.stringify(updatedUserData));
+                
+                setTimeout(() => {
+                    closeVerificationModal();
+                    setSuccess("Your profile has been verified successfully!");
+                    fetchCompleteProfileData(); // Refresh profile data
+                }, 2000);
+            }
+        } catch (error) {
+            console.error("Error verifying profile:", error);
+            if (error.response) {
+                setVerificationError(`Error: ${error.response.data.message || error.response.statusText}`);
+            } else {
+                setVerificationError("Failed to verify your profile. Please try again later.");
+            }
+        } finally {
+            setVerifying(false);
         }
     };
 
@@ -466,6 +655,118 @@ export default function CandidateProfile() {
     return (
         <>
             <Layout>
+                {/* Verification Modal */}
+                <Modal 
+                    show={showVerificationModal} 
+                    onHide={closeVerificationModal}
+                    centered
+                    size="lg"
+                >
+                    <Modal.Header closeButton>
+                        <Modal.Title>Verify Your Profile</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        <div className="text-center mb-4">
+                            <p>Profile verification helps employers trust your identity and increases your chances of getting hired.</p>
+                        </div>
+                        
+                        {verificationError && (
+                            <div className="alert alert-danger mb-3">
+                                {verificationError}
+                            </div>
+                        )}
+                        
+                        {verificationSuccess ? (
+                            <div className="text-center">
+                                <div className="success-animation">
+                                    <div className="checkmark">
+                                        <svg className="checkmark_success" height="70" viewBox="0 0 48 48" width="70">
+                                            <path fill="#43A047" d="M24 4C12.95 4 4 12.95 4 24c0 11.04 8.95 20 20 20 11.04 0 20-8.96 20-20 0-11.05-8.96-20-20-20zm-4 30L10 24l2.83-2.83L20 28.34l15.17-15.17L38 16 20 34z" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <h4 className="mt-3 mb-4">Verification Successful!</h4>
+                                <p>Your profile has been verified. A verification badge will now appear on your profile.</p>
+                            </div>
+                        ) : verificationImage ? (
+                            <div>
+                                <div className="text-center mb-3">
+                                    <img 
+                                        src={verificationImage} 
+                                        alt="Verification" 
+                                        style={{ 
+                                            maxWidth: '100%', 
+                                            maxHeight: '300px',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '8px'
+                                        }} 
+                                    />
+                                </div>
+                                <div className="d-flex justify-content-center mt-4">
+                                    <button 
+                                        className="btn btn-outline-secondary me-2" 
+                                        onClick={() => {
+                                            setVerificationImage(null);
+                                            startCamera();
+                                        }}
+                                    >
+                                        Retake
+                                    </button>
+                                    <button 
+                                        className="btn btn-primary" 
+                                        onClick={submitVerification}
+                                        disabled={verifying}
+                                    >
+                                        {verifying ? (
+                                            <>
+                                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                                Verifying...
+                                            </>
+                                        ) : "Submit for Verification"}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="camera-container" style={{ 
+                                    width: '100%', 
+                                    height: '400px',
+                                    position: 'relative',
+                                    backgroundColor: '#f0f0f0',
+                                    borderRadius: '8px',
+                                    overflow: 'hidden' 
+                                }}>
+                                    <video 
+                                        ref={videoRef} 
+                                        autoPlay 
+                                        playsInline 
+                                        style={{ 
+                                            width: '100%', 
+                                            height: '100%', 
+                                            objectFit: 'cover' 
+                                        }} 
+                                    />
+                                    <canvas ref={canvasRef} style={{ display: 'none' }} />
+                                </div>
+                                <div className="text-center mt-4">
+                                    <button 
+                                        className="btn btn-primary" 
+                                        onClick={captureImage}
+                                    >
+                                        Take Photo
+                                    </button>
+                                </div>
+                                <div className="text-muted mt-3">
+                                    <small>
+                                        <i className="fi-rr-info me-1"></i>
+                                        Please center your face in the frame and ensure good lighting for best results.
+                                    </small>
+                                </div>
+                            </div>
+                        )}
+                    </Modal.Body>
+                </Modal>
+
                 <div>
                     <section className="section-box-2">
                         <div className="container">
@@ -474,17 +775,41 @@ export default function CandidateProfile() {
                                 <a className="btn-editor" href="#" />
                             </div>
                             <div className="box-company-profile">
-                                <div className="image-compay">
+                                <div className="image-compay" style={{ maxWidth: '120px', maxHeight: '120px', overflow: 'hidden' }}>
                                     {userData.profilePicture ? (
-                                        <img src={userData.profilePicture} alt={userData.firstName} />
+                                        <img 
+                                            src={userData.profilePicture} 
+                                            alt={userData.firstName} 
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        />
                                     ) : (
-                                        <img src="assets/imgs/page/candidates/candidate-profile.png" alt="profile" />
+                                        <img 
+                                            src="assets/imgs/page/candidates/candidate-profile.png" 
+                                            alt="profile" 
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        />
                                     )}
                                 </div>
                                 <div className="row mt-10">
                                     <div className="col-lg-8 col-md-12">
                                         <h5 className="f-18">
                                             {userData.firstName} {userData.lastName} 
+                                            {userData.isVerified && (
+                                                <span className="verified-badge ml-10" title="Verified Profile">
+                                                    <i className="fi-rr-check-circle" style={{ 
+                                                        color: '#0099ff',
+                                                        fontSize: '18px',
+                                                        marginRight: '5px',
+                                                        verticalAlign: 'middle'
+                                                    }}></i>
+                                                    <span style={{
+                                                        fontSize: '14px',
+                                                        color: '#0099ff',
+                                                        fontWeight: 'normal',
+                                                        verticalAlign: 'middle'
+                                                    }}>Verified</span>
+                                                </span>
+                                            )}
                                             <span className="card-location font-regular ml-20">
                                                 {userData.location || "Location not specified"}
                                             </span>
@@ -494,6 +819,20 @@ export default function CandidateProfile() {
                                         </p>
                                     </div>
                                     <div className="col-lg-4 col-md-12 text-lg-end">
+                                        {!userData.isVerified ? (
+                                            <button 
+                                                className="btn btn-success btn-default mr-15" 
+                                                onClick={openVerificationModal}
+                                            >
+                                                <i className="fi-rr-user-check mr-5"></i>
+                                                Verify Profile
+                                            </button>
+                                        ) : (
+                                            <span className="badge bg-success-light text-success p-2 mr-15">
+                                                <i className="fi-rr-check-circle mr-5"></i>
+                                                Verified on {new Date(userData.verifiedAt).toLocaleDateString()}
+                                            </span>
+                                        )}
                                         <Link legacyBehavior href="/page-contact">
                                             <a className="btn btn-preview-icon btn-apply btn-apply-big">Edit Profile</a>
                                         </Link>
@@ -554,13 +893,52 @@ export default function CandidateProfile() {
                                                 </Link>
 
                                                 <div className="mt-35 mb-40 box-info-profie">
-                                                    <div className="image-profile">
+                                                    <div className="image-profile" style={{position: 'relative'}}>
                                                         {userData.profilePicture ? (
                                                             <img src={userData.profilePicture} alt={userData.firstName} />
                                                         ) : (
                                                             <img src="assets/imgs/page/candidates/candidate-profile.png" alt="profile" />
                                                         )}
+                                                        
+                                                        <div className="upload-button" style={{
+                                                            position: 'absolute',
+                                                            bottom: '10px',
+                                                            right: '10px',
+                                                            background: 'rgba(0,0,0,0.5)',
+                                                            borderRadius: '50%',
+                                                            width: '40px',
+                                                            height: '40px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            cursor: 'pointer'
+                                                        }}>
+                                                            <label htmlFor="profile-upload" style={{cursor: 'pointer', margin: '0'}}>
+                                                                <i className="fi-rr-camera" style={{color: 'white', fontSize: '18px'}}></i>
+                                                            </label>
+                                                            <input 
+                                                                id="profile-upload" 
+                                                                type="file" 
+                                                                accept="image/*"
+                                                                style={{display: 'none'}}
+                                                                onChange={(e) => {
+                                                                    if (e.target.files && e.target.files[0]) {
+                                                                        setSelectedFile(e.target.files[0]);
+                                                                        handleProfilePictureUpload(e.target.files[0]);
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
                                                     </div>
+                                                    
+                                                    {uploadingPhoto && (
+                                                        <div className="text-center mt-3">
+                                                            <div className="spinner-border text-primary" role="status">
+                                                                <span className="visually-hidden">Uploading...</span>
+                                                            </div>
+                                                            <p className="text-muted mt-2">Uploading your photo...</p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 
                                                 <form className="row form-contact" onSubmit={updateProfile}>

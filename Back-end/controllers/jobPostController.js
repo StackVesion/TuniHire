@@ -198,3 +198,60 @@ exports.getCompanyByJobPost = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// Get jobs by location
+exports.getJobsByLocation = async (req, res) => {
+  try {
+    console.log("Getting jobs grouped by location");
+    
+    const locationStats = await JobPost.aggregate([
+      {
+        $match: { location: { $exists: true, $ne: "" } }
+      },
+      {
+        $group: {
+          _id: "$location",
+          count: { $sum: 1 },
+          jobs: { $push: "$$ROOT" }
+        }
+      },
+      {
+        $project: {
+          location: "$_id",
+          count: 1,
+          jobSample: { $slice: ["$jobs", 3] } // Just include a sample of jobs for preview
+        }
+      },
+      {
+        $sort: { count: -1 } // Sort by most jobs first
+      },
+      {
+        $limit: 6 // Limit to 6 locations for the display
+      }
+    ]);
+
+    // Count companies per location - with safer handling of companyId
+    for (const locationStat of locationStats) {
+      // Safety check to ensure jobSample exists and is an array
+      if (!locationStat.jobSample || !Array.isArray(locationStat.jobSample)) {
+        locationStat.companiesCount = 0;
+        continue;
+      }
+      
+      // Filter out any jobs without valid companyId before mapping
+      const companyIds = [...new Set(
+        locationStat.jobSample
+          .filter(job => job.companyId) // Filter out null/undefined companyIds
+          .map(job => job.companyId.toString ? job.companyId.toString() : String(job.companyId))
+      )];
+      
+      locationStat.companiesCount = companyIds.length;
+    }
+    
+    console.log(`Found ${locationStats.length} locations with jobs`);
+    res.status(200).json(locationStats);
+  } catch (error) {
+    console.error(`Error getting jobs by location: ${error.message}`);
+    res.status(500).json({ error: error.message });
+  }
+};
