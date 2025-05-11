@@ -198,6 +198,9 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Routes
+const routes = require('./routes/index');
+app.use('/api', routes);
+
 app.use("/api/auth", require("./routes/user"));
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/jobs", require("./routes/jobRoutes"));
@@ -210,6 +213,7 @@ app.use("/api/ai", require("./routes/aiRoutes"));
 app.use("/api/courses", require("./routes/courseRoutes"));
 app.use("/api/certificates", require("./routes/certificateRoutes"));
 app.use("/api/subscriptions", require("./routes/subscriptionRoutes"));
+app.use("/api/blogs", require("./routes/blogRoutes"));
 app.use("/health", require("./routes/health"));
 
 // API route list

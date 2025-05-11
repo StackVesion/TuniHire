@@ -25,12 +25,10 @@ export default function MobileMenu({ handleToggle, isToggled }) {
                                         </li>
                                         <li> <Link className={router.pathname == "/recruiters" ? "dashboard2 active" : "dashboard2"} href="/recruiters"><img src="assets/imgs/page/dashboard/recruiters.svg" alt="jobBox" /><span className="name">Recruiters</span></Link>
                                         </li>
-                                        <li> <Link className={router.pathname == "/my-job-grid" ? "dashboard2 active" : "dashboard2"} href="/my-job-grid"><img src="assets/imgs/page/dashboard/jobs.svg" alt="jobBox" /><span className="name">My Jobs</span></Link>
-                                        </li>
-                                        <li> <Link className={router.pathname == "/my-tasks-list" ? "dashboard2 active" : "dashboard2"} href="/my-tasks-list"><img src="assets/imgs/page/dashboard/tasks.svg" alt="jobBox" /><span className="name">Tasks List</span></Link>
-                                        </li>
-                                        <li> <Link className={router.pathname == "/profile" ? "dashboard2 active" : "dashboard2"} href="/profile"><img src="assets/imgs/page/dashboard/profiles.svg" alt="jobBox" /><span className="name">My Profiles</span></Link>
-                                        </li>
+                                        <li> <Link className={router.pathname == "/my-job-grid" ? "dashboard2 active" : "dashboard2"} href="/my-job-grid"><img src="/assets/imgs/page/dashboard/jobs.svg" alt="jobBox" /><span className="name">Manage Jobs</span></Link></li>
+                                        <li> <Link className={router.pathname == "/CampanyApplications" ? "dashboard2 active" : "dashboard2"} href="/CampanyApplications"><img src="/assets/imgs/page/dashboard/candidates.svg" alt="jobBox" /><span className="name">Applications</span></Link></li>
+                                        <li> <Link className={router.pathname == "/blogs" ? "dashboard2 active" : "dashboard2"} href="/blogs"><img src="/assets/imgs/page/dashboard/content.svg" alt="jobBox" /><span className="name">Company Blog</span></Link></li>
+                                        <li> <Link className={router.pathname == "/company-settings" ? "dashboard2 active" : "dashboard2"} href="/settings"><img src="/assets/imgs/page/dashboard/profiles.svg" alt="jobBox" /><span className="name">Company Profile</span></Link></li>
                                         <li> <Link className={router.pathname == "/my" ? "dashboard2 active" : "dashboard2"} href="/my-resume"><img src="assets/imgs/page/dashboard/cv-manage.svg" alt="jobBox" /><span className="name">CV Manage</span></Link>
                                         </li>
                                         <li> <Link className={router.pathname == "/settings" ? "dashboard2 active" : "dashboard2"} href="/settings"><img src="assets/imgs/page/dashboard/settings.svg" alt="jobBox" /><span className="name">Setting</span></Link>

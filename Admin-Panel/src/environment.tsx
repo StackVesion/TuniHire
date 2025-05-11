@@ -1,5 +1,5 @@
 export const base_path ='/'
-export const img_path ='/'
+export const img_path ='http://localhost:5000/'
 
 // Environment configuration
 const environment = {

@@ -7,11 +7,91 @@ import { all_routes } from "../../router/all_routes";
 import PredefinedDateRanges from "../../../core/common/datePicker";
 import CommonTagsInput from "../../../core/common/Taginput";
 import CollapseHeader from "../../../core/common/collapse-header/collapse-header";
+import { fetchBlogs, Blog, BlogsResponse, createBlog, updateBlog, deleteBlog } from "../../../core/services/blogService";
+import { toast } from "react-toastify";
+import moment from "moment";
 
+const socialInteractionStyles = `
+  .social-interaction-wrapper {
+    padding-top: 15px;
+    margin-top: 12px;
+    border-top: 1px solid #e9e9e9;
+  }
+  
+  .social-item {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    transition: all 0.3s ease;
+    padding: 5px 8px;
+    border-radius: 6px;
+  }
+  
+  .social-item:hover {
+    background-color: #f8f9fa;
+  }
+  
+  .social-item i {
+    font-size: 16px;
+    margin-right: 5px;
+  }
+  
+  .border-primary {
+    border-width: 2px !important;
+  }
+  
+  .text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .blog-summary {
+    min-height: 48px;
+  }
+  
+  .category-badges {
+    z-index: 1;
+  }
+  
+  .featured-tag {
+    z-index: 2;
+  }
+  
+  .card:hover {
+    transform: translateY(-5px);
+    transition: transform 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  .blog-title {
+    min-height: 48px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+`;
 
 const Blogs = () => {
-
   const [tags, setTags] = useState<string[]>(["HRMS", "Recruitment", "HRTech"]);
+  const [blogs, setBlogs] = useState<Blog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalBlogs, setTotalBlogs] = useState(0);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [newBlogData, setNewBlogData] = useState({
+    title: '',
+    content: '',
+    summary: '',
+    category: 'Select',
+    tags: [] as string[],
+    status: 'Active'
+  });
+  const [selectedBlog, setSelectedBlog] = useState<Blog | null>(null);
 
   const categoryChoose = [
     { value: "Select", label: "Select" },
@@ -21,9 +101,142 @@ const Blogs = () => {
   ];
   const status = [
     { value: "Select", label: "Select" },
-    { value: "Active", label: "Active" },
-    { value: "Inactive", label: "Inactive" },
+    { value: "Active", label: "Public" },
+    { value: "Inactive", label: "Private" },
   ];
+
+  useEffect(() => {
+    loadBlogs();
+  }, [currentPage]);
+
+  const loadBlogs = async () => {
+    try {
+      setLoading(true);
+      const response = await fetchBlogs(currentPage, 10);
+      setBlogs(response.blogs);
+      setTotalPages(response.totalPages);
+      setTotalBlogs(response.totalBlogs);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error loading blogs:", error);
+      toast.error("Failed to load blogs. Please try again.");
+      setLoading(false);
+    }
+  };
+
+  const handleAddBlog = async () => {
+    try {
+      if (!newBlogData.title || !newBlogData.content || !newBlogData.summary || newBlogData.category === "Select") {
+        toast.error("Please fill in all required fields");
+        return;
+      }
+
+      await createBlog({
+        title: newBlogData.title,
+        content: newBlogData.content,
+        summary: newBlogData.summary,
+        category: newBlogData.category,
+        tags: newBlogData.tags as string[],
+        published: newBlogData.status === "Active"
+      });
+
+      toast.success("Blog created successfully");
+      // Reset form and reload blogs
+      setNewBlogData({
+        title: '',
+        content: '',
+        summary: '',
+        category: 'Select',
+        tags: [] as string[],
+        status: 'Active'
+      });
+      loadBlogs();
+    } catch (error) {
+      console.error("Error creating blog:", error);
+      toast.error("Failed to create blog. Please try again.");
+    }
+  };
+
+  const handleDeleteBlog = async (id: string) => {
+    try {
+      await deleteBlog(id);
+      toast.success("Blog deleted successfully");
+      loadBlogs();
+    } catch (error) {
+      console.error("Error deleting blog:", error);
+      toast.error("Failed to delete blog. Please try again.");
+    }
+  };
+
+  const handleUpdateBlog = async () => {
+    if (!selectedBlog) return;
+
+    try {
+      await updateBlog(selectedBlog._id, {
+        title: newBlogData.title,
+        content: newBlogData.content,
+        summary: newBlogData.summary,
+        category: newBlogData.category,
+        tags: newBlogData.tags as string[],
+        published: newBlogData.status === "Active"
+      });
+
+      toast.success("Blog updated successfully");
+      loadBlogs();
+    } catch (error) {
+      console.error("Error updating blog:", error);
+      toast.error("Failed to update blog. Please try again.");
+    }
+  };
+
+  const prepareForEdit = (blog: Blog) => {
+    setSelectedBlog(blog);
+    setNewBlogData({
+      title: blog.title,
+      content: blog.content,
+      summary: blog.summary,
+      category: blog.category,
+      tags: blog.tags as string[],
+      status: blog.published ? "Active" : "Inactive"
+    });
+  };
+
+  // Filter blogs by category or tag
+  const filterBlogs = (filterType: string) => {
+    setActiveFilter(activeFilter === filterType ? null : filterType);
+  };
+  
+  // Function to sort blogs with Remote Work at the top
+  const sortedBlogs = [...blogs].sort((a, b) => {
+    if (a.title.includes('Remote Work') && !b.title.includes('Remote Work')) {
+      return -1;
+    }
+    if (!a.title.includes('Remote Work') && b.title.includes('Remote Work')) {
+      return 1;
+    }
+    return 0;
+  });
+
+  // Function to filter blogs based on active filter
+  const filteredBlogs = sortedBlogs.filter(blog => {
+    if (!activeFilter) return true;
+    
+    if (activeFilter === 'Remote Work') {
+      return blog.title.toLowerCase().includes('remote work') || 
+             blog.tags.some(tag => tag.toLowerCase().includes('remote'));
+    }
+    
+    if (activeFilter === 'Guide') {
+      return blog.category === 'Guide' || 
+             blog.tags.some(tag => tag.toLowerCase().includes('guide'));
+    }
+    
+    if (activeFilter === 'Featured') {
+      return blog.viewCount > 100 || blog.likes?.length > 10;
+    }
+    
+    return true;
+  });
 
   return (
     <>
@@ -101,7 +314,7 @@ const Blogs = () => {
           <div className="card">
             <div className="card-body p-3">
               <div className="d-flex align-items-center justify-content-between flex-wrap row-gap-3">
-                <h5>Blogs </h5>
+                <h5>Blogs ({totalBlogs})</h5>
                 <div className="d-flex my-xl-auto right-content align-items-center flex-wrap row-gap-3">
                   <div className="me-3">
                     <div className="input-icon-end position-relative">
@@ -111,32 +324,25 @@ const Blogs = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="dropdown me-3">
-                    <Link
-                      to="#"
-                      className="dropdown-toggle btn btn-white d-inline-flex align-items-center"
-                      data-bs-toggle="dropdown"
+                  <div className="me-3 d-flex">
+                    <button 
+                      className={`btn ${activeFilter === 'Remote Work' ? 'btn-primary' : 'btn-outline-primary'} d-inline-flex align-items-center me-2`}
+                      onClick={() => filterBlogs('Remote Work')}
                     >
-                      Status
-                    </Link>
-                    <ul className="dropdown-menu  dropdown-menu-end p-3">
-                      <li>
-                        <Link
-                          to="#"
-                          className="dropdown-item rounded-1"
-                        >
-                          Active
-                        </Link>
-                      </li>
-                      <li>
-                        <Link
-                          to="#"
-                          className="dropdown-item rounded-1"
-                        >
-                          Inactive
-                        </Link>
-                      </li>
-                    </ul>
+                      <i className="ti ti-world me-1" /> Remote Work
+                    </button>
+                    <button 
+                      className={`btn ${activeFilter === 'Guide' ? 'btn-success' : 'btn-outline-success'} d-inline-flex align-items-center me-2`}
+                      onClick={() => filterBlogs('Guide')}
+                    >
+                      <i className="ti ti-book me-1" /> Guides
+                    </button>
+                    <button 
+                      className={`btn ${activeFilter === 'Featured' ? 'btn-warning' : 'btn-outline-warning'} d-inline-flex align-items-center`}
+                      onClick={() => filterBlogs('Featured')}
+                    >
+                      <i className="ti ti-star me-1" /> Featured
+                    </button>
                   </div>
                   <div className="dropdown">
                     <Link
@@ -193,870 +399,212 @@ const Blogs = () => {
               </div>
             </div>
           </div>
-          <div className="row justify-content-center">
-            <div className="col-xxl-4 col-md-6">
-              <div className="card">
-                <div className="card-body">
-                  <div className="img-sec w-100 position-relative mb-3">
-                    <Link to={all_routes.blogCategories}>
-                      <ImageWithBasePath
-                        src="assets/img/blogs/blog-01.jpg"
-                        className="img-fluid rounded w-100"
-                        alt="img"
-                      />
-                    </Link>
-                    <div className="">
-                      <span className="trend-tag badge bg-info-transparent fs-10 fw-medium">
-                        Evlovution
-                      </span>
-                      <span className="badge badge-success dot-icon">
-                        <i className="ti ti-point-filled" /> Active
-                      </span>
-                    </div>
-                  </div>
-                  <div className="d-flex align-items-center justify-content-between mb-3">
-                    <div className="d-flex align-items-center">
-                      <span className="me-2 d-flex align-items-center">
-                        <i className="ti ti-calendar me-1" /> 05/10/2024
-                      </span>
-                      <Link
-                        to="#"
-                        className="border-start link-default fs-14 fw-normal ps-2 me-2 text-truncate"
-                      >
-                        <ImageWithBasePath
-                          src="assets/img/users/user-02.jpg"
-                          className="avatar avatar-xs rounded-circle me-2 flex-shrink-0"
-                          alt="Img"
-                        />
-                        Gertrude Bowie
-                      </Link>
-                    </div>
-                    <div className="d-flex align-items-center">
-                      <Link
-                        to="#"
-                        className="link-default me-2"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#edit_blog"
-                      >
-                        <i className="ti ti-edit" />
-                      </Link>
-                      <Link
-                        to="#"
-                        className="link-default"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#delete_modal"
-                      >
-                        <i className="ti ti-trash" />
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="border-bottom mb-3">
-                    <h5 className="mb-3">
-                      <Link
-                        to={all_routes.blogCategories}
-                        className="fs-16 fw-medium text-truncate"
-                      >
-                        The Evolution of HRMS: Manual to Digital
-                      </Link>
-                    </h5>
-                  </div>
-                  <div className="d-flex align-items-center justify-content-between text-center">
-                    <div className="me-3">
-                      <h6 className="fs-14 fw-medium">3000</h6>
-                      <span className="fs-12 fw-normal">Likes</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">454</h6>
-                      <span className="fs-12 fw-normal">Comments</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">102</h6>
-                      <span className="fs-12 fw-normal">Share</span>
-                    </div>
-                    <div className="border-start text-gray ps-3">
-                      <h6 className="fs-14 fw-medium">350</h6>
-                      <span className="fs-12 fw-normal">Reviews</span>
-                    </div>
-                  </div>
+          
+          {loading ? (
+            <div className="row justify-content-center">
+              <div className="col-md-6 text-center p-5">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
                 </div>
               </div>
             </div>
-            <div className="col-xxl-4 col-md-6">
-              <div className="card">
-                <div className="card-body">
-                  <div className="img-sec w-100 position-relative mb-3">
-                    <Link to={all_routes.blogCategories}>
-                      <ImageWithBasePath
-                        src="assets/img/blogs/blog-02.jpg"
-                        className="img-fluid rounded w-100"
-                        alt="img"
-                      />
-                    </Link>
-                    <div className="">
-                      <span className="trend-tag badge bg-info-transparent fs-10 fw-medium">
-                        Guide
-                      </span>
-                      <span className="badge badge-success dot-icon">
-                        <i className="ti ti-point-filled" /> Active
-                      </span>
-                    </div>
-                  </div>
-                  <div className="d-flex align-items-center justify-content-between mb-3">
-                    <div className="d-flex align-items-center">
-                      <span className="me-2 d-flex align-items-center">
-                        <i className="ti ti-calendar me-1" /> 05/10/2024
-                      </span>
-                      <Link
-                        to="#"
-                        className="border-start link-default fs-14 fw-normal ps-2 me-2 text-truncate"
-                      >
-                        <ImageWithBasePath
-                          src="assets/img/users/user-03.jpg"
-                          className="avatar avatar-xs rounded-circle me-2 flex-shrink-0"
-                          alt="Img"
-                        />
-                        Edward Marcus
-                      </Link>
-                    </div>
-                    <div className="d-flex align-items-center">
-                      <Link
-                        to="#"
-                        className="link-default me-2"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#edit_blog"
-                      >
-                        <i className="ti ti-edit" />
-                      </Link>
-                      <Link
-                        to="#"
-                        className="link-default"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#delete_modal"
-                      >
-                        <i className="ti ti-trash" />
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="border-bottom mb-3">
-                    <h5 className="mb-3">
-                      <Link
-                        to={all_routes.blogCategories}
-                        className="fs-16 fw-medium text-truncate"
-                      >
-                        HRMS Implementation: Step-by-Step Guide
-                      </Link>
-                    </h5>
-                  </div>
-                  <div className="d-flex align-items-center justify-content-between text-center">
-                    <div className="me-3">
-                      <h6 className="fs-14 fw-medium">2458</h6>
-                      <span className="fs-12 fw-normal">Likes</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">524</h6>
-                      <span className="fs-12 fw-normal">Comments</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">248</h6>
-                      <span className="fs-12 fw-normal">Share</span>
-                    </div>
-                    <div className="border-start text-gray ps-3">
-                      <h6 className="fs-14 fw-medium">450</h6>
-                      <span className="fs-12 fw-normal">Reviews</span>
-                    </div>
-                  </div>
+          ) : blogs.length === 0 ? (
+            <div className="row justify-content-center">
+              <div className="col-md-6 text-center p-5">
+                <div className="empty-state">
+                  <ImageWithBasePath src="img/icons/no-data.svg" alt="No Data" width={120} />
+                  <h4 className="mt-3">No blogs found</h4>
+                  <p>Create your first blog by clicking the "Add Blog" button above.</p>
                 </div>
               </div>
             </div>
-            <div className="col-xxl-4 col-md-6">
-              <div className="card">
-                <div className="card-body">
-                  <div className="img-sec w-100 position-relative mb-3">
-                    <Link to={all_routes.blogCategories}>
-                      <ImageWithBasePath
-                        src="assets/img/blogs/blog-03.jpg"
-                        className="img-fluid rounded w-100"
-                        alt="img"
-                      />
-                    </Link>
-                    <div className="">
-                      <span className="trend-tag badge bg-info-transparent fs-10 fw-medium">
-                        Security
-                      </span>
-                      <span className="badge badge-success dot-icon">
-                        <i className="ti ti-point-filled" /> Active
-                      </span>
+          ) : (
+            <div className="row justify-content-center">
+              {filteredBlogs.length === 0 ? (
+                <div className="col-md-6 text-center p-5">
+                  <div className="empty-state">
+                    <ImageWithBasePath src="img/icons/no-data.svg" alt="No Data" width={120} />
+                    <h4 className="mt-3">No blogs found with this filter</h4>
+                    <p>Try another filter or browse all blogs.</p>
+                    <button 
+                      className="btn btn-primary mt-3"
+                      onClick={() => setActiveFilter(null)}
+                    >
+                      Show All Blogs
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                filteredBlogs.map((blog) => (
+                  <div className="col-xxl-4 col-md-6" key={blog._id}>
+                    <div className={`card ${blog.title.includes('Remote Work') ? 'border-primary shadow-sm' : ''}`}>
+                      <div className="card-body">
+                        {blog.title.includes('Remote Work') && (
+                          <div className="featured-tag position-absolute end-0 top-0 mt-2 me-2">
+                            <span className="badge bg-primary text-white px-3 py-2 rounded-pill">
+                              <i className="ti ti-star me-1"></i> Featured
+                            </span>
+                          </div>
+                        )}
+                        <div className="img-sec w-100 position-relative mb-3">
+                          <Link to={`${all_routes.blogCategories}?id=${blog._id}`}>
+                            <ImageWithBasePath
+                              src={blog.image || "img/blogs/blog-01.jpg"}
+                              className="img-fluid rounded w-100"
+                              alt={blog.title}
+                              height={200}
+                            />
+                          </Link>
+                          <div className="category-badges position-absolute bottom-0 start-0 mb-2 ms-2">
+                            <span className="trend-tag badge bg-info-transparent fs-10 fw-medium">
+                              {blog.category}
+                            </span>
+                          </div>
+                        </div>
+                        <h5 className={`blog-title mb-2 ${blog.title.includes('Remote Work') ? 'text-primary' : ''}`}>
+                          <Link to={`${all_routes.blogCategories}?id=${blog._id}`} className={blog.title.includes('Remote Work') ? 'text-primary' : ''}>
+                            {blog.title}
+                          </Link>
+                        </h5>
+                        <p className="text-truncate-2 mb-3 blog-summary">
+                          {blog.summary}
+                        </p>
+                        <div className="d-flex align-items-center justify-content-between mb-3">
+                          <div className="d-flex align-items-center">
+                            <span className="me-2 d-flex align-items-center">
+                              <i className="ti ti-calendar me-1" /> {moment(blog.createdAt).format('DD/MM/YYYY')}
+                            </span>
+                            <Link
+                              to="#"
+                              className="border-start link-default fs-14 fw-normal ps-2 me-2 text-truncate"
+                            >
+                              <img
+                                src={blog.author?.profilePicture || "img/users/user-02.jpg"}
+                                className="avatar avatar-xs rounded-circle me-2 flex-shrink-0"
+                                alt="User"
+                              />
+                              {blog.author?.firstName} {blog.author?.lastName}
+                            </Link>
+                          </div>
+                          <div className="d-flex align-items-center">
+                            <Link
+                              to="#"
+                              className="link-default me-2"
+                              data-bs-toggle="modal"
+                              data-bs-target="#edit_blog"
+                              onClick={() => prepareForEdit(blog)}
+                            >
+                              <i className="ti ti-edit" />
+                            </Link>
+                            <Link
+                              to="#"
+                              className="link-default"
+                              data-bs-toggle="modal"
+                              data-bs-target="#delete_modal"
+                              onClick={() => setSelectedBlog(blog)}
+                            >
+                              <i className="ti ti-trash" />
+                            </Link>
+                          </div>
+                        </div>
+                        <div className="social-interaction-wrapper">
+                          <div className="d-flex align-items-center flex-wrap">
+                            <div className="social-item me-3">
+                              <i className="ti ti-eye me-1 text-muted"></i>
+                              <span className="text-muted">{blog.viewCount || 0} views</span>
+                            </div>
+                            <div className="social-item me-3">
+                              <i className="ti ti-heart me-1 text-danger"></i>
+                              <span>{blog.likes?.length || 0} likes</span>
+                            </div>
+                            <div className="social-item me-3">
+                              <i className="ti ti-message-dots me-1 text-info"></i>
+                              <span>{blog.comments?.length || 0} comments</span>
+                            </div>
+                            <div className="social-item">
+                              <i className="ti ti-share me-1 text-success"></i>
+                              <span>{blog.shares?.length || 0} shares</span>
+                            </div>
+                          </div>
+                          <div className="mt-2">
+                            {blog.tags?.map((tag, index) => (
+                              <span key={index} className={`badge me-1 ${
+                                tag.toLowerCase().includes('remote') ? 'bg-primary-transparent' : 
+                                tag.toLowerCase().includes('work') ? 'bg-success-transparent' : 
+                                tag.toLowerCase().includes('future') ? 'bg-warning-transparent' : 
+                                'badge-light'
+                              }`}>{tag}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="d-flex align-items-center justify-content-between mb-3">
-                    <div className="d-flex align-items-center">
-                      <span className="me-2 d-flex align-items-center">
-                        <i className="ti ti-calendar me-1" /> 05/10/2024
-                      </span>
-                      <Link
-                        to="#"
-                        className="border-start link-default fs-14 fw-normal ps-2 me-2 text-truncate"
-                      >
-                        <ImageWithBasePath
-                          src="assets/img/users/user-05.jpg"
-                          className="avatar avatar-xs rounded-circle me-2 flex-shrink-0"
-                          alt="Img"
-                        />
-                        Mark Phillips
-                      </Link>
-                    </div>
-                    <div className="d-flex align-items-center">
-                      <Link
-                        to="#"
-                        className="link-default me-2"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#edit_blog"
-                      >
-                        <i className="ti ti-edit" />
-                      </Link>
-                      <Link
-                        to="#"
-                        className="link-default"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#delete_modal"
-                      >
-                        <i className="ti ti-trash" />
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="border-bottom mb-3">
-                    <h5 className="mb-3">
-                      <Link
-                        to={all_routes.blogCategories}
-                        className="fs-16 fw-medium text-truncate"
-                      >
-                        {" "}
-                        Data Security in HRMS: What Matters
-                      </Link>
-                    </h5>
-                  </div>
-                  <div className="d-flex align-items-center justify-content-between text-center">
-                    <div className="me-3">
-                      <h6 className="fs-14 fw-medium">3000</h6>
-                      <span className="fs-12 fw-normal">Likes</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">454</h6>
-                      <span className="fs-12 fw-normal">Comments</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">102</h6>
-                      <span className="fs-12 fw-normal">Share</span>
-                    </div>
-                    <div className="border-start text-gray ps-3">
-                      <h6 className="fs-14 fw-medium">350</h6>
-                      <span className="fs-12 fw-normal">Reviews</span>
-                    </div>
-                  </div>
+                ))
+              )}
+            </div>
+          )}
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="row">
+              <div className="col-md-12">
+                <div className="pagination-tab d-flex justify-content-center">
+                  <ul className="pagination mb-0">
+                    <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                      <a className="page-link" href="#" onClick={() => setCurrentPage(currentPage - 1)}>
+                        <i className="ti ti-chevron-left" />
+                      </a>
+                    </li>
+                    {[...Array(totalPages)].map((_, index) => (
+                      <li key={index} className={`page-item ${currentPage === index + 1 ? 'active' : ''}`}>
+                        <a className="page-link" href="#" onClick={() => setCurrentPage(index + 1)}>
+                          {index + 1}
+                        </a>
+                      </li>
+                    ))}
+                    <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                      <a className="page-link" href="#" onClick={() => setCurrentPage(currentPage + 1)}>
+                        <i className="ti ti-chevron-right" />
+                      </a>
+                    </li>
+                  </ul>
                 </div>
               </div>
             </div>
-            <div className="col-xxl-4 col-md-6">
-              <div className="card">
-                <div className="card-body">
-                  <div className="img-sec w-100 position-relative mb-3">
-                    <Link to={all_routes.blogCategories}>
-                      <ImageWithBasePath
-                        src="assets/img/blogs/blog-04.jpg"
-                        className="img-fluid rounded w-100"
-                        alt="img"
-                      />
-                    </Link>
-                    <div className="">
-                      <span className="trend-tag badge bg-info-transparent fs-10 fw-medium">
-                        Recruitment
-                      </span>
-                      <span className="badge badge-success dot-icon">
-                        <i className="ti ti-point-filled" /> Active
-                      </span>
-                    </div>
-                  </div>
-                  <div className="d-flex align-items-center justify-content-between mb-3">
-                    <div className="d-flex align-items-center">
-                      <span className="me-2 d-flex align-items-center">
-                        <i className="ti ti-calendar me-1" /> 05/10/2024
-                      </span>
-                      <Link
-                        to="#"
-                        className="border-start link-default fs-14 fw-normal ps-2 me-2 text-truncate"
-                      >
-                        <ImageWithBasePath
-                          src="assets/img/users/user-04.jpg"
-                          className="avatar avatar-xs rounded-circle me-2 flex-shrink-0"
-                          alt="Img"
-                        />
-                        Nidia Hale
-                      </Link>
-                    </div>
-                    <div className="d-flex align-items-center">
-                      <Link
-                        to="#"
-                        className="link-default me-2"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#edit_blog"
-                      >
-                        <i className="ti ti-edit" />
-                      </Link>
-                      <Link
-                        to="#"
-                        className="link-default"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#delete_modal"
-                      >
-                        <i className="ti ti-trash" />
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="border-bottom mb-3">
-                    <h5 className="mb-3">
-                      <Link
-                        to={all_routes.blogCategories}
-                        className="fs-16 fw-medium text-truncate"
-                      >
-                        {" "}
-                        Improving Recruitment with HRMS
-                      </Link>
-                    </h5>
-                  </div>
-                  <div className="d-flex align-items-center justify-content-between text-center">
-                    <div className="me-3">
-                      <h6 className="fs-14 fw-medium">3200</h6>
-                      <span className="fs-12 fw-normal">Likes</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">424</h6>
-                      <span className="fs-12 fw-normal">Comments</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">402</h6>
-                      <span className="fs-12 fw-normal">Share</span>
-                    </div>
-                    <div className="border-start text-gray ps-3">
-                      <h6 className="fs-14 fw-medium">250</h6>
-                      <span className="fs-12 fw-normal">Reviews</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="col-xxl-4 col-md-6">
-              <div className="card">
-                <div className="card-body">
-                  <div className="img-sec w-100 position-relative mb-3">
-                    <Link to={all_routes.blogCategories}>
-                      <ImageWithBasePath
-                        src="assets/img/blogs/blog-05.jpg"
-                        className="img-fluid rounded w-100"
-                        alt="img"
-                      />
-                    </Link>
-                    <div className="">
-                      <span className="trend-tag badge bg-info-transparent fs-10 fw-medium">
-                        Implementation
-                      </span>
-                      <span className="badge badge-success dot-icon">
-                        <i className="ti ti-point-filled" /> Active
-                      </span>
-                    </div>
-                  </div>
-                  <div className="d-flex align-items-center justify-content-between mb-3">
-                    <div className="d-flex align-items-center">
-                      <span className="me-2 d-flex align-items-center">
-                        <i className="ti ti-calendar me-1" /> 05/10/2024
-                      </span>
-                      <Link
-                        to="#"
-                        className="border-start link-default fs-14 fw-normal ps-2 me-2 text-truncate"
-                      >
-                        <ImageWithBasePath
-                          src="assets/img/users/user-06.jpg"
-                          className="avatar avatar-xs rounded-circle me-2 flex-shrink-0"
-                          alt="Img"
-                        />
-                        Rebecca Dale
-                      </Link>
-                    </div>
-                    <div className="d-flex align-items-center">
-                      <Link
-                        to="#"
-                        className="link-default me-2"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#edit_blog"
-                      >
-                        <i className="ti ti-edit" />
-                      </Link>
-                      <Link
-                        to="#"
-                        className="link-default"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#delete_modal"
-                      >
-                        <i className="ti ti-trash" />
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="border-bottom mb-3">
-                    <h5 className="mb-3">
-                      <Link
-                        to={all_routes.blogCategories}
-                        className="fs-16 fw-medium text-truncate"
-                      >
-                        {" "}
-                        Impact of HRMS on Company Culture
-                      </Link>
-                    </h5>
-                  </div>
-                  <div className="d-flex align-items-center justify-content-between text-center">
-                    <div className="me-3">
-                      <h6 className="fs-14 fw-medium">2200</h6>
-                      <span className="fs-12 fw-normal">Likes</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">224</h6>
-                      <span className="fs-12 fw-normal">Comments</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">122</h6>
-                      <span className="fs-12 fw-normal">Share</span>
-                    </div>
-                    <div className="border-start text-gray ps-3">
-                      <h6 className="fs-14 fw-medium">450</h6>
-                      <span className="fs-12 fw-normal">Reviews</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="col-xxl-4 col-md-6">
-              <div className="card">
-                <div className="card-body">
-                  <div className="img-sec w-100 position-relative mb-3">
-                    <Link to={all_routes.blogCategories}>
-                      <ImageWithBasePath
-                        src="assets/img/blogs/blog-06.jpg"
-                        className="img-fluid rounded w-100"
-                        alt="img"
-                      />
-                    </Link>
-                    <div className="">
-                      <span className="trend-tag badge bg-info-transparent fs-10 fw-medium">
-                        Benefits
-                      </span>
-                      <span className="badge badge-success dot-icon">
-                        <i className="ti ti-point-filled" /> Active
-                      </span>
-                    </div>
-                  </div>
-                  <div className="d-flex align-items-center justify-content-between mb-3">
-                    <div className="d-flex align-items-center">
-                      <span className="me-2 d-flex align-items-center">
-                        <i className="ti ti-calendar me-1" /> 05/10/2024
-                      </span>
-                      <Link
-                        to="#"
-                        className="border-start link-default fs-14 fw-normal ps-2 me-2 text-truncate"
-                      >
-                        <ImageWithBasePath
-                          src="assets/img/users/user-08.jpg"
-                          className="avatar avatar-xs rounded-circle me-2 flex-shrink-0"
-                          alt="Img"
-                        />
-                        Jimmy Johnson
-                      </Link>
-                    </div>
-                    <div className="d-flex align-items-center">
-                      <Link
-                        to="#"
-                        className="link-default me-2"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#edit_blog"
-                      >
-                        <i className="ti ti-edit" />
-                      </Link>
-                      <Link
-                        to="#"
-                        className="link-default"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#delete_modal"
-                      >
-                        <i className="ti ti-trash" />
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="border-bottom mb-3">
-                    <h5 className="mb-3">
-                      <Link
-                        to={all_routes.blogCategories}
-                        className="fs-16 fw-medium text-truncate"
-                      >
-                        Key Benefits of Implementing HRMS
-                      </Link>
-                    </h5>
-                  </div>
-                  <div className="d-flex align-items-center justify-content-between text-center">
-                    <div className="me-3">
-                      <h6 className="fs-14 fw-medium">2800</h6>
-                      <span className="fs-12 fw-normal">Likes</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">284</h6>
-                      <span className="fs-12 fw-normal">Comments</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">182</h6>
-                      <span className="fs-12 fw-normal">Share</span>
-                    </div>
-                    <div className="border-start text-gray ps-3">
-                      <h6 className="fs-14 fw-medium">680</h6>
-                      <span className="fs-12 fw-normal">Reviews</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="col-xxl-4 col-md-6">
-              <div className="card">
-                <div className="card-body">
-                  <div className="img-sec w-100 position-relative mb-3">
-                    <Link to={all_routes.blogCategories}>
-                      <ImageWithBasePath
-                        src="assets/img/blogs/blog-07.jpg"
-                        className="img-fluid rounded w-100"
-                        alt="img"
-                      />
-                    </Link>
-                    <div className="">
-                      <span className="trend-tag badge bg-info-transparent fs-10 fw-medium">
-                        Management
-                      </span>
-                      <span className="badge badge-success dot-icon">
-                        <i className="ti ti-point-filled" /> Active
-                      </span>
-                    </div>
-                  </div>
-                  <div className="d-flex align-items-center justify-content-between mb-3">
-                    <div className="d-flex align-items-center">
-                      <span className="me-2 d-flex align-items-center">
-                        <i className="ti ti-calendar me-1" /> 05/10/2024
-                      </span>
-                      <Link
-                        to="#"
-                        className="border-start link-default fs-14 fw-normal ps-2 me-2 text-truncate"
-                      >
-                        <ImageWithBasePath
-                          src="assets/img/users/user-07.jpg"
-                          className="avatar avatar-xs rounded-circle me-2 flex-shrink-0"
-                          alt="Img"
-                        />
-                        Stanley Pierre
-                      </Link>
-                    </div>
-                    <div className="d-flex align-items-center">
-                      <Link
-                        to="#"
-                        className="link-default me-2"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#edit_blog"
-                      >
-                        <i className="ti ti-edit" />
-                      </Link>
-                      <Link
-                        to="#"
-                        className="link-default"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#delete_modal"
-                      >
-                        <i className="ti ti-trash" />
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="border-bottom mb-3">
-                    <h5 className="mb-3">
-                      <Link
-                        to={all_routes.blogCategories}
-                        className="fs-16 fw-medium text-truncate"
-                      >
-                        Why Your Company Needs a HRMS
-                      </Link>
-                    </h5>
-                  </div>
-                  <div className="d-flex align-items-center justify-content-between text-center">
-                    <div className="me-3">
-                      <h6 className="fs-14 fw-medium">4800</h6>
-                      <span className="fs-12 fw-normal">Likes</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">484</h6>
-                      <span className="fs-12 fw-normal">Comments</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">490</h6>
-                      <span className="fs-12 fw-normal">Share</span>
-                    </div>
-                    <div className="border-start text-gray ps-3">
-                      <h6 className="fs-14 fw-medium">850</h6>
-                      <span className="fs-12 fw-normal">Reviews</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="col-xxl-4 col-md-6">
-              <div className="card">
-                <div className="card-body">
-                  <div className="img-sec w-100 position-relative mb-3">
-                    <Link to={all_routes.blogCategories}>
-                      <ImageWithBasePath
-                        src="assets/img/blogs/blog-08.jpg"
-                        className="img-fluid rounded w-100"
-                        alt="img"
-                      />
-                    </Link>
-                    <div className="">
-                      <span className="trend-tag badge bg-info-transparent fs-10 fw-medium">
-                        Management
-                      </span>
-                      <span className="badge badge-success dot-icon">
-                        <i className="ti ti-point-filled" /> Active
-                      </span>
-                    </div>
-                  </div>
-                  <div className="d-flex align-items-center justify-content-between mb-3">
-                    <div className="d-flex align-items-center">
-                      <span className="me-2 d-flex align-items-center">
-                        <i className="ti ti-calendar me-1" /> 05/10/2024
-                      </span>
-                      <Link
-                        to="#"
-                        className="border-start link-default fs-14 fw-normal ps-2 me-2 text-truncate"
-                      >
-                        <ImageWithBasePath
-                          src="assets/img/users/user-10.jpg"
-                          className="avatar avatar-xs rounded-circle me-2 flex-shrink-0"
-                          alt="Img"
-                        />
-                        Alice Garcia
-                      </Link>
-                    </div>
-                    <div className="d-flex align-items-center">
-                      <Link
-                        to="#"
-                        className="link-default me-2"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#edit_blog"
-                      >
-                        <i className="ti ti-edit" />
-                      </Link>
-                      <Link
-                        to="#"
-                        className="link-default"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#delete_modal"
-                      >
-                        <i className="ti ti-trash" />
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="border-bottom mb-3">
-                    <h5 className="mb-3">
-                      <Link
-                        to={all_routes.blogCategories}
-                        className="fs-16 fw-medium text-truncate"
-                      >
-                        Scaling Your HR Operations with HRMS
-                      </Link>
-                    </h5>
-                  </div>
-                  <div className="d-flex align-items-center justify-content-between text-center">
-                    <div className="me-3">
-                      <h6 className="fs-14 fw-medium">3000</h6>
-                      <span className="fs-12 fw-normal">Likes</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">454</h6>
-                      <span className="fs-12 fw-normal">Comments</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">102</h6>
-                      <span className="fs-12 fw-normal">Share</span>
-                    </div>
-                    <div className="border-start text-gray ps-3">
-                      <h6 className="fs-14 fw-medium">350</h6>
-                      <span className="fs-12 fw-normal">Reviews</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="col-xxl-4 col-md-6">
-              <div className="card">
-                <div className="card-body">
-                  <div className="img-sec w-100 position-relative mb-3">
-                    <Link to={all_routes.blogCategories}>
-                      <ImageWithBasePath
-                        src="assets/img/blogs/blog-09.jpg"
-                        className="img-fluid rounded w-100"
-                        alt="img"
-                      />
-                    </Link>
-                    <div className="">
-                      <span className="trend-tag badge bg-info-transparent fs-10 fw-medium">
-                        Management
-                      </span>
-                      <span className="badge badge-success dot-icon">
-                        <i className="ti ti-point-filled" /> Active
-                      </span>
-                    </div>
-                  </div>
-                  <div className="d-flex align-items-center justify-content-between mb-3">
-                    <div className="d-flex align-items-center">
-                      <span className="me-2 d-flex align-items-center">
-                        <i className="ti ti-calendar me-1" /> 05/10/2024
-                      </span>
-                      <Link
-                        to="#"
-                        className="border-start link-default fs-14 fw-normal ps-2 me-2 text-truncate"
-                      >
-                        <ImageWithBasePath
-                          src="assets/img/users/user-09.jpg"
-                          className="avatar avatar-xs rounded-circle me-2 flex-shrink-0"
-                          alt="Img"
-                        />
-                        James Currier
-                      </Link>
-                    </div>
-                    <div className="d-flex align-items-center">
-                      <Link
-                        to="#"
-                        className="link-default me-2"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#edit_blog"
-                      >
-                        <i className="ti ti-edit" />
-                      </Link>
-                      <Link
-                        to="#"
-                        className="link-default"
-                        data-bs-toggle="modal" data-inert={true}
-                        data-bs-target="#delete_modal"
-                      >
-                        <i className="ti ti-trash" />
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="border-bottom mb-3">
-                    <h5 className="mb-3">
-                      <Link
-                        to={all_routes.blogCategories}
-                        className="fs-16 fw-medium text-truncate"
-                      >
-                        How HRMS Drives Organizational Success
-                      </Link>
-                    </h5>
-                  </div>
-                  <div className="d-flex align-items-center justify-content-between text-center">
-                    <div className="me-3">
-                      <h6 className="fs-14 fw-medium">4000</h6>
-                      <span className="fs-12 fw-normal">Likes</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">554</h6>
-                      <span className="fs-12 fw-normal">Comments</span>
-                    </div>
-                    <div className="border-start text-gray ps-3 me-3">
-                      <h6 className="fs-14 fw-medium">202</h6>
-                      <span className="fs-12 fw-normal">Share</span>
-                    </div>
-                    <div className="border-start text-gray ps-3">
-                      <h6 className="fs-14 fw-medium">450</h6>
-                      <span className="fs-12 fw-normal">Reviews</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="text-center mb-4">
-            <Link to="#" className="btn btn-white border">
-              <i className="ti ti-loader-3 text-primary me-2" />
-              Load More
-            </Link>
-          </div>
-        </div>
-        <div className="footer d-sm-flex align-items-center justify-content-between border-top bg-white p-3">
-          <p className="mb-0">2014 - 2025 © SmartHR.</p>
-          <p>
-            Designed &amp; Developed By{" "}
-            <Link to="#" className="text-primary">
-              Dreams
-            </Link>
-          </p>
+          )}
         </div>
       </div>
-      {/* /Page Wrapper */}
-      <>
-        {/* Add Blog */}
-        <div className="modal fade" id="add_blog">
-          <div className="modal-dialog modal-dialog-centered modal-lg">
+      
+      {/* Add Blog Modal */}
+      <div className="modal fade" id="add_blog" tabIndex={-1} aria-hidden="true">
+        <div className="modal-dialog modal-xl modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
-                <h4 className="modal-title">Add Blog</h4>
+              <h5 className="modal-title">Add Blog</h5>
                 <button
                   type="button"
-                  className="btn-close custom-btn-close"
+                className="btn-close close-modal"
                   data-bs-dismiss="modal"
                   aria-label="Close"
                 >
                   <i className="ti ti-x" />
                 </button>
               </div>
-              <form action="blogs.html">
-                <div className="modal-body pb-0">
+            <div className="modal-body">
+              <form>
                   <div className="row">
-                    <div className="col-md-12">
-                      <div className="d-flex align-items-center flex-wrap row-gap-3 bg-light w-100 rounded p-3 mb-4">
-                        <div className="d-flex align-items-center justify-content-center avatar avatar-xxl rounded-circle border border-dashed me-2 flex-shrink-0 text-dark frames">
-                          <ImageWithBasePath
-                            src="assets/img/profiles/avatar-30.jpg"
-                            alt="img"
-                            className="rounded-circle"
-                          />
-                        </div>
-                        <div className="profile-upload">
-                          <div className="mb-2">
-                            <h6 className="mb-1">Featured Image</h6>
-                            <p className="fs-12">Image should be below 4 mb</p>
-                          </div>
-                          <div className="profile-uploader d-flex align-items-center">
-                            <div className="drag-upload-btn btn btn-sm btn-primary me-2">
-                              Upload
-                              <input
-                                type="file"
-                                className="form-control image-sign"
-                                multiple
-                              />
-                            </div>
-                            <Link
-                              to="#"
-                              className="btn btn-light btn-sm"
-                            >
-                              Cancel
-                            </Link>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
                     <div className="col-md-12">
                       <div className="mb-3">
                         <label className="form-label">
                           Blog Title <span className="text-danger"> *</span>
                         </label>
-                        <input type="text" className="form-control" />
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        value={newBlogData.title}
+                        onChange={(e) => setNewBlogData({...newBlogData, title: e.target.value})}
+                      />
                       </div>
                     </div>
                     <div className="col-md-4">
@@ -1067,7 +615,8 @@ const Blogs = () => {
                         <CommonSelect
                           className="select"
                           options={categoryChoose}
-                          defaultValue={categoryChoose[0]}
+                        defaultValue={categoryChoose.find(c => c.value === newBlogData.category)}
+                        onChange={(option) => setNewBlogData({...newBlogData, category: option?.value || 'Select'})}
                         />
                       </div>
                     </div>
@@ -1077,31 +626,64 @@ const Blogs = () => {
                           Tags <span className="text-danger"> *</span>
                         </label>
                         <CommonTagsInput
-                          value={tags}
-                          onChange={setTags}
+                        value={newBlogData.tags}
+                        onChange={(tags) => setNewBlogData({...newBlogData, tags: tags as string[]})}
                           placeholder="Add new"
-                          className="form-control" // Optional custom class
+                        className="form-control"
                         />
                       </div>
                     </div>
                     <div className="col-md-4">
                       <div className="mb-3 ">
-                        <label className="form-label">Status</label>
+                        <label className="form-label text-muted">
+                          <small>Visibility</small>
+                        </label>
                         <CommonSelect
-                          className="select"
+                          className="select form-select-sm"
                           options={status}
-                          defaultValue={status[0]}
+                          defaultValue={status.find(s => s.value === newBlogData.status)}
+                          onChange={(option) => setNewBlogData({...newBlogData, status: option?.value || 'Active'})}
                         />
                       </div>
                     </div>
-                    <div className="col-lg-12">
+                  <div className="col-md-12">
                       <div className="mb-3">
-                        <label className="form-label">Description</label>
-                        <div className="summernote">
-                          <p className="text-gray fw-normal">
-                            Write a new comment, send your team notification by typing
-                            @ followed by their name
-                          </p>
+                      <label className="form-label">
+                        Summary <span className="text-danger"> *</span>
+                      </label>
+                      <textarea 
+                        className="form-control" 
+                        rows={3}
+                        value={newBlogData.summary}
+                        onChange={(e) => setNewBlogData({...newBlogData, summary: e.target.value})}
+                      ></textarea>
+                        </div>
+                      </div>
+                  <div className="col-md-12">
+                    <div className="mb-3">
+                      <label className="form-label">
+                        Content <span className="text-danger"> *</span>
+                      </label>
+                      <textarea 
+                        className="form-control" 
+                        rows={5}
+                        value={newBlogData.content}
+                        onChange={(e) => setNewBlogData({...newBlogData, content: e.target.value})}
+                      ></textarea>
+                    </div>
+                  </div>
+                  <div className="col-md-12">
+                    <div className="mb-3">
+                      <label className="form-label">Upload Image</label>
+                      <div className="file-upload position-relative">
+                        <div className="input-form">
+                          <input type="file" className="upload form-control" />
+                        </div>
+                        <div className="file-upload-img">
+                          <ImageWithBasePath
+                            src="img/icons/file-upload.svg"
+                            alt="file upload"
+                          />
                         </div>
                       </div>
                     </div>
@@ -1110,80 +692,54 @@ const Blogs = () => {
                 <div className="modal-footer">
                   <button
                     type="button"
-                    className="btn btn-light me-2"
+                    className="btn btn-light-danger"
                     data-bs-dismiss="modal"
                   >
                     Cancel
                   </button>
-                  <button type="button" data-bs-dismiss="modal" className="btn btn-primary">
-                    Add Blog
+                  <button
+                    type="button"
+                    className="btn btn-success"
+                    onClick={handleAddBlog}
+                  >
+                    Save
                   </button>
                 </div>
               </form>
             </div>
           </div>
         </div>
-        {/* /Add Blog */}
-      </>
-
-      <>
-        {/* Edit Blog */}
-        <div className="modal fade" id="edit_blog">
-          <div className="modal-dialog modal-dialog-centered modal-lg">
+      </div>
+      
+      {/* Edit Blog Modal */}
+      <div className="modal fade" id="edit_blog" tabIndex={-1} aria-hidden="true">
+        <div className="modal-dialog modal-xl modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
-                <h4 className="modal-title">Edit Blog</h4>
+              <h5 className="modal-title">Edit Blog</h5>
                 <button
                   type="button"
-                  className="btn-close custom-btn-close"
+                className="btn-close close-modal"
                   data-bs-dismiss="modal"
                   aria-label="Close"
                 >
                   <i className="ti ti-x" />
                 </button>
               </div>
-              <form action="blogs.html">
-                <div className="modal-body pb-0">
+            <div className="modal-body">
+              <form>
                   <div className="row">
-                    <div className="col-md-12">
-                      <div className="d-flex align-items-center flex-wrap row-gap-3 bg-light w-100 rounded p-3 mb-4">
-                        <div className="d-flex align-items-center justify-content-center avatar avatar-xxl rounded-circle border border-dashed me-2 flex-shrink-0 text-dark frames">
-                          <ImageWithBasePath
-                            src="assets/img/profiles/avatar-30.jpg"
-                            alt="img"
-                            className="rounded-circle"
-                          />
-                        </div>
-                        <div className="profile-upload">
-                          <div className="mb-2">
-                            <h6 className="mb-1">Featured Image</h6>
-                            <p className="fs-12">Image should be below 4 mb</p>
-                          </div>
-                          <div className="profile-uploader d-flex align-items-center">
-                            <div className="drag-upload-btn btn btn-sm btn-primary me-2">
-                              Upload
-                              <input
-                                type="file"
-                                className="form-control image-sign"
-                                multiple
-                              />
-                            </div>
-                            <Link
-                              to="#"
-                              className="btn btn-light btn-sm"
-                            >
-                              Cancel
-                            </Link>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
                     <div className="col-md-12">
                       <div className="mb-3">
                         <label className="form-label">
                           Blog Title <span className="text-danger"> *</span>
                         </label>
-                        <input type="text" className="form-control" />
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        value={newBlogData.title}
+                        onChange={(e) => setNewBlogData({...newBlogData, title: e.target.value})}
+                      />
                       </div>
                     </div>
                     <div className="col-md-4">
@@ -1194,7 +750,8 @@ const Blogs = () => {
                         <CommonSelect
                           className="select"
                           options={categoryChoose}
-                          defaultValue={categoryChoose[1]}
+                        defaultValue={categoryChoose.find(c => c.value === newBlogData.category)}
+                        onChange={(option) => setNewBlogData({...newBlogData, category: option?.value || 'Select'})}
                         />
                       </div>
                     </div>
@@ -1204,31 +761,64 @@ const Blogs = () => {
                           Tags <span className="text-danger"> *</span>
                         </label>
                         <CommonTagsInput
-                          value={tags}
-                          onChange={setTags}
+                        value={newBlogData.tags}
+                        onChange={(tags) => setNewBlogData({...newBlogData, tags: tags as string[]})}
                           placeholder="Add new"
-                          className="form-control" // Optional custom class
+                        className="form-control"
                         />
                       </div>
                     </div>
                     <div className="col-md-4">
                       <div className="mb-3 ">
-                        <label className="form-label">Status</label>
+                        <label className="form-label text-muted">
+                          <small>Visibility</small>
+                        </label>
                         <CommonSelect
-                          className="select"
+                          className="select form-select-sm"
                           options={status}
-                          defaultValue={status[1]}
+                          defaultValue={status.find(s => s.value === newBlogData.status)}
+                          onChange={(option) => setNewBlogData({...newBlogData, status: option?.value || 'Active'})}
                         />
                       </div>
                     </div>
-                    <div className="col-lg-12">
+                  <div className="col-md-12">
                       <div className="mb-3">
-                        <label className="form-label">Description</label>
-                        <div className="summernote">
-                          <p className="text-gray fw-normal">
-                            Write a new comment, send your team notification by typing
-                            @ followed by their name
-                          </p>
+                      <label className="form-label">
+                        Summary <span className="text-danger"> *</span>
+                      </label>
+                      <textarea 
+                        className="form-control" 
+                        rows={3}
+                        value={newBlogData.summary}
+                        onChange={(e) => setNewBlogData({...newBlogData, summary: e.target.value})}
+                      ></textarea>
+                        </div>
+                      </div>
+                  <div className="col-md-12">
+                    <div className="mb-3">
+                      <label className="form-label">
+                        Content <span className="text-danger"> *</span>
+                      </label>
+                      <textarea 
+                        className="form-control" 
+                        rows={5}
+                        value={newBlogData.content}
+                        onChange={(e) => setNewBlogData({...newBlogData, content: e.target.value})}
+                      ></textarea>
+                    </div>
+                  </div>
+                  <div className="col-md-12">
+                    <div className="mb-3">
+                      <label className="form-label">Upload Image</label>
+                      <div className="file-upload position-relative">
+                        <div className="input-form">
+                          <input type="file" className="upload form-control" />
+                        </div>
+                        <div className="file-upload-img">
+                          <ImageWithBasePath
+                            src="img/icons/file-upload.svg"
+                            alt="file upload"
+                          />
                         </div>
                       </div>
                     </div>
@@ -1237,25 +827,66 @@ const Blogs = () => {
                 <div className="modal-footer">
                   <button
                     type="button"
-                    className="btn btn-light me-2"
+                    className="btn btn-light-danger"
                     data-bs-dismiss="modal"
                   >
                     Cancel
                   </button>
-                  <button type="button" data-bs-dismiss="modal" className="btn btn-primary">
-                    Save Changes
+                  <button
+                    type="button"
+                    className="btn btn-success"
+                    onClick={handleUpdateBlog}
+                  >
+                    Update
                   </button>
                 </div>
               </form>
             </div>
           </div>
         </div>
-        {/* /Edit Blog */}
-      </>
-
-
+      </div>
+      
+      {/* Delete Modal */}
+      <div className="modal fade" id="delete_modal" tabIndex={-1} aria-hidden="true">
+        <div className="modal-dialog modal-dialog-centered">
+          <div className="modal-content">
+            <div className="modal-header">
+              <button
+                type="button"
+                className="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+              >
+                <i className="ti ti-x" />
+              </button>
+            </div>
+            <div className="modal-body p-4 text-center">
+              <div className="prompt-image mx-auto mb-3">
+                <ImageWithBasePath
+                  src="img/icons/bin.svg"
+                  alt="img"
+                />
+              </div>
+              <div className="prompt-message">
+                <h5 className="mb-2">Are you sure?</h5>
+                <p>Do you really want to delete this blog? This process cannot be undone.</p>
+              </div>
+              <div className="mt-4">
+                <button type="button" className="btn btn-light-danger me-3" data-bs-dismiss="modal">Cancel</button>
+                <button 
+                  type="button" 
+                  className="btn btn-danger" 
+                  data-bs-dismiss="modal"
+                  onClick={() => selectedBlog && handleDeleteBlog(selectedBlog._id)}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </>
-
   );
 };
 
