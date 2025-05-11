@@ -13,6 +13,9 @@ router.get("/", (req, res, next) => {
 // Use a different pattern for the company endpoint to avoid conflicts
 router.get("/job/:jobId/company", jobPostController.getCompanyByJobPost);
 
+// Add route for jobs by location
+router.get("/locations", jobPostController.getJobsByLocation);
+
 // Static segment routes next
 router.get("/company/:companyId", jobPostController.getJobPostsByCompany);
 

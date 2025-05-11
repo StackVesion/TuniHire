@@ -7,7 +7,7 @@ import axios from 'axios';
 
 export default function JobGrid() {
     const router = useRouter();
-    const { company: companyId } = router.query;
+    const { company: companyId, location } = router.query;
 
     // États pour stocker les données
     const [jobs, setJobs] = useState([]);
@@ -29,6 +29,15 @@ export default function JobGrid() {
     
     console.log("Router query:", router.query);
     console.log("Company ID from query:", companyId);
+    console.log("Location from query:", location);
+    
+    // Set initial location filter from URL parameter
+    useEffect(() => {
+        if (router.isReady && location) {
+            setLocationFilter(location);
+            console.log("Setting location filter from URL:", location);
+        }
+    }, [router.isReady, location]);
     
     // Récupérer les emplois depuis l'API
     useEffect(() => {
@@ -229,20 +238,21 @@ export default function JobGrid() {
         }
     };
     
-    // Réinitialiser tous les filtres
+    // Reset all filters
     const resetFilters = () => {
         setSearchTerm("");
         setLocationFilter("");
         setIndustryFilter("");
         setWorkplaceType("");
-        setCurrentPage(1);
         setSortBy("newest");
+        setCurrentPage(1);
         
-        // Réinitialiser les champs du formulaire si nécessaire
-        const searchForm = document.querySelector(".form-find");
-        if (searchForm) {
-            searchForm.reset();
-        }
+        // Clear URL parameters while keeping the current page
+        const url = new URL(window.location.href);
+        url.searchParams.delete('location');
+        
+        // Update the URL without reloading the page
+        window.history.pushState({}, '', url);
     };
     
     return (

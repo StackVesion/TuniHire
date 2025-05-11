@@ -5,6 +5,7 @@ const User = require("../models/User");
 const { generateOTP, sendOTPEmail } = require("../utils/emailUtils");
 const { sendVerificationEmail } = require('../config/emailService');
 const fs = require("fs");
+const path = require("path");
 
 // Get all users
 const getUsers = async (req, res) => {
@@ -1136,7 +1137,9 @@ const getAllUsers = async (req, res) => {
             profilePicture: user.profilePicture || '',
             isEmailVerified: !!user.isEmailVerified,
             isActive: user.isActive !== false,
-            createdAt: user.createdAt
+            createdAt: user.createdAt,
+            isVerified: user.isVerified || false,
+            verifiedAt: user.verifiedAt || null
         }));
 
         return res.status(200).json({
@@ -1158,6 +1161,118 @@ const getAllUsers = async (req, res) => {
         });
     }
 };
+
+// Get public profile information for a user (accessible without authentication)
+const getPublicUserProfile = async (req, res) => {
+    try {
+        const userId = req.params.id;
+        
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'User ID is required'
+            });
+        }
+        
+        // Find the user by ID
+        const user = await User.findById(userId);
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+          // Return limited public information only
+        const publicProfile = {
+            _id: user._id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            profilePicture: user.profilePicture,
+            role: user.role,
+            title: user.title,
+            location: user.location,
+            experienceYears: user.experienceYears,
+            skills: user.skills || [],
+            bio: user.bio || "",
+            isVerified: user.isVerified || false,
+            verifiedAt: user.verifiedAt,
+            verificationScore: user.verificationScore || 0
+        };
+        
+        return res.status(200).json(publicProfile);
+    } catch (error) {
+        console.error('Error fetching public user profile:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error'
+        });
+    }
+};
+
+// Profile verification with camera
+const verifyUserProfile = async (req, res) => {
+    try {
+        // Check if user is authenticated
+        if (!req.user) {
+            return res.status(401).json({ message: 'Authentication required' });
+        }
+        
+        const userId = req.user.id;
+        
+        // Check if verification image was uploaded
+        if (!req.files || !req.files.verificationImage) {
+            return res.status(400).json({ message: 'Verification image is required' });
+        }
+        
+        const verificationImage = req.files.verificationImage;
+        
+        // Generate unique filename
+        const fileName = `verification_${userId}_${Date.now()}${path.extname(verificationImage.name)}`;
+        const uploadPath = path.join(__dirname, '../public/uploads/verification/', fileName);
+        
+        // Create directory if it doesn't exist
+        const dir = path.dirname(uploadPath);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        
+        // Move the file to uploads directory
+        verificationImage.mv(uploadPath, async (err) => {
+            if (err) {
+                console.error('File upload error:', err);
+                return res.status(500).json({ message: 'Failed to upload verification image' });
+            }
+            
+            // Update user verification status in database
+            const user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+            
+            // Store verification image path and update verification status
+            const verificationImageUrl = `/uploads/verification/${fileName}`;
+            
+            user.isVerified = true;
+            user.verifiedAt = new Date();
+            user.verificationImage = verificationImageUrl;
+            
+            await user.save();
+            
+            return res.status(200).json({ 
+                message: 'Profile verified successfully',
+                user: {
+                    ...user.toObject(),
+                    password: undefined
+                }
+            });
+        });
+    } catch (error) {
+        console.error('Profile verification error:', error);
+        return res.status(500).json({ message: 'An error occurred during profile verification' });
+    }
+};
+
 // Keep the main module.exports with all functions
 module.exports = {
     getUsers,
@@ -1176,5 +1291,7 @@ module.exports = {
     validateToken,
     generateNewVerificationToken,
     updateUserRole,
-    getAllUsers
+    getAllUsers,
+    getPublicUserProfile,
+    verifyUserProfile
 };

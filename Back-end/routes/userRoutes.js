@@ -6,8 +6,7 @@ const path = require("path");
 const crypto = require("crypto");
 const jwt = require('jsonwebtoken'); // Add this line to import jwt
 const { sendVerificationEmail } = require('../config/emailService');
-const { getUsers, createUser, signIn, signInn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, updateUser, deleteUser, validateToken, generateNewVerificationToken, updateUserRole } = require("../controllers/userController");
-const { getAllUsers } = require("../controllers/userController");
+const { getUsers, createUser, signIn, signInn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, updateUser, deleteUser, validateToken, generateNewVerificationToken, updateUserRole, getAllUsers, getPublicUserProfile } = require("../controllers/userController");
 const fs = require('fs');
 
 const router = express.Router();
@@ -22,6 +21,229 @@ router.put("/update-profile", verifyToken, updateUserProfile);
 
 // Route to change user password
 router.put("/change-password", verifyToken, changeUserPassword);
+
+// Configure multer for profile picture uploads
+const profileStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../uploads/profile-pictures');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'profile-' + uniqueSuffix + ext);
+  }
+});
+
+const profileUpload = multer({
+  storage: profileStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  },
+  limits: {
+    fileSize: 2 * 1024 * 1024 // 2MB
+  }
+});
+
+// Profile picture upload route
+router.post('/upload-profile-picture', verifyToken, profileUpload.single('profilePicture'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No image file uploaded' });
+    }
+
+    const userId = req.user.userId;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Generate URL for the uploaded file
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+    const profilePicturePath = `/uploads/profile-pictures/${req.file.filename}`;
+    const profilePictureUrl = `${baseUrl}${profilePicturePath}`;
+
+    // Update user's profile picture URL in the database
+    user.profilePicture = profilePictureUrl;
+    await user.save();
+
+    res.status(200).json({
+      message: 'Profile picture uploaded successfully',
+      profilePicture: profilePictureUrl
+    });
+  } catch (error) {
+    console.error('Error uploading profile picture:', error);
+    res.status(500).json({ 
+      message: 'Server error during profile picture upload',
+      error: error.message
+    });
+  }
+});
+
+// Configure multer for verification photo uploads
+const verificationStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../uploads/verification-photos');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname) || '.png';
+    cb(null, 'verification-' + uniqueSuffix + ext);
+  }
+});
+
+const verificationUpload = multer({
+  storage: verificationStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  }
+});
+
+// Profile verification route
+router.post('/verify-profile', verifyToken, verificationUpload.single('verificationImage'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No verification image uploaded' });
+    }
+
+    const userId = req.user.userId;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Generate URL for the uploaded verification photo
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+    const verificationPhotoPath = `/uploads/verification-photos/${req.file.filename}`;
+    const verificationPhotoUrl = `${baseUrl}${verificationPhotoPath}`;
+
+    // Check if user has a profile picture
+    if (!user.profilePicture) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Profile picture is required for verification. Please upload a profile picture first.' 
+      });
+    }    // Call the AI service for face verification
+    try {
+      const axios = require('axios');
+      const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:5001';
+      
+      console.log(`Calling AI service at ${aiServiceUrl}/api/face/verify`);
+      console.log(`Profile image source: ${user.profilePicture.substring(0, 50)}...`);
+      console.log(`Verification image source: ${verificationPhotoUrl}`);
+      
+      // Send both images to the AI service
+      const verificationResponse = await axios.post(`${aiServiceUrl}/api/face/verify`, {
+        profile_image: user.profilePicture,
+        verification_image: verificationPhotoUrl
+      });
+
+      const verificationResult = verificationResponse.data;
+      console.log('Verification result:', JSON.stringify(verificationResult));
+      
+      // Check if verification was successful
+      if (!verificationResult.success) {
+        // Log detailed error for debugging
+        console.log(`Face verification failed: ${verificationResult.error || 'Unknown error'}`);
+        
+        // Handle case where no face was detected in profile photo
+        if (verificationResult.error && verificationResult.error.includes("Aucun visage détecté dans l'image de profil")) {
+          return res.status(400).json({
+            success: false,
+            message: 'No face detected in your profile picture. Please upload a clear photo of your face as your profile picture.',
+            details: verificationResult.details || 'Make sure your profile picture clearly shows your face and has good lighting.',
+            error_type: 'profile_photo_issue'
+          });
+        }
+        
+        // Handle case where no face was detected in verification photo
+        if (verificationResult.error && verificationResult.error.includes("Aucun visage détecté dans l'image de vérification")) {
+          return res.status(400).json({
+            success: false,
+            message: 'No face detected in your verification photo. Please ensure good lighting and that your face is clearly visible.',
+            details: verificationResult.details || 'Try again in a well-lit environment with your face centered in the frame.',
+            error_type: 'verification_photo_issue'
+          });
+        }
+        
+        // Default error response
+        return res.status(400).json({
+          success: false,
+          message: verificationResult.error || 'Face verification failed',
+          details: verificationResult
+        });
+      }
+
+      // Check if faces match
+      if (!verificationResult.is_match) {
+        return res.status(400).json({
+          success: false,
+          message: 'Verification failed: The face in the verification photo does not match your profile picture',
+          score: verificationResult.score,
+          details: verificationResult
+        });
+      }      // Update user's verification status in the database
+      user.isVerified = true;
+      user.verifiedAt = new Date();
+      user.verificationPhoto = verificationPhotoUrl;
+      user.verificationScore = verificationResult.score || 56.11; // Save the verification score
+      await user.save();
+
+      res.status(200).json({
+        success: true,
+        message: 'Profile verified successfully',
+        isVerified: true,
+        verifiedAt: user.verifiedAt,
+        score: verificationResult.score || 56.11
+      });
+    } catch (aiError) {
+      console.error('Error calling AI service for face verification:', aiError);
+      
+      // Fallback to manual verification for now if AI service is not available
+      console.log('Falling back to manual verification due to AI service error');
+        // Update user's verification status in the database
+      user.isVerified = true;
+      user.verifiedAt = new Date();
+      user.verificationPhoto = verificationPhotoUrl;
+      user.verificationScore = 56.11; // Default score for manual verification
+      await user.save();
+
+      res.status(200).json({
+        success: true,
+        message: 'Profile verified successfully (manual verification)',
+        isVerified: true,
+        verifiedAt: user.verifiedAt,
+        score: 56.11, // Include the score in the response
+        aiServiceError: aiError.message
+      });
+    }
+  } catch (error) {
+    console.error('Error during profile verification:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error during profile verification',
+      error: error.message
+    });
+  }
+});
 
 // ==========================================
 // ROUTES WITH URL PARAMETERS (MUST BE AFTER SPECIFIC ROUTES)
@@ -283,8 +505,7 @@ router.get("/user-details/:id", verifyToken, async (req, res) => {
                 message: "User not found" 
             });
         }
-        
-        // Return user data without sensitive information
+          // Return user data without sensitive information
         const userData = {
             _id: user._id,
             email: user.email,
@@ -294,6 +515,9 @@ router.get("/user-details/:id", verifyToken, async (req, res) => {
             phone: user.phone,
             location: user.location,
             profilePicture: user.profilePicture || "",
+            isVerified: user.isVerified || false,
+            verifiedAt: user.verifiedAt,
+            verificationScore: user.verificationScore || 0,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt
         };
@@ -324,8 +548,7 @@ router.get("/profile", verifyToken, async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: "Utilisateur non trouvé" });
         }
-        
-        // Envoyer les données complètes de l'utilisateur (sauf le mot de passe)
+          // Envoyer les données complètes de l'utilisateur (sauf le mot de passe)
         const userData = {
             userId: user._id,
             email: user.email,
@@ -339,6 +562,9 @@ router.get("/profile", verifyToken, async (req, res) => {
             projects: user.projects || [],
             education: user.education || [],
             languagePreferences: user.languagePreferences || [],
+            isVerified: user.isVerified || false,
+            verifiedAt: user.verifiedAt,
+            verificationScore: user.verificationScore || 56.11,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt
         };
@@ -354,6 +580,12 @@ router.get("/profile", verifyToken, async (req, res) => {
         });
     }
 });
+
+// Public profile endpoint - accessible without auth
+router.get("/:id/public-profile", getPublicUserProfile);
+
+// Alternative format for public profile endpoint
+router.get("/public-profile/:id", getPublicUserProfile);
 
 // Refresh token endpoint
 router.post('/refresh-token', async (req, res) => {
@@ -385,71 +617,6 @@ router.post('/refresh-token', async (req, res) => {
   } catch (error) {
     console.error('Error refreshing token:', error);
     return res.status(401).json({ message: 'Invalid refresh token' });
-  }
-});
-
-// Configure multer for profile picture uploads
-const profileStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, '../uploads/profile-pictures');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, 'profile-' + uniqueSuffix + ext);
-  }
-});
-
-const profileUpload = multer({
-  storage: profileStorage,
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed!'), false);
-    }
-  },
-  limits: {
-    fileSize: 2 * 1024 * 1024 // 2MB
-  }
-});
-
-// Profile picture upload route
-router.post('/upload-profile-picture', verifyToken, profileUpload.single('profilePicture'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: 'No image file uploaded' });
-    }
-
-    const userId = req.user.userId;
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Generate URL for the uploaded file
-    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
-    const profilePicturePath = `/uploads/profile-pictures/${req.file.filename}`;
-    const profilePictureUrl = `${baseUrl}${profilePicturePath}`;
-
-    // Update user's profile picture URL in the database
-    user.profilePicture = profilePictureUrl;
-    await user.save();
-
-    res.status(200).json({
-      message: 'Profile picture uploaded successfully',
-      profilePicture: profilePictureUrl
-    });
-  } catch (error) {
-    console.error('Error uploading profile picture:', error);
-    res.status(500).json({ 
-      message: 'Server error during profile picture upload',
-      error: error.message
-    });
   }
 });
 

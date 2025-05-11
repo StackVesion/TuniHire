@@ -6,7 +6,9 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Swal from "sweetalert2";
 import { useRouter } from "next/router";
-import { getCompanyById, getJobsByCompany } from "../lib/api";
+
+// Define the API URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export default function CompanyDetails() {
     const [activeIndex, setActiveIndex] = useState(1);
@@ -16,7 +18,6 @@ export default function CompanyDetails() {
     const [loading, setLoading] = useState(true);
     const [jobsLoading, setJobsLoading] = useState(true);
     const router = useRouter();
-    const { id } = router.query;
 
     const handleOnClick = (index) => {
         setActiveIndex(index); 
@@ -44,13 +45,30 @@ export default function CompanyDetails() {
     useEffect(() => {
         // Fetch company data when id is available
         const fetchCompanyData = async () => {
-            if (!id) return;
+            if (!router.isReady) return;
+            
+            const { id } = router.query;
+            console.log('Company ID from query:', id);
+            
+            if (!id) {
+                console.error('No company ID found in URL');
+                return;
+            }
             
             try {
                 setLoading(true);
-                const response = await getCompanyById(id);
-                setCompany(response.company);
-                setLoading(false);
+                console.log('Fetching company with ID:', id);
+                
+                // Use direct axios call instead of the library method
+                const response = await axios.get(`${API_URL}/companies/${id}`);
+                
+                console.log('Company API response:', response.data);
+                if (response.data.company) {
+                    setCompany(response.data.company);
+                    setLoading(false);
+                } else {
+                    throw new Error('Company data not found in response');
+                }
             } catch (error) {
                 console.error('Error fetching company data:', error);
                 setLoading(false);
@@ -67,23 +85,29 @@ export default function CompanyDetails() {
         };
 
         fetchCompanyData();
-    }, [id, router]);
+    }, [router.isReady, router.query, router]);
     
     // Fetch company jobs
     useEffect(() => {
         const fetchCompanyJobs = async () => {
+            if (!router.isReady) return;
+            
+            const { id } = router.query;
             if (!id) return;
             
             try {
                 setJobsLoading(true);
-                const response = await getJobsByCompany(id);
-                console.log('Jobs response:', response);
                 
-                if (response.jobs && Array.isArray(response.jobs)) {
-                    setCompanyJobs(response.jobs);
-                    console.log(`Loaded ${response.jobs.length} jobs for company`);
+                // Use direct axios call instead of the library method
+                const response = await axios.get(`${API_URL}/jobs/company/${id}`);
+                
+                console.log('Jobs API response:', response.data);
+                
+                if (Array.isArray(response.data)) {
+                    setCompanyJobs(response.data);
+                    console.log(`Loaded ${response.data.length} jobs for company`);
                 } else {
-                    console.warn('No jobs array in response:', response);
+                    console.warn('No jobs array in response:', response.data);
                     setCompanyJobs([]);
                 }
                 setJobsLoading(false);
@@ -95,7 +119,7 @@ export default function CompanyDetails() {
         };
         
         fetchCompanyJobs();
-    }, [id]);
+    }, [router.isReady, router.query]);
 
     // Function to handle Apply for Company button click
     const handleApplyForCompany = async () => {

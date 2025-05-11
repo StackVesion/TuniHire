@@ -4,7 +4,7 @@ function PageHead({ headTitle }) {
         <>
             <Head>
                 <title>
-                    {headTitle ? headTitle : "Jobbox - Job Portal HTML Template"}
+                    {headTitle ? headTitle : "TuniHire - Find Your Dream Job"}
                 </title>
                 <link rel="icon" href="/images/favicon.png" />
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
