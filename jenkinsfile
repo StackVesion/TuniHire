@@ -97,7 +97,7 @@ pipeline {
                             steps {
                                 dir(MODULE_DIR) {
                                     echo "Running SonarQube analysis for ${MODULE_NAME}..."
-                                    withSonarQubeEnv('SonarQubeServer') {
+                                    withSonarQubeEnv('scanner') {
                                         sh "${tool('SonarScanner')}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}" // Assumes SonarScanner tool is named 'SonarScanner'
                                     }
                                 }
@@ -152,7 +152,7 @@ pipeline {
                             steps {
                                 dir(MODULE_DIR) {
                                     echo "Running SonarQube analysis for ${MODULE_NAME}..."
-                                    withSonarQubeEnv('SonarQubeServer') {
+                                    withSonarQubeEnv('scanner') {
                                         sh "${tool('SonarScanner')}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}"
                                     }
                                 }
@@ -207,7 +207,7 @@ pipeline {
                             steps {
                                 dir(MODULE_DIR) {
                                     echo "Running SonarQube analysis for ${MODULE_NAME}..."
-                                    withSonarQubeEnv('SonarQubeServer') {
+                                    withSonarQubeEnv('scanner') {
                                         sh "${tool('SonarScanner')}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}"
                                     }
                                 }
@@ -262,7 +262,7 @@ pipeline {
                             steps {
                                 dir(MODULE_DIR) {
                                     echo "Running SonarQube analysis for ${MODULE_NAME}..."
-                                    withSonarQubeEnv('SonarQubeServer') {
+                                    withSonarQubeEnv('scanner') {
                                         sh "${tool('SonarScanner')}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}"
                                     }
                                 }
@@ -318,7 +318,7 @@ pipeline {
                                 //           AFTER Python dependencies/tests are done in their own Dockerized stage.
                                 // For now, let's assume SonarScanner is available or this step will be refined.
                                 echo "Running SonarQube analysis for ${MODULE_NAME}... (May require SonarScanner in Docker image or different agent setup)"
-                                withSonarQubeEnv('SonarQubeServer') {
+                                withSonarQubeEnv('scanner') {
                                     // This sh command will run inside the python:3.9-slim container.
                                     // SonarScanner CLI needs to be installed in it, or this step needs rethinking.
                                     // For simplicity, we'll try, but it will likely fail if sonar-scanner is not in python:3.9-slim.
