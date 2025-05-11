@@ -279,13 +279,47 @@ export default function JobGrid() {
                                                                 className="col-xl-6 col-lg-6 col-md-6 col-sm-12 col-12"
                                                                 key={i}
                                                             >
-                                                                <div className="card-grid-2 hover-up" style={{boxShadow: '0 5px 15px rgba(0,0,0,0.1)', borderRadius: '10px', border: '1px solid #eee', marginBottom: '20px'}}>
+                                                                <div className="card-grid-2 hover-up position-relative" style={{
+                                                                    boxShadow: '0 8px 20px rgba(0,0,0,0.08)', 
+                                                                    borderRadius: '12px', 
+                                                                    border: 'none', 
+                                                                    marginBottom: '25px',
+                                                                    transition: 'all 0.3s ease',
+                                                                    overflow: 'hidden'
+                                                                }}>
+                                                                    {/* Badge de statut */}
+                                                                    <div className="position-absolute" style={{top: '15px', right: '15px', zIndex: '10'}}>
+                                                                        <span className="badge bg-primary-soft text-primary" style={{
+                                                                            padding: '6px 12px', 
+                                                                            borderRadius: '20px', 
+                                                                            fontSize: '12px', 
+                                                                            fontWeight: '600',
+                                                                            backgroundColor: 'rgba(60, 101, 245, 0.1)',
+                                                                            color: '#3C65F5'
+                                                                        }}>
+                                                                            Active
+                                                                        </span>
+                                                                    </div>
+                                                                    
                                                                     <div className="card-grid-2-image-left">
-                                                                        <div className="image-box">
+                                                                        <div className="image-box" style={{
+                                                                            backgroundColor: 'rgba(60, 101, 245, 0.05)', 
+                                                                            borderRadius: '8px',
+                                                                            padding: '5px',
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center'
+                                                                        }}>
                                                                             <img src="/assets/imgs/brands/brand-1.png" alt="jobBox" />
                                                                         </div>
                                                                         <div className="right-info">
-                                                                            <a className="name-job" href={`/job-details/${job.id}`} title={job.title} style={{color: '#3C65F5', fontWeight: 'bold'}}>
+                                                                            <a className="name-job" href={`/job-details/${job.id}`} title={job.title} style={{
+                                                                                color: '#3C65F5', 
+                                                                                fontWeight: 'bold', 
+                                                                                fontSize: '18px',
+                                                                                textDecoration: 'none',
+                                                                                transition: 'color 0.2s ease'
+                                                                            }}>
                                                                                 {job.title.length > 30 ? `${job.title.substring(0, 30)}...` : job.title}
                                                                             </a>
                                                                             <div className="company-info mt-5">
@@ -294,47 +328,90 @@ export default function JobGrid() {
                                                                         </div>
                                                                     </div>
                                                                     <div className="card-block-info">
-                                                                        <div className="mt-5 d-flex justify-content-between">
-                                                                            <span className="card-briefcase"><i className="fi-rr-briefcase mr-5"></i>{job.workplaceType || 'Remote'}</span>
-                                                                            <span className="card-time">
-                                                                                <i className="fi-rr-clock mr-5"></i>{new Date(job.date).toLocaleDateString()}
+                                                                        <div className="mt-5 d-flex align-items-center">
+                                                                            <span className="card-briefcase me-3" style={{
+                                                                                backgroundColor: 'rgba(60, 101, 245, 0.08)', 
+                                                                                padding: '4px 10px', 
+                                                                                borderRadius: '6px',
+                                                                                fontSize: '13px'
+                                                                            }}>
+                                                                                <i className="fi-rr-briefcase mr-5"></i>{job.workplaceType || 'Remote'}
+                                                                            </span>
+                                                                            <span className="card-time" style={{
+                                                                                backgroundColor: 'rgba(56, 182, 83, 0.08)', 
+                                                                                padding: '4px 10px', 
+                                                                                borderRadius: '6px',
+                                                                                fontSize: '13px',
+                                                                                color: '#38B653'
+                                                                            }}>
+                                                                                <i className="fi-rr-clock mr-5"></i>{new Date(job.date).toLocaleDateString('fr-FR', {day: '2-digit', month: 'short', year: 'numeric'})}
                                                                             </span>
                                                                         </div>
-                                                                        <p className="font-sm color-text-paragraph mt-10" title={job.description}>
-                                                                            {job.description.length > 75 ? `${job.description.substring(0, 75)}...` : job.description}
-                                                                        </p>
-                                                                        <div className="mt-15">
-                                                                            <div className="d-flex align-items-center">
-                                                                                <i className="fi-rr-marker mr-5 text-mutted" style={{color: '#F58A3C'}}></i>
-                                                                                <span className="font-sm color-text-mutted">{job.location}</span>
-                                                                            </div>
-                                                                            <div className="d-flex align-items-center mt-10">
-                                                                                <i className="fi-rr-dollar mr-5 text-mutted" style={{color: '#38B653'}}></i>
-                                                                                <span className="font-sm color-text-mutted">{job.salary}</span>
-                                                                            </div>
-                                                                            <div className="d-flex align-items-center mt-10">
-                                                                                <i className="fi-rr-list-check mr-5 text-mutted" style={{color: '#8E74FF'}}></i>
-                                                                                <span className="font-sm color-text-mutted">{job.requirements ? (job.requirements.length > 3 ? `${job.requirements.slice(0, 3).join(', ')}...` : job.requirements.join(', ')) : ''}</span>
-                                                                            </div>
+                                                                        <div className="mt-15" style={{
+                                                                            backgroundColor: 'rgba(245, 245, 245, 0.5)',
+                                                                            padding: '12px',
+                                                                            borderRadius: '8px',
+                                                                            marginBottom: '15px'
+                                                                        }}>
+                                                                            <p className="font-sm color-text-paragraph" title={job.description} style={{
+                                                                                margin: '0',
+                                                                                lineHeight: '1.5',
+                                                                                color: '#4F5E64',
+                                                                                fontSize: '14px'
+                                                                            }}>
+                                                                                {job.description.length > 85 ? `${job.description.substring(0, 85)}...` : job.description}
+                                                                            </p>
                                                                         </div>
-                                                                        <div className="card-2-bottom mt-20">
-                                                                            <div className="row">
-                                                                                <div className="col-6">
-                                                                                    <a href={`/edit-job?id=${job.id}`} className="btn btn-primary-outline btn-sm" style={{borderRadius: '50px', border: '2px solid #3C65F5', padding: '8px 20px', transition: 'all 0.3s'}} title="Edit job">
-                                                                                        <i className="fi-rr-edit" style={{color: '#3C65F5'}}></i>
-                                                                                        <span style={{marginLeft: '5px', color: '#3C65F5', fontWeight: 'bold'}}>Edit</span>
-                                                                                    </a>
+                                                                        <div className="card-2-bottom-info">
+                                                                            <div className="mb-15">
+                                                                                <div className="d-flex align-items-center mb-2">
+                                                                                    <i className="fi-rr-marker mr-5" style={{color: '#F58A3C', width: '20px'}}></i>
+                                                                                    <span className="font-sm color-text-paragraph">{job.location}</span>
                                                                                 </div>
-                                                                                <div className="col-6 text-end">
-                                                                                    <button
-                                                                                        className="btn btn-danger-outline btn-sm" 
-                                                                                        style={{borderRadius: '50px', border: '2px solid #dc3545', padding: '8px 20px', transition: 'all 0.3s'}} 
-                                                                                        onClick={() => handleDeleteJob(job.id)}
-                                                                                        title="Delete job"
-                                                                                    >
-                                                                                        <i className="fi-rr-trash" style={{color: '#dc3545'}}></i>
-                                                                                        <span style={{marginLeft: '5px', color: '#dc3545', fontWeight: 'bold'}}>Delete</span>
-                                                                                    </button>
+                                                                                <div className="d-flex align-items-center mb-2">
+                                                                                    <i className="fi-rr-dollar mr-5" style={{color: '#38B653', width: '20px'}}></i>
+                                                                                    <span className="font-sm color-text-paragraph">{job.salary}</span>
+                                                                                </div>
+                                                                                <div className="d-flex align-items-center">
+                                                                                    <i className="fi-rr-list-check mr-5" style={{color: '#8E74FF', width: '20px'}}></i>
+                                                                                    <span className="font-sm color-text-paragraph">{job.requirements ? (job.requirements.length > 3 ? `${job.requirements.slice(0, 3).join(', ')}...` : job.requirements.join(', ')) : ''}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="card-2-bottom mt-20">
+                                                                                <div className="row">
+                                                                                    <div className="col-6">
+                                                                                        <a href={`/edit-job?id=${job.id}`} className="btn btn-primary-outline btn-sm w-100" style={{
+                                                                                            borderRadius: '50px', 
+                                                                                            border: '2px solid #3C65F5', 
+                                                                                            padding: '8px 15px', 
+                                                                                            transition: 'all 0.3s',
+                                                                                            display: 'flex',
+                                                                                            alignItems: 'center',
+                                                                                            justifyContent: 'center'
+                                                                                        }} title="Edit job">
+                                                                                            <i className="fi-rr-edit me-2" style={{color: '#3C65F5'}}></i>
+                                                                                            <span style={{color: '#3C65F5', fontWeight: 'bold'}}>Modifier</span>
+                                                                                        </a>
+                                                                                    </div>
+                                                                                    <div className="col-6">
+                                                                                        <button
+                                                                                            className="btn btn-danger-outline btn-sm w-100" 
+                                                                                            style={{
+                                                                                                borderRadius: '50px', 
+                                                                                                border: '2px solid #dc3545', 
+                                                                                                padding: '8px 15px', 
+                                                                                                transition: 'all 0.3s',
+                                                                                                display: 'flex',
+                                                                                                alignItems: 'center',
+                                                                                                justifyContent: 'center'
+                                                                                            }} 
+                                                                                            onClick={() => handleDeleteJob(job.id)}
+                                                                                            title="Delete job"
+                                                                                        >
+                                                                                            <i className="fi-rr-trash me-2" style={{color: '#dc3545'}}></i>
+                                                                                            <span style={{color: '#dc3545', fontWeight: 'bold'}}>Supprimer</span>
+                                                                                        </button>
+                                                                                    </div>
                                                                                 </div>
                                                                             </div>
                                                                         </div>

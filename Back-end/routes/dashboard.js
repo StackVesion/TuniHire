@@ -13,5 +13,6 @@ router.get('/sales-overview', dashboardController.getSalesOverview);
 router.get('/attendance-overview', dashboardController.getAttendanceOverview);
 router.get('/recent-activities', dashboardController.getRecentActivities);
 router.get('/company-registration-trends', dashboardController.getCompanyRegistrationTrends);
+router.get('/hr-dashboard', dashboardController.getHrDashboardData);
 
 module.exports = router;

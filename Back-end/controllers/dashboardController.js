@@ -659,6 +659,202 @@ exports.getCompanyRegistrationTrends = async (req, res) => {
   }
 };
 
+// New function: Get HR dashboard data for specific company
+exports.getHrDashboardData = async (req, res) => {
+  try {
+    // Get the requesting user's information (already authenticated via middleware)
+    const userId = req.userId;
+    
+    // Find the company for this HR user
+    const company = await Company.findOne({ createdBy: userId });
+    
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "No company found for this user"
+      });
+    }
+    
+    // Get company ID
+    const companyId = company._id;
+    
+    // Get all jobs for this company
+    const jobs = await JobPost.find({ companyId: companyId });
+    const jobIds = jobs.map(job => job._id);
+    
+    // Count statistics
+    const totalJobs = jobs.length;
+    const activeJobs = jobs.filter(job => job.isActive).length;
+    
+    // Get applications for all jobs from this company
+    let totalApplications = 0;
+    let newApplications = 0;
+    
+    // Calculate date for "new" applications (last 7 days)
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    // Get all applications for the company's jobs
+    const applications = [];
+    for (const jobId of jobIds) {
+      const jobApplications = await Application.find({ jobId })
+        .populate('userId', 'firstName lastName email avatar jobTitle location')
+        .populate('jobId', 'title');
+      
+      console.log(`Found ${jobApplications.length} applications for job ${jobId}`);
+      applications.push(...jobApplications);
+    }
+    
+    totalApplications = applications.length;
+    newApplications = applications.filter(app => 
+      new Date(app.createdAt) >= oneWeekAgo
+    ).length;
+    
+    // Calculate percentages for growth indicators
+    const previousWeek = new Date();
+    previousWeek.setDate(previousWeek.getDate() - 14);
+    
+    const olderApplications = applications.filter(app => 
+      new Date(app.createdAt) >= previousWeek && 
+      new Date(app.createdAt) < oneWeekAgo
+    ).length;
+    
+    // Calculate percent change (avoid division by zero)
+    const applicationGrowth = olderApplications > 0 
+      ? Math.round(((newApplications - olderApplications) / olderApplications) * 100)
+      : (newApplications > 0 ? 100 : 0);
+    
+    // Count applications by status (pending, accepted, rejected)
+    const applicationsByStatus = {
+      pending: 0,
+      accepted: 0,
+      rejected: 0
+    };
+    
+    // Debug total applications count
+    console.log(`Total applications found: ${applications.length}`);
+    
+    applications.forEach(app => {
+      const status = app.status ? app.status.toLowerCase() : 'pending';
+      console.log(`Application ID: ${app._id}, Status: ${app.status}`);
+      
+      if (status === 'pending' || status === 'en attente') {
+        applicationsByStatus.pending++;
+      } else if (status === 'accepted' || status === 'shortlisted' || status === 'hired' || status === 'embauché' || status === 'accepté') {
+        applicationsByStatus.accepted++;
+      } else if (status === 'rejected' || status === 'rejeté') {
+        applicationsByStatus.rejected++;
+      } else {
+        // Default: consider as pending
+        applicationsByStatus.pending++;
+      }
+    });
+    
+    // Log final counts
+    console.log('Application counts by status:', applicationsByStatus);
+    console.log(`Total should equal sum of statuses: ${applicationsByStatus.pending + applicationsByStatus.accepted + applicationsByStatus.rejected} = ${totalApplications}`);
+    
+    // Get top candidates based on application ratings
+    let topCandidates = [];
+    
+    if (applications.length > 0) {
+      // Create a map to store unique candidates with their highest rating
+      const candidateMap = new Map();
+      
+      applications.forEach(app => {
+        const candidate = app.userId;
+        if (!candidate) return;
+        
+        const candidateId = candidate._id.toString();
+        const rating = app.rating || Math.floor(Math.random() * 5) + 1; // Use rating or random 1-5
+        
+        if (!candidateMap.has(candidateId) || candidateMap.get(candidateId).rating < rating) {
+          candidateMap.set(candidateId, {
+            _id: candidate._id,
+            firstName: candidate.firstName,
+            lastName: candidate.lastName,
+            jobTitle: candidate.jobTitle || 'Job Seeker',
+            location: candidate.location || 'Not specified',
+            avatar: candidate.avatar || "assets/imgs/page/dashboard/avata1.png",
+            isOnline: Math.random() > 0.5, // Simulate online status
+            rating: rating,
+            reviewCount: Math.floor(Math.random() * 100) + 1 // Random number of reviews
+          });
+        }
+      });
+      
+      // Convert map to array and sort by rating (descending)
+      topCandidates = Array.from(candidateMap.values());
+      topCandidates.sort((a, b) => b.rating - a.rating);
+      
+      // Take top 3 candidates
+      topCandidates = topCandidates.slice(0, 3);
+    }
+    
+    // Get recent applications
+    let recentApplications = [];
+    
+    if (applications.length > 0) {
+      // Sort by date (most recent first)
+      applications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      // Take most recent 5 applications
+      recentApplications = applications.slice(0, 5).map(app => ({
+        _id: app._id,
+        user: app.userId ? {
+          _id: app.userId._id,
+          firstName: app.userId.firstName,
+          lastName: app.userId.lastName,
+          jobTitle: app.userId.jobTitle || 'Job Seeker',
+          avatar: app.userId.avatar || `assets/imgs/page/dashboard/avata${Math.floor(Math.random() * 5) + 1}.png`
+        } : { firstName: 'Unknown', lastName: 'User' },
+        job: app.jobId ? {
+          _id: app.jobId._id,
+          title: app.jobId.title
+        } : { title: 'Unknown Job' },
+        status: app.status || 'Pending',
+        createdAt: app.createdAt || new Date().toISOString()
+      }));
+    }
+    
+    // Return all dashboard data
+    res.status(200).json({
+      success: true,
+      company: {
+        _id: company._id,
+        name: company.name,
+        logo: company.logo,
+        status: company.status,
+        email: company.email,
+        location: company.location,
+        website: company.website,
+        phone: company.phone,
+        foundedYear: company.foundedYear,
+        category: company.category,
+        description: company.description
+      },
+      stats: {
+        totalJobs,
+        activeJobs,
+        totalApplications,
+        newApplications,
+        applicationGrowth,
+        applicationsByStatus  // Add the application status counts to the response
+      },
+      topCandidates,
+      recentApplications
+    });
+    
+  } catch (error) {
+    console.error("Error fetching HR dashboard data:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch dashboard data", 
+      error: error.message 
+    });
+  }
+};
+
 // Helper function to format time
 function formatTime(date) {
   const hours = date.getHours();
@@ -676,5 +872,6 @@ module.exports = {
   getSalesOverview: exports.getSalesOverview,
   getAttendanceOverview: exports.getAttendanceOverview,
   getRecentActivities: exports.getRecentActivities,
-  getCompanyRegistrationTrends: exports.getCompanyRegistrationTrends
+  getCompanyRegistrationTrends: exports.getCompanyRegistrationTrends,
+  getHrDashboardData: exports.getHrDashboardData
 };
