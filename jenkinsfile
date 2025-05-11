@@ -70,12 +70,14 @@ pipeline {
                         stage('Checkout & Install') {
                             steps {
                                 dir(MODULE_DIR) {
-                                    // Clone only this subdirectory
                                     checkout([
                                         $class: 'GitSCM',
                                         branches: scm.branches,
                                         userRemoteConfigs: scm.userRemoteConfigs,
-                                        extensions:[[$class:'RelativeTargetDirectory',relativeTargetDir:MODULE_DIR]]
+                                        extensions:[
+                                            [$class:'RelativeTargetDirectory',relativeTargetDir:MODULE_DIR],
+                                            [$class: 'CloneOption', shallow: true, depth: 1, timeout: 30]
+                                        ]
                                     ])
                                     sh 'npm install'
                                 }
@@ -114,8 +116,13 @@ pipeline {
                             steps {
                                 dir(MODULE_DIR) {
                                     checkout([
-                                        $class: 'GitSCM', branches: scm.branches, userRemoteConfigs: scm.userRemoteConfigs,
-                                        extensions:[[$class:'RelativeTargetDirectory',relativeTargetDir:MODULE_DIR]]
+                                        $class: 'GitSCM', 
+                                        branches: scm.branches, 
+                                        userRemoteConfigs: scm.userRemoteConfigs,
+                                        extensions:[
+                                            [$class:'RelativeTargetDirectory',relativeTargetDir:MODULE_DIR],
+                                            [$class: 'CloneOption', shallow: true, depth: 1, timeout: 30]
+                                        ]
                                     ])
                                     sh 'npm install'
                                 }
@@ -154,8 +161,13 @@ pipeline {
                             steps {
                                 dir(MODULE_DIR) {
                                     checkout([
-                                        $class: 'GitSCM', branches: scm.branches, userRemoteConfigs: scm.userRemoteConfigs,
-                                        extensions:[[$class:'RelativeTargetDirectory',relativeTargetDir:MODULE_DIR]]
+                                        $class: 'GitSCM', 
+                                        branches: scm.branches, 
+                                        userRemoteConfigs: scm.userRemoteConfigs,
+                                        extensions:[
+                                            [$class:'RelativeTargetDirectory',relativeTargetDir:MODULE_DIR],
+                                            [$class: 'CloneOption', shallow: true, depth: 1, timeout: 30]
+                                        ]
                                     ])
                                     sh 'npm install'
                                 }
@@ -194,8 +206,13 @@ pipeline {
                             steps {
                                 dir(MODULE_DIR) {
                                     checkout([
-                                        $class: 'GitSCM', branches: scm.branches, userRemoteConfigs: scm.userRemoteConfigs,
-                                        extensions:[[$class:'RelativeTargetDirectory',relativeTargetDir:MODULE_DIR]]
+                                        $class: 'GitSCM', 
+                                        branches: scm.branches, 
+                                        userRemoteConfigs: scm.userRemoteConfigs,
+                                        extensions:[
+                                            [$class:'RelativeTargetDirectory',relativeTargetDir:MODULE_DIR],
+                                            [$class: 'CloneOption', shallow: true, depth: 1, timeout: 30]
+                                        ]
                                     ])
                                     sh 'npm install'
                                 }
