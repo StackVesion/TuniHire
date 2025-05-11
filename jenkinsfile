@@ -39,7 +39,14 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo "Checking out SCM..."
-                checkout scm
+                checkout([
+                    $class: 'GitSCM',
+                    branches: scm.branches,
+                    userRemoteConfigs: scm.userRemoteConfigs,
+                    extensions: [
+                        [$class: 'CloneOption', shallow: true, depth: 1, timeout: 30]
+                    ]
+                ])
             }
         }
 
