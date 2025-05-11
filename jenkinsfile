@@ -404,10 +404,6 @@ pipeline {
     }
 
     post {
-        always {
-            echo "Pipeline finished. Cleaning up workspace..."
-            cleanWs()
-        }
         success {
             echo "Pipeline completed successfully!"
         }
