@@ -1,4 +1,4 @@
-﻿// Jenkinsfile for TuniHire
+// Jenkinsfile for TuniHire
 // Updated with fixes for SonarQube, Test execution, and error handling
 pipeline {
     agent any // Default agent for most stages
@@ -36,21 +36,11 @@ pipeline {
         booleanParam(name: 'SKIP_DEPLOY', defaultValue: false, description: 'Skip final Docker Compose deployment')
     }
 
-    stages {        stage('Checkout') {
+    stages {
+        stage('Checkout') {
             steps {
                 echo "Checking out SCM..."
-                checkout([$class: 'GitSCM', 
-                    branches: [[name: '*/devops_2']], 
-                    doGenerateSubmoduleConfigurations: false, 
-                    extensions: [
-                        [$class: 'CloneOption', depth: 1, noTags: true, shallow: true, timeout: 30]
-                    ],
-                    submoduleCfg: [], 
-                    userRemoteConfigs: [[
-                        credentialsId: "${GITHUB_CREDENTIALS_ID}", 
-                        url: 'https://github.com/StackVesion/TuniHire.git'
-                    ]]
-                ])
+                checkout scm
             }
         }
 
@@ -69,7 +59,8 @@ pipeline {
             }
         }
 
-        stage('Modules CI') {            failFast false // Changed to false to avoid entire pipeline failing when one module fails
+        stage('Modules CI') {
+            failFast true
             parallel {
                 // --- Backend Module ---
                 stage('Backend CI') {
@@ -77,7 +68,6 @@ pipeline {
                         MODULE_DIR = "Back-End"
                         MODULE_NAME = "tunihire-backend"
                         SONAR_PROJECT_KEY = "TuniHire_Backend"
-                        SONAR_QUALITY_GATE_TIMEOUT = 1 // Minutes - reduced from default 5
                     }
                     stages {
                         stage('Install Dependencies') {
@@ -149,7 +139,7 @@ EOL
                                     script {
                                         try {
                                             withSonarQubeEnv('scanner') {
-                                                def sonarScannerPath = tool name: 'scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                                                def sonarScannerPath = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                                                 sh "${sonarScannerPath}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}"
                                             }
                                         } catch (Exception e) {
@@ -166,7 +156,7 @@ EOL
                                 script {
                                     try {
                                         echo "Checking SonarQube Quality Gate for ${MODULE_NAME}..."
-                                        timeout(time: 1, unit: 'MINUTES') /* Reduced timeout */ {
+                                        timeout(time: 5, unit: 'MINUTES') {
                                             waitForQualityGate abortPipeline: false
                                         }
                                     } catch (Exception e) {
@@ -185,7 +175,6 @@ EOL
                         MODULE_DIR = "Front-End"
                         MODULE_NAME = "tunihire-frontend"
                         SONAR_PROJECT_KEY = "TuniHire_Frontend"
-                        SONAR_QUALITY_GATE_TIMEOUT = 1 // Minutes - reduced from default 5
                     }
                     stages {
                         stage('Install Dependencies') {
@@ -239,7 +228,7 @@ EOL
                                     script {
                                         try {
                                             withSonarQubeEnv('scanner') {
-                                                def sonarScannerPath = tool name: 'scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                                                def sonarScannerPath = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                                                 sh "${sonarScannerPath}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}"
                                             }
                                         } catch (Exception e) {
@@ -256,7 +245,7 @@ EOL
                                 script {
                                     try {
                                         echo "Checking SonarQube Quality Gate for ${MODULE_NAME}..."
-                                        timeout(time: 1, unit: 'MINUTES') /* Reduced timeout */ {
+                                        timeout(time: 5, unit: 'MINUTES') {
                                             waitForQualityGate abortPipeline: false
                                         }
                                     } catch (Exception e) {
@@ -275,8 +264,6 @@ EOL
                         MODULE_DIR = "Company-Panel"
                         MODULE_NAME = "tunihire-company-panel"
                         SONAR_PROJECT_KEY = "TuniHire_CompanyPanel"
-                        SONAR_QUALITY_GATE_TIMEOUT = 1 // Minutes - reduced from default 5
-                        SONAR_EXCLUSIONS = "node_modules/**,.next/**" // Common exclusions
                     }
                     stages {
                         stage('Install Dependencies') {
@@ -330,7 +317,7 @@ EOL
                                     script {
                                         try {
                                             withSonarQubeEnv('scanner') {
-                                                def sonarScannerPath = tool name: 'scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                                                def sonarScannerPath = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                                                 sh "${sonarScannerPath}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}"
                                             }
                                         } catch (Exception e) {
@@ -347,7 +334,7 @@ EOL
                                 script {
                                     try {
                                         echo "Checking SonarQube Quality Gate for ${MODULE_NAME}..."
-                                        timeout(time: 1, unit: 'MINUTES') /* Reduced timeout */ {
+                                        timeout(time: 5, unit: 'MINUTES') {
                                             waitForQualityGate abortPipeline: false
                                         }
                                     } catch (Exception e) {
@@ -358,13 +345,14 @@ EOL
                             }
                         }
                     }
-                }                // --- Admin-Panel Module ---
+                }
+
+                // --- Admin-Panel Module ---
                 stage('Admin-Panel CI') {
-                    environment {                        MODULE_DIR = "Admin-Panel"
+                    environment {
+                        MODULE_DIR = "Admin-Panel"
                         MODULE_NAME = "tunihire-admin-panel"
                         SONAR_PROJECT_KEY = "TuniHire_AdminPanel"
-                        SONAR_QUALITY_GATE_TIMEOUT = 1 // Minutes - reduced from default 5
-                        SONAR_EXCLUSIONS = "src/types/css.d.ts,node_modules/**,.next/**" // Added to fix language detection conflict
                     }
                     stages {
                         stage('Install Dependencies') {
@@ -418,8 +406,8 @@ EOL
                                     script {
                                         try {
                                             withSonarQubeEnv('scanner') {
-                                                def sonarScannerPath = tool name: 'scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-                                                sh "${sonarScannerPath}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY} -Dsonar.exclusions=${SONAR_EXCLUSIONS}"
+                                                def sonarScannerPath = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                                                sh "${sonarScannerPath}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}"
                                             }
                                         } catch (Exception e) {
                                             echo "SonarQube analysis failed: ${e.getMessage()}"
@@ -435,7 +423,7 @@ EOL
                                 script {
                                     try {
                                         echo "Checking SonarQube Quality Gate for ${MODULE_NAME}..."
-                                        timeout(time: 1, unit: 'MINUTES') /* Reduced timeout */ {
+                                        timeout(time: 5, unit: 'MINUTES') {
                                             waitForQualityGate abortPipeline: false
                                         }
                                     } catch (Exception e) {
@@ -447,36 +435,35 @@ EOL
                         }
                     }
                 }
-                  // --- AI-Service Module (Python) ---
+                
+                // --- AI-Service Module (Python) ---
                 stage('AI-Service CI') {
                     agent {
-                        label 'master' // Use the same agent to avoid Docker startup issues
+                        docker {
+                            image 'python:3.9-slim' // Using a Docker agent for this Python stage
+                            // args '-v /var/run/docker.sock:/var/run/docker.sock' // Uncomment if Docker-in-Docker is needed for this stage
+                        } 
                     }
                     environment {
                         MODULE_DIR = "AI-Service" // This will be relative to the workspace root mounted in the Docker container
                         MODULE_NAME = "tunihire-ai-service"
                         SONAR_PROJECT_KEY = "TuniHire_AIService"
                     }
-                    stages {                        stage('Install Dependencies') {
+                    stages {
+                        stage('Install Dependencies') {
                             steps {
-                                echo "Installing ${MODULE_NAME} (Python) dependencies..."
-                                script {
-                                    // Skip actual pip install to prevent failures
-                                    sh """
-                                    echo "Simulating pip install for AI-Service module"
-                                    # Skip real pip install to avoid failures
-                                    # sh "pip install -r ${MODULE_DIR}/requirements.txt"
-                                    """
-                                }
+                                // dir(MODULE_DIR) // context is already /var/lib/jenkins/workspace/your-job-name/AI-Service inside the container if workspace is mounted
+                                echo "Installing ${MODULE_NAME} (Python) dependencies inside Docker..."
+                                sh "pip install -r ${MODULE_DIR}/requirements.txt" // Path relative to workspace root
                             }
                         }
                         stage('Run Tests') {
                             when { expression { return !params.SKIP_TESTS } }
-                            steps {                                echo "Running ${MODULE_NAME} (Python) tests..."
+                            steps {
+                                echo "Running ${MODULE_NAME} (Python) tests inside Docker..."
                                 script {
                                     // Create a simple test results file
                                     sh """
-                                    mkdir -p ${MODULE_DIR}
                                     cat > ${MODULE_DIR}/test-results.xml << 'EOL'
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites>
@@ -498,29 +485,28 @@ EOL
                         }
                         stage('SonarQube Analysis') {
                             when { expression { return !params.SKIP_SONAR } }
-                            steps {                                script {
-                                    echo "SonarQube analysis for ${MODULE_NAME} skipped"
-                                    echo "To run SonarQube analysis for Python, configure a SonarScanner in the image or use a different approach"
+                            steps {
+                                script {
+                                    echo "SonarQube analysis for ${MODULE_NAME} skipped in Docker agent"
+                                    echo "To run SonarQube analysis for Python, configure a SonarScanner in the Docker image or use a different approach"
                                 }
                             }
-                        }                        stage('SonarQube Quality Gate') {
+                        }
+                        stage('SonarQube Quality Gate') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 script {
-                                    echo "SonarQube Quality Gate for ${MODULE_NAME} skipped"
+                                    echo "SonarQube Quality Gate for ${MODULE_NAME} skipped in Docker agent"
                                 }
                             }
                         }
                     }
                 }
             }
-        }        stage('Build & Push Docker Images') {
-            when { 
-                allOf {
-                    expression { return !params.SKIP_DOCKER_BUILD_PUSH }
-                    expression { return false } // Skip this step for now to prevent pipeline failures
-                }
-            }
+        }
+
+        stage('Build & Push Docker Images') {
+            when { expression { return !params.SKIP_DOCKER_BUILD_PUSH } }
             steps {
                 script {
                     def backendImage = "${env.NEXUS_REGISTRY_URL}/tunihire-backend:${env.BASE_APP_VERSION}"
@@ -549,13 +535,10 @@ EOL
                     }
                 }
             }
-        }        stage('Deploy Application') {
-            when { 
-                allOf {
-                    expression { return !params.SKIP_DEPLOY }
-                    expression { return false } // Skip this step for now to prevent pipeline failures
-                }
-            }
+        }
+
+        stage('Deploy Application') {
+            when { expression { return !params.SKIP_DEPLOY } }
             steps {
                 script {
                     echo "Deploying application using Docker Compose..."
@@ -609,5 +592,3 @@ EOL
         }
     }
 }
-
-

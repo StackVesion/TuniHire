@@ -1,4 +1,4 @@
-﻿// Jenkinsfile for TuniHire
+// Jenkinsfile for TuniHire
 // Updated with fixes for SonarQube, Test execution, and error handling
 pipeline {
     agent any // Default agent for most stages
@@ -166,7 +166,7 @@ EOL
                                 script {
                                     try {
                                         echo "Checking SonarQube Quality Gate for ${MODULE_NAME}..."
-                                        timeout(time: 1, unit: 'MINUTES') /* Reduced timeout */ {
+                                        timeout(time: 5, unit: 'MINUTES') {
                                             waitForQualityGate abortPipeline: false
                                         }
                                     } catch (Exception e) {
@@ -256,7 +256,7 @@ EOL
                                 script {
                                     try {
                                         echo "Checking SonarQube Quality Gate for ${MODULE_NAME}..."
-                                        timeout(time: 1, unit: 'MINUTES') /* Reduced timeout */ {
+                                        timeout(time: 5, unit: 'MINUTES') {
                                             waitForQualityGate abortPipeline: false
                                         }
                                     } catch (Exception e) {
@@ -347,7 +347,7 @@ EOL
                                 script {
                                     try {
                                         echo "Checking SonarQube Quality Gate for ${MODULE_NAME}..."
-                                        timeout(time: 1, unit: 'MINUTES') /* Reduced timeout */ {
+                                        timeout(time: 5, unit: 'MINUTES') {
                                             waitForQualityGate abortPipeline: false
                                         }
                                     } catch (Exception e) {
@@ -435,7 +435,7 @@ EOL
                                 script {
                                     try {
                                         echo "Checking SonarQube Quality Gate for ${MODULE_NAME}..."
-                                        timeout(time: 1, unit: 'MINUTES') /* Reduced timeout */ {
+                                        timeout(time: 5, unit: 'MINUTES') {
                                             waitForQualityGate abortPipeline: false
                                         }
                                     } catch (Exception e) {
@@ -609,5 +609,3 @@ EOL
         }
     }
 }
-
-
