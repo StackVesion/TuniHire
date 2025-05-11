@@ -67,10 +67,9 @@ pipeline {
                     sh "docker-compose --version"
                 }
             }
-        }
-
-        stage('Modules CI') {            failFast false // Changed to false to avoid entire pipeline failing when one module fails
+        }        stage('Modules CI') {
             parallel {
+                failFast false // Changed to false to avoid entire pipeline failing when one module fails
                 // --- Backend Module ---
                 stage('Backend CI') {
                     environment {
