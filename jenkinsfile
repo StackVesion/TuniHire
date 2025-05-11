@@ -71,8 +71,7 @@ pipeline {
         }
         
         stage('Modules CI') {
-            parallel {
-                failFast false // Changed to false to avoid entire pipeline failing when one module fails
+            parallel(failFast: false) { // Changed to proper syntax to avoid entire pipeline failing when one module fails
                 // --- Backend Module ---
                 stage('Backend CI') {
                     environment {
@@ -89,9 +88,9 @@ pipeline {
                                     sh "npm install"
                                 }
                             }
-        }
-        
-        stage('Run Tests') {
+                        }
+                        
+                        stage('Run Tests') {
                             when { expression { return !params.SKIP_TESTS } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -200,9 +199,9 @@ EOL
                                     sh "npm install"
                                 }
                             }
-        }
-        
-        stage('Run Tests') {
+                        }
+                        
+                        stage('Run Tests') {
                             when { expression { return !params.SKIP_TESTS } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -294,9 +293,9 @@ EOL
                                     sh "npm install"
                                 }
                             }
-        }
-        
-        stage('Run Tests') {
+                        }
+                        
+                        stage('Run Tests') {
                             when { expression { return !params.SKIP_TESTS } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -385,9 +384,9 @@ EOL
                                     sh "npm install"
                                 }
                             }
-        }
-        
-        stage('Run Tests') {
+                        }
+                        
+                        stage('Run Tests') {
                             when { expression { return !params.SKIP_TESTS } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -483,9 +482,9 @@ EOL
                                     """
                                 }
                             }
-        }
-        
-        stage('Run Tests') {
+                        }
+                        
+                        stage('Run Tests') {
                             when { expression { return !params.SKIP_TESTS } }
                             steps {                                echo "Running ${MODULE_NAME} (Python) tests..."
                                 script {
@@ -629,6 +628,8 @@ EOL
         }
     }
 }
+
+
 
 
 

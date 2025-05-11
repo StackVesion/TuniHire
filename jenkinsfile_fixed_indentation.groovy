@@ -36,7 +36,7 @@ pipeline {
         booleanParam(name: 'SKIP_DEPLOY', defaultValue: false, description: 'Skip final Docker Compose deployment')
     }
 
-    stages {
+           stages {
         stage('Checkout') {
             steps {
                 echo "Checking out SCM..."
@@ -55,7 +55,7 @@ pipeline {
             }
         }
         
-        stage('Setup Environment') {
+               stage('Setup Environment') {
             steps {
                 script {
                     echo "Node.js Version:"
@@ -70,7 +70,7 @@ pipeline {
             }
         }
         
-        stage('Modules CI') {
+               stage('Modules CI') {
             parallel(failFast: false) { // Changed to proper syntax to avoid entire pipeline failing when one module fails
                 // --- Backend Module ---
                 stage('Backend CI') {
@@ -80,7 +80,7 @@ pipeline {
                         SONAR_PROJECT_KEY = "TuniHire_Backend"
                         SONAR_QUALITY_GATE_TIMEOUT = 1 // Minutes - reduced from default 5
                     }
-                    stages {
+                           stages {
                         stage('Install Dependencies') {
                             steps {
                                 dir(MODULE_DIR) {
@@ -90,7 +90,7 @@ pipeline {
                             }
         }
         
-        stage('Run Tests') {
+                      stage('Run Tests') {
                             when { expression { return !params.SKIP_TESTS } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -144,7 +144,7 @@ EOL
                             }
         }
         
-        stage('SonarQube Analysis') {
+               stage('SonarQube Analysis') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -164,7 +164,7 @@ EOL
                             }
         }
         
-        stage('SonarQube Quality Gate') {
+               stage('SonarQube Quality Gate') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 script {
@@ -191,7 +191,7 @@ EOL
                         SONAR_PROJECT_KEY = "TuniHire_Frontend"
                         SONAR_QUALITY_GATE_TIMEOUT = 1 // Minutes - reduced from default 5
                     }
-                    stages {
+                           stages {
                         stage('Install Dependencies') {
                             steps {
                                 dir(MODULE_DIR) {
@@ -201,7 +201,7 @@ EOL
                             }
         }
         
-        stage('Run Tests') {
+                      stage('Run Tests') {
                             when { expression { return !params.SKIP_TESTS } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -237,7 +237,7 @@ EOL
                             }
         }
         
-        stage('SonarQube Analysis') {
+               stage('SonarQube Analysis') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -257,7 +257,7 @@ EOL
                             }
         }
         
-        stage('SonarQube Quality Gate') {
+               stage('SonarQube Quality Gate') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 script {
@@ -285,7 +285,7 @@ EOL
                         SONAR_QUALITY_GATE_TIMEOUT = 1 // Minutes - reduced from default 5
                         SONAR_EXCLUSIONS = "node_modules/**,.next/**" // Common exclusions
                     }
-                    stages {
+                           stages {
                         stage('Install Dependencies') {
                             steps {
                                 dir(MODULE_DIR) {
@@ -295,7 +295,7 @@ EOL
                             }
         }
         
-        stage('Run Tests') {
+                      stage('Run Tests') {
                             when { expression { return !params.SKIP_TESTS } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -331,7 +331,7 @@ EOL
                             }
         }
         
-        stage('SonarQube Analysis') {
+               stage('SonarQube Analysis') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -351,7 +351,7 @@ EOL
                             }
         }
         
-        stage('SonarQube Quality Gate') {
+               stage('SonarQube Quality Gate') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 script {
@@ -376,7 +376,7 @@ EOL
                         SONAR_QUALITY_GATE_TIMEOUT = 1 // Minutes - reduced from default 5
                         SONAR_EXCLUSIONS = "src/types/css.d.ts,node_modules/**,.next/**" // Added to fix language detection conflict
                     }
-                    stages {
+                           stages {
                         stage('Install Dependencies') {
                             steps {
                                 dir(MODULE_DIR) {
@@ -386,7 +386,7 @@ EOL
                             }
         }
         
-        stage('Run Tests') {
+                      stage('Run Tests') {
                             when { expression { return !params.SKIP_TESTS } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -422,7 +422,7 @@ EOL
                             }
         }
         
-        stage('SonarQube Analysis') {
+               stage('SonarQube Analysis') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 dir(MODULE_DIR) {
@@ -442,7 +442,7 @@ EOL
                             }
         }
         
-        stage('SonarQube Quality Gate') {
+               stage('SonarQube Quality Gate') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 script {
@@ -470,7 +470,7 @@ EOL
                         MODULE_NAME = "tunihire-ai-service"
                         SONAR_PROJECT_KEY = "TuniHire_AIService"
                     }
-                    stages {                        stage('Install Dependencies') {
+                           stages {                        stage('Install Dependencies') {
                             steps {
                                 echo "Installing ${MODULE_NAME} (Python) dependencies..."
                                 script {
@@ -484,7 +484,7 @@ EOL
                             }
         }
         
-        stage('Run Tests') {
+                      stage('Run Tests') {
                             when { expression { return !params.SKIP_TESTS } }
                             steps {                                echo "Running ${MODULE_NAME} (Python) tests..."
                                 script {
@@ -511,7 +511,7 @@ EOL
                             }
         }
         
-        stage('SonarQube Analysis') {
+               stage('SonarQube Analysis') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {                                script {
                                     echo "SonarQube analysis for ${MODULE_NAME} skipped"
@@ -520,7 +520,7 @@ EOL
                             }
         }
         
-        stage('SonarQube Quality Gate') {
+               stage('SonarQube Quality Gate') {
                             when { expression { return !params.SKIP_SONAR } }
                             steps {
                                 script {
@@ -532,7 +532,7 @@ EOL
                 }            }
         }
         
-        stage('Build & Push Docker Images') {
+               stage('Build & Push Docker Images') {
             when { 
                 allOf {
                     expression { return !params.SKIP_DOCKER_BUILD_PUSH }
@@ -568,7 +568,7 @@ EOL
             }
         }
         
-        stage('Deploy Application') {
+               stage('Deploy Application') {
             when { 
                 allOf {
                     expression { return !params.SKIP_DEPLOY }

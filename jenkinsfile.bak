@@ -1,4 +1,4 @@
-// Jenkinsfile for TuniHire
+﻿// Jenkinsfile for TuniHire
 // Updated with fixes for SonarQube, Test execution, and error handling
 pipeline {
     agent any // Default agent for most stages
@@ -628,7 +628,6 @@ EOL
         }
     }
 }
-
 
 
 
