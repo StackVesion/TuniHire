@@ -1,0 +1,52 @@
+/* Enhanced Verification Badge Styles */
+.verified-badge {
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.verified-badge:hover {
+  transform: translateY(-2px);
+}
+
+.verification-score-chip {
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.verification-score-chip:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.enhanced-verification-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+}
+
+/* Score rating colors */
+.score-high {
+  background-color: #e8f5e9 !important;
+  color: #2e7d32 !important;
+  border-color: #c8e6c9 !important;
+}
+
+.score-medium {
+  background-color: #fff8e1 !important;
+  color: #f57c00 !important;
+  border-color: #ffecb3 !important;
+}
+
+.score-low {
+  background-color: #ffebee !important;
+  color: #c62828 !important;
+  border-color: #ffcdd2 !important;
+}
+
+/* Glowing effect on hover for verified badge */
+.verified-badge:hover .verification-score {
+  box-shadow: 0 0 8px rgba(0, 153, 255, 0.5);
+}

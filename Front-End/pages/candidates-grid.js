@@ -253,7 +253,7 @@ export default function CandidateGrid() {
                                                                 <a>
                                                                     <figure>
                                                                         <img 
-                                                                            alt={`${candidate.firstName} ${candidate.lastName}`}
+                                                                            alt={`${candidate.firstName} ${candidate.lastName} ` }
                                                                             src={candidate.profilePicture || "assets/imgs/page/candidates/user1.png"} 
                                                                             onError={(e) => {
                                                                                 e.target.src = "assets/imgs/page/candidates/user1.png";
@@ -263,10 +263,25 @@ export default function CandidateGrid() {
                                                                 </a>
                                                             </Link>
                                                         </div>
-                                                        <div className="card-profile pt-10">
-                                                            <Link legacyBehavior href={`/candidate-details?id=${candidate._id}`}>
+                                                        <div className="card-profile pt-10">                                                            <Link legacyBehavior href={`/candidate-details?id=${candidate._id}`}>
                                                                 <a>
-                                                                    <h5>{candidate.firstName} {candidate.lastName}</h5>
+                                                                    <h5>
+                                                                        {candidate.firstName} {candidate.lastName}
+                                                                        {candidate.isVerified === true && (
+                                                                            <img 
+                                                                                src="/assets/imgs/template/icons/Verified_Badge.svg" 
+                                                                                alt="Verified" 
+                                                                                className="ml-5" 
+                                                                                style={{ 
+                                                                                    height: "16px", 
+                                                                                    width: "auto", 
+                                                                                    display: "inline-block",
+                                                                                    verticalAlign: "middle"
+                                                                                }}
+                                                                                title="Verified Profile"
+                                                                            />
+                                                                        )}
+                                                                    </h5>
                                                                 </a>
                                                             </Link>
                                                             <span className="font-xs color-text-mutted">

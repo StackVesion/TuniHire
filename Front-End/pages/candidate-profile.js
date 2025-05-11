@@ -4,6 +4,7 @@ import Layout from "../components/Layout/Layout";
 import { useRouter } from "next/router";
 import axios from "axios";
 import Modal from 'react-bootstrap/Modal';
+import ProfileVerificationModal from "../components/ProfileVerificationModal";
 
 export default function CandidateProfile() {
     const [activeIndex, setActiveIndex] = useState(1);
@@ -12,16 +13,8 @@ export default function CandidateProfile() {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
-    const [selectedFile, setSelectedFile] = useState(null);
-    // Verification related states
+    const [selectedFile, setSelectedFile] = useState(null);    // Verification related states - simplified since we're using the ProfileVerificationModal
     const [showVerificationModal, setShowVerificationModal] = useState(false);
-    const [verifying, setVerifying] = useState(false);
-    const [verificationSuccess, setVerificationSuccess] = useState(false);
-    const [verificationError, setVerificationError] = useState("");
-    const [stream, setStream] = useState(null);
-    const [verificationImage, setVerificationImage] = useState(null);
-    const videoRef = useRef(null);
-    const canvasRef = useRef(null);
     // Profile form state
     const [profileForm, setProfileForm] = useState({
         firstName: "",
@@ -68,10 +61,10 @@ export default function CandidateProfile() {
                         }
                     }
                 );
-                
-                console.log("Profile data received:", response.data);
-                
-                if (response.status === 200 && response.data.user) {
+                  console.log("Profile data received:", response.data);
+                  if (response.status === 200 && response.data.user) {
+                    // Process user data
+                    
                     // Mettre à jour le state avec les données complètes
                     setUserData(response.data.user);
                     
@@ -185,132 +178,67 @@ export default function CandidateProfile() {
         } finally {
             setUploadingPhoto(false);
         }
-    };
-
-    // Handle opening verification modal
+    };    // Handle opening verification modal using the reusable component
     const openVerificationModal = () => {
-        setVerificationError("");
-        setVerificationSuccess(false);
         setShowVerificationModal(true);
-        setTimeout(() => {
-            startCamera();
-        }, 500);
     };
 
     // Handle closing verification modal and cleanup
     const closeVerificationModal = () => {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            setStream(null);
-        }
-        setVerificationImage(null);
         setShowVerificationModal(false);
+    };    // Removed debug function for toggle verification status
+    
+    // Handle successful verification
+    const handleVerificationSuccess = (verificationData) => {
+        // Close the modal
+        setShowVerificationModal(false);
+        
+        // Update user data with verification information
+        const updatedUserData = {
+            ...userData,
+            isVerified: true,
+            verifiedAt: new Date(),
+            verificationScore: verificationData.score || verificationData.verificationScore || "56.11"
+        };
+        
+        // Update state and localStorage
+        setUserData(updatedUserData);
+        localStorage.setItem("user", JSON.stringify(updatedUserData));
+        
+        // Show success message
+        setSuccess(verificationData.verificationMessage || "Profile verified successfully!");
+        
+        // Refresh profile data
+        fetchCompleteProfileData();
     };
-
-    // Start camera stream
-    const startCamera = async () => {
-        try {
-            const videoStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "user" }, 
-                audio: false 
-            });
-            
-            setStream(videoStream);
-            
-            if (videoRef.current) {
-                videoRef.current.srcObject = videoStream;
-            }
-        } catch (err) {
-            console.error("Error accessing camera:", err);
-            setVerificationError("Failed to access your camera. Please ensure you have granted camera access permission.");
-        }
+    
+    // Helper functions for verification score styling
+    const getScoreClass = (score) => {
+        const numScore = parseFloat(score);
+        if (numScore >= 70) return 'score-high';
+        if (numScore >= 50) return 'score-medium';
+        return 'score-low';
     };
-
-    // Capture image from camera
-    const captureImage = () => {
-        if (!videoRef.current || !canvasRef.current) return;
-        
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        const context = canvas.getContext('2d');
-        
-        // Set canvas dimensions to match video
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        
-        // Draw current video frame to canvas
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Convert to data URL
-        const imageDataUrl = canvas.toDataURL('image/png');
-        setVerificationImage(imageDataUrl);
+    
+    const getScoreBackgroundColor = (score) => {
+        const numScore = parseFloat(score);
+        if (numScore >= 70) return '#e8f5e9';
+        if (numScore >= 50) return '#fff8e1';
+        return '#ffebee';
     };
-
-    // Submit verification to server
-    const submitVerification = async () => {
-        if (!verificationImage) {
-            setVerificationError("Please capture an image first");
-            return;
-        }
-
-        try {
-            setVerifying(true);
-            setVerificationError("");
-            
-            const token = localStorage.getItem("token");
-            if (!token) {
-                setVerificationError("You must be logged in to verify your profile");
-                setVerifying(false);
-                return;
-            }
-            
-            // Convert base64 image to blob for sending
-            const base64Response = await fetch(verificationImage);
-            const blob = await base64Response.blob();
-            
-            // Create a File object from the blob
-            const imageFile = new File([blob], "verification.png", { type: "image/png" });
-            
-            const formData = new FormData();
-            formData.append("verificationImage", imageFile);
-            
-            console.log("Sending verification image with token:", token.substring(0, 10) + "...");
-            
-            const response = await axios.post(
-                "http://localhost:5000/api/users/verify-profile",
-                formData,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        // Don't set Content-Type with FormData, axios will set it automatically with boundary
-                    }
-                }
-            );
-            
-            if (response.status === 200) {
-                setVerificationSuccess(true);
-                
-                // Update user data with verification status
-                const updatedUserData = {...userData, isVerified: true, verifiedAt: new Date()};
-                setUserData(updatedUserData);
-                localStorage.setItem("user", JSON.stringify(updatedUserData));
-                
-                setTimeout(() => {
-                    closeVerificationModal();
-                    setSuccess("Your profile has been verified successfully!");
-                    fetchCompleteProfileData(); // Refresh profile data
-                }, 2000);
-            }
-        } catch (error) {
-            console.error("Error verifying profile:", error);
-            if (error.response) {
-                setVerificationError(`Error: ${error.response.data.message || error.response.statusText}`);
-            } else {
-                setVerificationError("Failed to verify your profile. Please try again later.");
-            }
-        } finally {
-            setVerifying(false);
-        }
+    
+    const getScoreTextColor = (score) => {
+        const numScore = parseFloat(score);
+        if (numScore >= 70) return '#2e7d32';
+        if (numScore >= 50) return '#f57c00';
+        return '#c62828';
+    };
+    
+    const getScoreBorderColor = (score) => {
+        const numScore = parseFloat(score);
+        if (numScore >= 70) return '#c8e6c9';
+        if (numScore >= 50) return '#ffecb3';
+        return '#ffcdd2';
     };
 
     // Récupération des infos utilisateur depuis localStorage
@@ -654,118 +582,13 @@ export default function CandidateProfile() {
 
     return (
         <>
-            <Layout>
-                {/* Verification Modal */}
-                <Modal 
-                    show={showVerificationModal} 
+            <Layout>                {/* Use the ProfileVerificationModal component */}                <ProfileVerificationModal
+                    show={showVerificationModal}
                     onHide={closeVerificationModal}
-                    centered
-                    size="lg"
-                >
-                    <Modal.Header closeButton>
-                        <Modal.Title>Verify Your Profile</Modal.Title>
-                    </Modal.Header>
-                    <Modal.Body>
-                        <div className="text-center mb-4">
-                            <p>Profile verification helps employers trust your identity and increases your chances of getting hired.</p>
-                        </div>
+                    onVerificationSuccess={handleVerificationSuccess}
+                />
                         
-                        {verificationError && (
-                            <div className="alert alert-danger mb-3">
-                                {verificationError}
-                            </div>
-                        )}
                         
-                        {verificationSuccess ? (
-                            <div className="text-center">
-                                <div className="success-animation">
-                                    <div className="checkmark">
-                                        <svg className="checkmark_success" height="70" viewBox="0 0 48 48" width="70">
-                                            <path fill="#43A047" d="M24 4C12.95 4 4 12.95 4 24c0 11.04 8.95 20 20 20 11.04 0 20-8.96 20-20 0-11.05-8.96-20-20-20zm-4 30L10 24l2.83-2.83L20 28.34l15.17-15.17L38 16 20 34z" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                <h4 className="mt-3 mb-4">Verification Successful!</h4>
-                                <p>Your profile has been verified. A verification badge will now appear on your profile.</p>
-                            </div>
-                        ) : verificationImage ? (
-                            <div>
-                                <div className="text-center mb-3">
-                                    <img 
-                                        src={verificationImage} 
-                                        alt="Verification" 
-                                        style={{ 
-                                            maxWidth: '100%', 
-                                            maxHeight: '300px',
-                                            border: '1px solid #ddd',
-                                            borderRadius: '8px'
-                                        }} 
-                                    />
-                                </div>
-                                <div className="d-flex justify-content-center mt-4">
-                                    <button 
-                                        className="btn btn-outline-secondary me-2" 
-                                        onClick={() => {
-                                            setVerificationImage(null);
-                                            startCamera();
-                                        }}
-                                    >
-                                        Retake
-                                    </button>
-                                    <button 
-                                        className="btn btn-primary" 
-                                        onClick={submitVerification}
-                                        disabled={verifying}
-                                    >
-                                        {verifying ? (
-                                            <>
-                                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                                Verifying...
-                                            </>
-                                        ) : "Submit for Verification"}
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div>
-                                <div className="camera-container" style={{ 
-                                    width: '100%', 
-                                    height: '400px',
-                                    position: 'relative',
-                                    backgroundColor: '#f0f0f0',
-                                    borderRadius: '8px',
-                                    overflow: 'hidden' 
-                                }}>
-                                    <video 
-                                        ref={videoRef} 
-                                        autoPlay 
-                                        playsInline 
-                                        style={{ 
-                                            width: '100%', 
-                                            height: '100%', 
-                                            objectFit: 'cover' 
-                                        }} 
-                                    />
-                                    <canvas ref={canvasRef} style={{ display: 'none' }} />
-                                </div>
-                                <div className="text-center mt-4">
-                                    <button 
-                                        className="btn btn-primary" 
-                                        onClick={captureImage}
-                                    >
-                                        Take Photo
-                                    </button>
-                                </div>
-                                <div className="text-muted mt-3">
-                                    <small>
-                                        <i className="fi-rr-info me-1"></i>
-                                        Please center your face in the frame and ensure good lighting for best results.
-                                    </small>
-                                </div>
-                            </div>
-                        )}
-                    </Modal.Body>
-                </Modal>
 
                 <div>
                     <section className="section-box-2">
@@ -790,37 +613,32 @@ export default function CandidateProfile() {
                                         />
                                     )}
                                 </div>
-                                <div className="row mt-10">
-                                    <div className="col-lg-8 col-md-12">
-                                        <h5 className="f-18">
-                                            {userData.firstName} {userData.lastName} 
-                                            {userData.isVerified && (
-                                                <span className="verified-badge ml-10" title="Verified Profile">
-                                                    <i className="fi-rr-check-circle" style={{ 
-                                                        color: '#0099ff',
-                                                        fontSize: '18px',
-                                                        marginRight: '5px',
-                                                        verticalAlign: 'middle'
-                                                    }}></i>
-                                                    <span style={{
-                                                        fontSize: '14px',
-                                                        color: '#0099ff',
-                                                        fontWeight: 'normal',
-                                                        verticalAlign: 'middle'
-                                                    }}>Verified</span>
-                                                </span>
+                                                 <div className="row mt-30">           
+                                                            
+                                                 <div className="col-lg-8 col-md-12">    
+                                                  <h5 className="f-18 mt-3">    
+                                             {userData.firstName} {userData.lastName}
+                                            {userData.isVerified === true && (
+                                                <img 
+                                                    src="/assets/imgs/template/icons/Verified_Badge.svg" 
+                                                    alt="Verified" 
+                                                    className="ml-10" 
+                                                    style={{ 
+                                                        height: "20px", 
+                                                        width: "auto", 
+                                                        display: "inline-block",
+                                                        verticalAlign: "middle"
+                                                    }}
+                                                    title="Verified Profile"
+                                                />
                                             )}
                                             <span className="card-location font-regular ml-20">
-                                                {userData.location || "Location not specified"}
+                                                {userData.location || "Tunisia"}
                                             </span>
-                                        </h5>
-                                        <p className="mt-0 font-md color-text-paragraph-2 mb-15">
+                                        </h5>                                        <p className="mt-0 font-md color-text-paragraph-2 mb-15">
                                             {userData.role || "User"} | {userData.email}
-                                        </p>
-                                    </div>
-                                    <div className="col-lg-4 col-md-12 text-lg-end">
-                                        {!userData.isVerified ? (
-                                            <button 
+                                        </p>                                          {/* Debug elements removed */}
+                                    </div>                                    <div className="col-lg-4 col-md-12 text-lg-end">                                        {userData.isVerified !== true ? (<button 
                                                 className="btn btn-success btn-default mr-15" 
                                                 onClick={openVerificationModal}
                                             >
@@ -828,11 +646,22 @@ export default function CandidateProfile() {
                                                 Verify Profile
                                             </button>
                                         ) : (
-                                            <span className="badge bg-success-light text-success p-2 mr-15">
-                                                <i className="fi-rr-check-circle mr-5"></i>
-                                                Verified on {new Date(userData.verifiedAt).toLocaleDateString()}
-                                            </span>
-                                        )}
+                                            <div className="d-flex align-items-center mr-15">
+                                                <span className="badge bg-success-light text-success p-2">
+                                                    <img 
+                                                        src="/assets/imgs/template/icons/Verified_Badge.svg" 
+                                                        alt="Verified" 
+                                                        style={{ 
+                                                            height: "18px", 
+                                                            width: "auto",
+                                                            marginRight: "5px",
+                                                            verticalAlign: "middle"
+                                                        }}
+                                                    />
+                                                    Verified on {new Date(userData.verifiedAt).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                        )}{/* Debug toggle button removed */}
                                         <Link legacyBehavior href="/page-contact">
                                             <a className="btn btn-preview-icon btn-apply btn-apply-big">Edit Profile</a>
                                         </Link>

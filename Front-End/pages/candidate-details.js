@@ -56,9 +56,7 @@ export default function CandidateDetails() {
                     validateStatus: function (status) {
                         return status < 500; // Don't throw for any status < 500
                     }
-                });
-                
-                if (response.status === 200 && response.data) {
+                });                if (response.status === 200 && response.data) {
                     console.log("Successfully fetched authenticated user details");
                     setCandidate(response.data);
                 } else if (response.status === 401) {
@@ -67,9 +65,7 @@ export default function CandidateDetails() {
                     // Try the public profile endpoint as fallback
                     try {
                         // The correct endpoint from your routes is /:id/public-profile
-                        const publicResponse = await axios.get(`${apiUrl}/api/users/${id}/public-profile`);
-                        
-                        if (publicResponse.data) {
+                        const publicResponse = await axios.get(`${apiUrl}/api/users/${id}/public-profile`);                        if (publicResponse.data) {
                             console.log("Successfully fetched public profile");
                             setCandidate(publicResponse.data);
                         } else {
@@ -80,9 +76,9 @@ export default function CandidateDetails() {
                         
                         // Since we couldn't get public profile data, try another fallback
                         try {
-                            // Many APIs use this format instead
-                            const alternativeResponse = await axios.get(`${apiUrl}/api/users/public-profile/${id}`);
+                            // Many APIs use this format instead                            const alternativeResponse = await axios.get(`${apiUrl}/api/users/public-profile/${id}`);
                             if (alternativeResponse.data) {
+                                console.log("Successfully fetched alternative profile");
                                 setCandidate(alternativeResponse.data);
                             } else {
                                 setError("Failed to load candidate details");
@@ -245,12 +241,11 @@ export default function CandidateDetails() {
                         </div>
                         <div className="box-company-profile position-relative">
                             <div className="row">
-                                <div className="col-lg-4 col-md-6 col-sm-8 col-12 mx-auto text-center">
-                                    <div className="image-compay position-relative" style={{ 
+                                <div className="col-lg-4 col-md-6 col-sm-8 col-12 mx-auto text-center">                                    <div className="image-compay position-relative" style={{ 
                                         maxWidth: '150px', 
                                         maxHeight: '150px', 
                                         overflow: 'hidden', 
-                                        margin: '-110px auto 0',
+                                        margin: '-100px auto 0',
                                         zIndex: 2, 
                                         borderRadius: '50%', 
                                         border: '5px solid #fff', 
@@ -262,12 +257,25 @@ export default function CandidateDetails() {
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                             onError={(e) => {
                                                 e.target.src = ensurePath("assets/imgs/page/candidates/candidate-profile.png");
-                                            }}
-                                        />
-                                    </div>
-                                    <h3 className="mt-2 font-bold">
+                                            }}                                        />
+                                    </div>                                    <h3 className="mt-0 font-bold">
                                         {candidate.firstName} {candidate.lastName}
+                                        {candidate.isVerified === true && (
+                                            <img 
+                                                src="/assets/imgs/template/icons/Verified_Badge.svg" 
+                                                alt="Verified" 
+                                                className="ml-10" 
+                                                style={{ 
+                                                    height: "20px", 
+                                                    width: "auto", 
+                                                    display: "inline-block",
+                                                    verticalAlign: "middle"
+                                                }}
+                                                title="Verified Profile"
+                                            />
+                                        )}
                                     </h3>
+                                    
                                     <p className="card-location font-regular mb-1">
                                         <i className=""></i> {getLocation()}
                                     </p>
@@ -279,11 +287,8 @@ export default function CandidateDetails() {
                                         <img src={ensurePath("assets/imgs/template/icons/star.svg")} alt="jobbox" />
                                         <img src={ensurePath("assets/imgs/template/icons/star.svg")} alt="jobbox" />
                                         <img src={ensurePath("assets/imgs/template/icons/star.svg")} alt="jobbox" />
-                                        <img src={ensurePath("assets/imgs/template/icons/star.svg")} alt="jobbox" />
-                                        <span className="font-xs color-text-mutted ml-10">({candidate.reviewsCount || 0})</span>
-                                        {candidate.isVerified && (
-                                            <img className="ml-30" src={ensurePath("assets/imgs/page/candidates/verified.png")} alt="verified" />
-                                        )}
+                                        <img src={ensurePath("assets/imgs/template/icons/star.svg")} alt="jobbox" />                            
+                                 <span className="font-xs color-text-mutted ml-10">({candidate.reviewsCount || 0})</span>
                                     </div>
                                     
                                     <div className="mt-2">

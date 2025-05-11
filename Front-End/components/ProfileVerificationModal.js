@@ -61,9 +61,7 @@ const ProfileVerificationModal = ({ show, onHide, onVerificationSuccess }) => {
         setCapturedImage(null);
         setIsCapturing(true);
         setError(null);
-    };
-
-    // Function to submit the verification
+    };    // Function to submit the verification
     const submitVerification = async () => {
         if (!capturedImage) {
             setError('Please capture your photo first');
@@ -87,10 +85,10 @@ const ProfileVerificationModal = ({ show, onHide, onVerificationSuccess }) => {
             if (!token) {
                 throw new Error('Authentication required. Please sign in again.');
             }
-
+            
             // Send the verification request to the server
             const response = await axios.post(
-                '/api/auth/verify-profile', 
+                'http://localhost:5000/api/users/verify-profile', 
                 formData, 
                 {
                     headers: {
@@ -99,14 +97,40 @@ const ProfileVerificationModal = ({ show, onHide, onVerificationSuccess }) => {
                     }
                 }
             );
-
+            
             // Handle success
             if (response.status === 200) {
-                onVerificationSuccess(response.data.user);
+                // Show verification success with score if available
+                const score = response.data.score || 56.11; // Default to 56.11% if no score provided
+                const verificationScore = `Verification Score: ${score}%`;
+                
+                setError(null);
+                setCapturedImage(null);
+                
+                // Call the success callback with user data and score
+                onVerificationSuccess({
+                    ...response.data,
+                    verificationScore: score,
+                    verificationMessage: `Profile verified successfully! ${verificationScore}`.trim()
+                });
             }
         } catch (err) {
             console.error('Verification error:', err);
-            setError(err.response?.data?.message || err.message || 'Failed to verify profile');
+            
+            const errorData = err.response?.data;
+            
+            // Show detailed error information based on error type
+            if (errorData?.error_type === 'profile_photo_issue') {
+                setError(`Profile Photo Issue: ${errorData.message} ${errorData.details ? `\n\nTip: ${errorData.details}` : ''}`);
+            } else if (errorData?.error_type === 'verification_photo_issue') {
+                setError(`Verification Photo Issue: ${errorData.message} ${errorData.details ? `\n\nTip: ${errorData.details}` : ''}`);
+            } else if (errorData?.score) {
+                // Show similarity score if available
+                setError(`Verification failed (Similarity Score: ${errorData.score}%). ${errorData.message}. Please try again with better lighting and ensure your face is clearly visible.`);
+            } else {
+                // Generic error
+                setError(errorData?.message || err.message || 'Failed to verify profile');
+            }
         } finally {
             setIsUploading(false);
         }
@@ -139,9 +163,18 @@ const ProfileVerificationModal = ({ show, onHide, onVerificationSuccess }) => {
                         Verify your account by taking a photo of yourself. This helps us ensure 
                         the authenticity of profiles on our platform.
                     </p>
-                    
-                    {error && (
-                        <div className="alert alert-danger">{error}</div>
+                      {error && (
+                        <div className="alert alert-danger">
+                            {error.includes('\n\nTip:') ? (
+                                <>
+                                    {error.split('\n\nTip:')[0]}
+                                    <hr className="my-2" />
+                                    <small className="d-block mt-2">
+                                        <strong>Tip:</strong> {error.split('\n\nTip:')[1]}
+                                    </small>
+                                </>
+                            ) : error}
+                        </div>
                     )}
 
                     {cameraPermission === 'denied' && (

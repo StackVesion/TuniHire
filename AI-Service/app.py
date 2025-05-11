@@ -29,6 +29,15 @@ except ImportError as e:
     LANGUAGE_SERVICE_AVAILABLE = False
 
 try:
+    from services.face_recognition_service import FaceRecognitionService
+    FACE_RECOGNITION_SERVICE_AVAILABLE = True
+    logger.info("Service de reconnaissance faciale chargé avec succès")
+except ImportError as e:
+    logger.warning(f"FaceRecognitionService non disponible: {str(e)}")
+    logger.warning(traceback.format_exc())
+    FACE_RECOGNITION_SERVICE_AVAILABLE = False
+
+try:
     from routes.ats_routes import ats_bp
     ATS_ROUTES_AVAILABLE = True
     logger.info("Routes ATS chargées avec succès")
@@ -43,6 +52,15 @@ try:
 except ImportError as e:
     logger.warning(f"Routes de langue non disponibles: {str(e)}")
     LANGUAGE_ROUTES_AVAILABLE = False
+
+try:
+    from routes.face_routes import face_bp, init_face_routes
+    FACE_ROUTES_AVAILABLE = True
+    logger.info("Routes de reconnaissance faciale chargées avec succès")
+except ImportError as e:
+    logger.warning(f"Routes de reconnaissance faciale non disponibles: {str(e)}")
+    logger.warning(traceback.format_exc())
+    FACE_ROUTES_AVAILABLE = False
 
 from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
 from datetime import timedelta
@@ -81,6 +99,16 @@ if LANGUAGE_SERVICE_AVAILABLE:
         logger.error(f"Erreur lors de l'initialisation du service d'évaluation linguistique: {str(e)}")
         LANGUAGE_SERVICE_AVAILABLE = False
 
+# Initialiser le service de reconnaissance faciale si disponible
+face_recognition_service = None
+if FACE_RECOGNITION_SERVICE_AVAILABLE:
+    try:
+        face_recognition_service = FaceRecognitionService()
+        logger.info("Service de reconnaissance faciale initialisé avec succès")
+    except Exception as e:
+        logger.error(f"Erreur lors de l'initialisation du service de reconnaissance faciale: {str(e)}")
+        FACE_RECOGNITION_SERVICE_AVAILABLE = False
+
 # Enregistrer les blueprints si disponibles
 if ATS_ROUTES_AVAILABLE:
     app.register_blueprint(ats_bp, url_prefix='/api/ats')
@@ -90,6 +118,11 @@ if LANGUAGE_ROUTES_AVAILABLE:
     app.register_blueprint(language_bp, url_prefix='/api/language')
     logger.info("Blueprint d'évaluation linguistique enregistré")
 
+if FACE_ROUTES_AVAILABLE and face_recognition_service:
+    app.register_blueprint(face_bp, url_prefix='/api/face')
+    init_face_routes(face_recognition_service)
+    logger.info("Blueprint de reconnaissance faciale enregistré")
+
 @app.route('/')
 def index():
     return jsonify({
@@ -97,7 +130,8 @@ def index():
         "status": "online",
         "services_available": {
             "ats": ATS_SERVICE_AVAILABLE,
-            "language": LANGUAGE_SERVICE_AVAILABLE
+            "language": LANGUAGE_SERVICE_AVAILABLE,
+            "face_recognition": FACE_RECOGNITION_SERVICE_AVAILABLE
         },
         "routes_available": {
             "ats": ATS_ROUTES_AVAILABLE,

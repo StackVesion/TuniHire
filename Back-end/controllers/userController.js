@@ -1137,7 +1137,9 @@ const getAllUsers = async (req, res) => {
             profilePicture: user.profilePicture || '',
             isEmailVerified: !!user.isEmailVerified,
             isActive: user.isActive !== false,
-            createdAt: user.createdAt
+            createdAt: user.createdAt,
+            isVerified: user.isVerified || false,
+            verifiedAt: user.verifiedAt || null
         }));
 
         return res.status(200).json({
@@ -1181,8 +1183,7 @@ const getPublicUserProfile = async (req, res) => {
                 message: 'User not found'
             });
         }
-        
-        // Return limited public information only
+          // Return limited public information only
         const publicProfile = {
             _id: user._id,
             firstName: user.firstName,
@@ -1194,7 +1195,9 @@ const getPublicUserProfile = async (req, res) => {
             experienceYears: user.experienceYears,
             skills: user.skills || [],
             bio: user.bio || "",
-            isVerified: user.isEmailVerified
+            isVerified: user.isVerified || false,
+            verifiedAt: user.verifiedAt,
+            verificationScore: user.verificationScore || 0
         };
         
         return res.status(200).json(publicProfile);

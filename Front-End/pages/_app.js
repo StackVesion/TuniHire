@@ -1,5 +1,6 @@
 import "../public/assets/css/style.css";
 import "../styles/globals.css";
+import "../styles/verification-badge.css";  // Import our custom verification badge styles
 import { useEffect } from "react";
 import 'sweetalert2/dist/sweetalert2.min.css';
 import 'animate.css';
