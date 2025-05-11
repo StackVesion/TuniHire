@@ -17,12 +17,6 @@ pipeline {
         FRONTEND_URL_CONFIG = "http://localhost:3000"
         SMTP_PORT_CONFIG = "587"
     }
-
-    tools {
-        nodejs "NodeJS18"
-        jdk "JDK17"
-    }
-
     options {
         timeout(time: 2, unit: 'HOURS')
         buildDiscarder(logRotator(numToKeepStr: '10'))
