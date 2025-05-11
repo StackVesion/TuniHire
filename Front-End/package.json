@@ -1,13 +1,13 @@
 {
   "name": "TuniHire",
   "version": "2.0.0",
-  "private": true,
-  "scripts": {
+  "private": true,  "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "sass": "sass --watch public/assets/scss/style.scss:public/assets/css/style.css"
+    "sass": "sass --watch public/assets/scss/style.scss:public/assets/css/style.css",
+    "test": "node scripts/dummy-test.js"
   },
   "dependencies": {
     "@react-oauth/google": "^0.12.1",

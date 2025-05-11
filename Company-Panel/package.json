@@ -1,13 +1,13 @@
 {
     "name": "tunihire-dashboard",
     "version": "0.1.0",
-    "private": true,
-    "scripts": {
+    "private": true,    "scripts": {
         "dev": "next dev",
         "build": "next build",
         "start": "next start",
         "lint": "next lint",
-        "sass": "sass --watch public/assets/scss/style.scss:public/assets/css/style.css"
+        "sass": "sass --watch public/assets/scss/style.scss:public/assets/css/style.css",
+        "test": "node scripts/dummy-test.js"
     },
     "dependencies": {
         "@headlessui/react": "^1.7.13",
