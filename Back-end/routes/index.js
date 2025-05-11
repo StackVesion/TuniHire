@@ -3,14 +3,16 @@ const router = express.Router();
 
 const userRoutes = require('./user');
 const companyRoutes = require('./company');
-const jobRoutes = require('./job');
-const applicationRoutes = require('./application');
+const jobRoutes = require('./jobRoutes');
+const applicationRoutes = require('./applicationRoutes');
 const dashboardRoutes = require('./dashboard');
+const blogRoutes = require('./blogRoutes');
 
 router.use('/users', userRoutes);
 router.use('/companies', companyRoutes);
 router.use('/jobs', jobRoutes);
 router.use('/applications', applicationRoutes);
 router.use('/dashboard', dashboardRoutes);
+router.use('/blogs', blogRoutes);
 
 module.exports = router;
