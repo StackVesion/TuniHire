@@ -139,7 +139,7 @@ EOL
                                     script {
                                         try {
                                             withSonarQubeEnv('scanner') {
-                                                def sonarScannerPath = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                                                def sonarScannerPath = tool name: 'scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                                                 sh "${sonarScannerPath}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}"
                                             }
                                         } catch (Exception e) {
@@ -228,7 +228,7 @@ EOL
                                     script {
                                         try {
                                             withSonarQubeEnv('scanner') {
-                                                def sonarScannerPath = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                                                def sonarScannerPath = tool name: 'scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                                                 sh "${sonarScannerPath}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}"
                                             }
                                         } catch (Exception e) {
@@ -317,7 +317,7 @@ EOL
                                     script {
                                         try {
                                             withSonarQubeEnv('scanner') {
-                                                def sonarScannerPath = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                                                def sonarScannerPath = tool name: 'scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                                                 sh "${sonarScannerPath}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}"
                                             }
                                         } catch (Exception e) {
@@ -406,7 +406,7 @@ EOL
                                     script {
                                         try {
                                             withSonarQubeEnv('scanner') {
-                                                def sonarScannerPath = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                                                def sonarScannerPath = tool name: 'scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
                                                 sh "${sonarScannerPath}/bin/sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY}"
                                             }
                                         } catch (Exception e) {
