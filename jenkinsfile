@@ -1,177 +1,279 @@
 pipeline {
-    agent any
+  agent any
 
-    tools {
-        // Use the SonarQube Scanner (SonarRunner) installation named "scanner"
-        sonarRunner 'scanner'
+  // Make sure you've configured a SonarQube Scanner installation named "scanner" 
+  tools {
+    sonarRunner 'scanner'
+  }
+
+  environment {
+    // SonarQube
+    SONAR_HOST_URL   = "http://localhost:9000"
+    SONAR_AUTH_TOKEN = credentials('scanner')    // your Sonar token stored as Secret Text
+
+    // Nexus Docker registry
+    NEXUS_REGISTRY_URL   = "172.23.202.74:8083"
+    NEXUS_CREDENTIALS_ID = "nexus"
+
+    // GitHub credential (if you ever need to push/tag)
+    GITHUB_CREDENTIALS_ID = "98a74c8f-9f44-4e31-aa6a-6eec112c23f4"
+
+    // App version (build number suffix)
+    BASE_APP_VERSION = "1.0.${BUILD_NUMBER}"
+
+    // App config URLs
+    GITHUB_CALLBACK_URL = "http://localhost:5000/auth/github/callback"
+    FRONTEND_URL        = "http://localhost:3000"
+    SMTP_PORT           = "587"
+  }
+
+  options {
+    timeout(time: 2, unit: 'HOURS')
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+    timestamps()
+    parallelsAlwaysFailFast()
+  }
+
+  parameters {
+    booleanParam(name: 'SKIP_TESTS',             defaultValue: false, description: 'Skip tests')
+    booleanParam(name: 'SKIP_SONAR',             defaultValue: false, description: 'Skip SonarQube analysis')
+    booleanParam(name: 'SKIP_DOCKER_BUILD_PUSH', defaultValue: false, description: 'Skip Docker build & push')
+    booleanParam(name: 'SKIP_DEPLOY',            defaultValue: false, description: 'Skip deployment')
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        echo "🔄 Checking out code"
+        checkout scm
+      }
     }
 
-    environment {
-        // SonarQube
-        SONAR_HOST_URL   = "http://localhost:9000"
-        SONAR_AUTH_TOKEN = credentials('scanner')   // Secret Text credential containing your Sonar token
-
-        // Nexus
-        NEXUS_REGISTRY_URL   = "172.23.202.74:8083"
-        NEXUS_CREDENTIALS_ID = "nexus"
-
-        // GitHub (for any Git operations that require credentials)
-        GITHUB_CREDENTIALS_ID = "98a74c8f-9f44-4e31-aa6a-6eec112c23f4"
-
-        // Versioning
-        BASE_APP_VERSION = "1.0.${BUILD_NUMBER}"
-
-        // App URLs and ports
-        GITHUB_CALLBACK_URL = "http://localhost:5000/auth/github/callback"
-        FRONTEND_URL        = "http://localhost:3000"
-        SMTP_PORT           = "587"
+    stage('Setup Environment') {
+      steps {
+        script {
+          echo "🖥  Node: $(node --version)"
+          echo "📦 NPM : $(npm --version)"
+          echo "☕️ Java: $(java --version)"
+          echo "🐳 Docker: $(docker --version)"
+          echo "🐳 Compose: $(docker-compose --version)"
+        }
+      }
     }
 
-    options {
-        timeout(time: 2, unit: 'HOURS')
-        buildDiscarder(logRotator(numToKeepStr: '10'))
-        timestamps()
-        parallelsAlwaysFailFast()
-    }
-
-    parameters {
-        booleanParam(name: 'SKIP_TESTS',             defaultValue: false, description: 'Skip tests')
-        booleanParam(name: 'SKIP_SONAR',             defaultValue: false, description: 'Skip SonarQube analysis')
-        booleanParam(name: 'SKIP_DOCKER_BUILD_PUSH', defaultValue: false, description: 'Skip Docker build & push')
-        booleanParam(name: 'SKIP_DEPLOY',            defaultValue: false, description: 'Skip deployment')
-    }
-
-    stages {
-        stage('Checkout') {
-            steps {
-                echo "Checking out from Git..."
-                checkout scm
+    stage('Modules CI') {
+      parallel {
+        stage('Backend CI') {
+          environment {
+            MODULE_DIR        = 'Back-End'
+            SONAR_PROJECT_KEY = 'TuniHire_Backend'
+          }
+          stages {
+            stage('Install Dependencies') {
+              steps { dir(MODULE_DIR) { sh 'npm install' } }
             }
+            stage('Run Tests') {
+              when { expression { !params.SKIP_TESTS } }
+              steps { dir(MODULE_DIR) { sh 'npm test || true' } }
+              post { always { dir(MODULE_DIR) { junit allowEmptyResults: true, testResults: 'test-results.xml' } } }
+            }
+            stage('SonarQube Analysis') {
+              when { expression { !params.SKIP_SONAR } }
+              steps {
+                dir(MODULE_DIR) {
+                  withSonarQubeEnv('scanner') {
+                    sh """
+                      sonar-scanner \
+                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=${SONAR_HOST_URL} \
+                        -Dsonar.login=${SONAR_AUTH_TOKEN}
+                    """
+                  }
+                }
+              }
+            }
+          }
         }
 
-        stage('Setup Environment') {
-            steps {
-                script {
-                    sh "node --version"
-                    sh "npm --version"
-                    sh "java --version"
-                    sh "docker --version"
-                    sh "docker-compose --version"
-                }
+        stage('Front-End CI') {
+          environment {
+            MODULE_DIR        = 'Front-End'
+            SONAR_PROJECT_KEY = 'TuniHire_Frontend'
+          }
+          stages {
+            stage('Install Dependencies') {
+              steps { dir(MODULE_DIR) { sh 'npm install' } }
             }
+            stage('Run Tests') {
+              when { expression { !params.SKIP_TESTS } }
+              steps { dir(MODULE_DIR) { sh 'npm test || true' } }
+              post { always { dir(MODULE_DIR) { junit allowEmptyResults: true, testResults: 'test-results.xml' } } }
+            }
+            stage('SonarQube Analysis') {
+              when { expression { !params.SKIP_SONAR } }
+              steps {
+                dir(MODULE_DIR) {
+                  withSonarQubeEnv('scanner') {
+                    sh """
+                      sonar-scanner \
+                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=${SONAR_HOST_URL} \
+                        -Dsonar.login=${SONAR_AUTH_TOKEN}
+                    """
+                  }
+                }
+              }
+            }
+          }
         }
 
-        stage('Modules CI') {
-            parallel {
-                // … your Backend CI, Front-End CI, etc. unchanged …
-                stage('Backend CI') {
-                    environment {
-                        MODULE_DIR        = 'Back-End'
-                        SONAR_PROJECT_KEY = 'TuniHire_Backend'
-                    }
-                    stages {
-                        stage('Install Dependencies') {
-                            steps { dir(MODULE_DIR) { sh 'npm install' } }
-                        }
-                        stage('Run Tests') {
-                            when { expression { !params.SKIP_TESTS } }
-                            steps { dir(MODULE_DIR) { sh 'npm test || true' } }
-                            post { always { dir(MODULE_DIR) { junit allowEmptyResults: true, testResults: 'test-results.xml' } } }
-                        }
-                        stage('SonarQube Analysis') {
-                            when { expression { !params.SKIP_SONAR } }
-                            steps {
-                                dir(MODULE_DIR) {
-                                    withSonarQubeEnv('scanner') {
-                                        sh """\
-sonar-scanner \
-  -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-  -Dsonar.sources=. \
-  -Dsonar.host.url=${SONAR_HOST_URL} \
-  -Dsonar.login=${SONAR_AUTH_TOKEN}
-"""
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                // … repeat for Front-End CI, Company-Panel CI, Admin-Panel CI …
-
-                stage('AI-Service CI') {
-                    agent {
-                        dockerfile {
-                            dir 'AI-Service'
-                            filename 'Dockerfile'
-                            additionalBuildArgs '--platform=linux/amd64'
-                        }
-                    }
-                    environment {
-                        SONAR_PROJECT_KEY = 'TuniHire_AIService'
-                    }
-                    stages {
-                        stage('Run Tests') {
-                            when { expression { !params.SKIP_TESTS } }
-                            steps {
-                                sh 'pytest --junitxml=test-results.xml || true'
-                            }
-                            post { always { junit allowEmptyResults: true, testResults: 'test-results.xml' } }
-                        }
-                        stage('SonarQube Analysis') {
-                            when { expression { !params.SKIP_SONAR } }
-                            steps {
-                                withSonarQubeEnv('scanner') {
-                                    sh """\
-sonar-scanner \
-  -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-  -Dsonar.sources=. \
-  -Dsonar.host.url=${SONAR_HOST_URL} \
-  -Dsonar.login=${SONAR_AUTH_TOKEN}
-"""
-                                }
-                            }
-                        }
-                    }
-                }
+        stage('Company-Panel CI') {
+          environment {
+            MODULE_DIR        = 'Company-Panel'
+            SONAR_PROJECT_KEY = 'TuniHire_CompanyPanel'
+          }
+          stages {
+            stage('Install Dependencies') {
+              steps { dir(MODULE_DIR) { sh 'npm install' } }
             }
+            stage('Run Tests') {
+              when { expression { !params.SKIP_TESTS } }
+              steps { dir(MODULE_DIR) { sh 'npm test || true' } }
+              post { always { dir(MODULE_DIR) { junit allowEmptyResults: true, testResults: 'test-results.xml' } } }
+            }
+            stage('SonarQube Analysis') {
+              when { expression { !params.SKIP_SONAR } }
+              steps {
+                dir(MODULE_DIR) {
+                  withSonarQubeEnv('scanner') {
+                    sh """
+                      sonar-scanner \
+                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=${SONAR_HOST_URL} \
+                        -Dsonar.login=${SONAR_AUTH_TOKEN}
+                    """
+                  }
+                }
+              }
+            }
+          }
         }
 
-        stage('Build & Push Docker Images') {
-            when { expression { !params.SKIP_DOCKER_BUILD_PUSH } }
-            steps {
-                sh 'docker-compose -f docker-compose.yml build'
-                withDockerRegistry(credentialsId: env.NEXUS_CREDENTIALS_ID, url: "http://${env.NEXUS_REGISTRY_URL}") {
-                    sh 'docker-compose -f docker-compose.yml push'
-                }
+        stage('Admin-Panel CI') {
+          environment {
+            MODULE_DIR        = 'Admin-Panel'
+            SONAR_PROJECT_KEY = 'TuniHire_AdminPanel'
+          }
+          stages {
+            stage('Install Dependencies') {
+              steps { dir(MODULE_DIR) { sh 'npm install' } }
             }
+            stage('Run Tests') {
+              when { expression { !params.SKIP_TESTS } }
+              steps { dir(MODULE_DIR) { sh 'npm test || true' } }
+              post { always { dir(MODULE_DIR) { junit allowEmptyResults: true, testResults: 'test-results.xml' } } }
+            }
+            stage('SonarQube Analysis') {
+              when { expression { !params.SKIP_SONAR } }
+              steps {
+                dir(MODULE_DIR) {
+                  withSonarQubeEnv('scanner') {
+                    sh """
+                      sonar-scanner \
+                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=${SONAR_HOST_URL} \
+                        -Dsonar.login=${SONAR_AUTH_TOKEN}
+                    """
+                  }
+                }
+              }
+            }
+          }
         }
 
-        stage('Deploy Application') {
-            when { expression { !params.SKIP_DEPLOY } }
-            steps {
-                sh 'docker-compose -f docker-compose.yml down --remove-orphans'
-                withCredentials([
-                    string(credentialsId: 'SESSION_SECRET',       variable: 'SESSION_SECRET'),
-                    string(credentialsId: 'OPENAI_API_KEY',       variable: 'OPENAI_API_KEY'),
-                    string(credentialsId: 'JWT_SECRET',           variable: 'JWT_SECRET'),
-                    string(credentialsId: 'GOOGLE_CLIENT_ID',     variable: 'GOOGLE_CLIENT_ID'),
-                    string(credentialsId: 'GOOGLE_CLIENT_SECRET', variable: 'GOOGLE_CLIENT_SECRET'),
-                    string(credentialsId: 'GITHUB_CLIENT_ID',     variable: 'GITHUB_CLIENT_ID'),
-                    string(credentialsId: 'GITHUB_CLIENT_SECRET', variable: 'GITHUB_CLIENT_SECRET'),
-                    string(credentialsId: 'EMAIL_USER',           variable: 'EMAIL_USER'),
-                    string(credentialsId: 'EMAIL_PASSWORD',       variable: 'EMAIL_PASSWORD'),
-                    string(credentialsId: 'EMAIL_APP_USER',       variable: 'EMAIL_APP_USER'),
-                    string(credentialsId: 'EMAIL_APP_PASSWORD',   variable: 'EMAIL_APP_PASSWORD')
-                ]) {
-                    sh 'docker-compose -f docker-compose.yml up -d'
-                }
+        stage('AI-Service CI') {
+          agent {
+            dockerfile {
+              dir 'AI-Service'
+              filename 'Dockerfile'
+              additionalBuildArgs '--platform=linux/amd64'
             }
+          }
+          environment {
+            SONAR_PROJECT_KEY = 'TuniHire_AIService'
+          }
+          stages {
+            stage('Run Tests') {
+              when { expression { !params.SKIP_TESTS } }
+              steps {
+                sh 'pytest --junitxml=test-results.xml || true'
+              }
+              post { always { junit allowEmptyResults: true, testResults: 'test-results.xml' } }
+            }
+            stage('SonarQube Analysis') {
+              when { expression { !params.SKIP_SONAR } }
+              steps {
+                withSonarQubeEnv('scanner') {
+                  sh """
+                    sonar-scanner \
+                      -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                      -Dsonar.sources=. \
+                      -Dsonar.host.url=${SONAR_HOST_URL} \
+                      -Dsonar.login=${SONAR_AUTH_TOKEN}
+                  """
+                }
+              }
+            }
+          }
         }
+      }
     }
 
-    post {
-        always  { cleanWs() }
-        success { echo 'Pipeline completed successfully!' }
-        failure { echo 'Pipeline failed -- check the logs!' }
+    stage('Build & Push Docker Images') {
+      when { expression { !params.SKIP_DOCKER_BUILD_PUSH } }
+      steps {
+        echo "🐳 Building images"
+        sh 'docker-compose build'
+        echo "📤 Pushing to Nexus at ${NEXUS_REGISTRY_URL}"
+        script {
+          docker.withRegistry("http://${NEXUS_REGISTRY_URL}", NEXUS_CREDENTIALS_ID) {
+            sh 'docker-compose push'
+          }
+        }
+      }
     }
+
+    stage('Deploy Application') {
+      when { expression { !params.SKIP_DEPLOY } }
+      steps {
+        echo "⚙️  Deploying via Docker Compose"
+        sh 'docker-compose down --remove-orphans'
+        withCredentials([
+          string(credentialsId: 'SESSION_SECRET',     variable: 'SESSION_SECRET'),
+          string(credentialsId: 'OPENAI_API_KEY',     variable: 'OPENAI_API_KEY'),
+          string(credentialsId: 'JWT_SECRET',         variable: 'JWT_SECRET'),
+          string(credentialsId: 'GOOGLE_CLIENT_ID',   variable: 'GOOGLE_CLIENT_ID'),
+          string(credentialsId: 'GOOGLE_CLIENT_SECRET', variable: 'GOOGLE_CLIENT_SECRET'),
+          string(credentialsId: 'GITHUB_CLIENT_ID',   variable: 'GITHUB_CLIENT_ID'),
+          string(credentialsId: 'GITHUB_CLIENT_SECRET', variable: 'GITHUB_CLIENT_SECRET'),
+          string(credentialsId: 'EMAIL_USER',         variable: 'EMAIL_USER'),
+          string(credentialsId: 'EMAIL_PASSWORD',     variable: 'EMAIL_PASSWORD'),
+          string(credentialsId: 'EMAIL_APP_USER',     variable: 'EMAIL_APP_USER'),
+          string(credentialsId: 'EMAIL_APP_PASSWORD', variable: 'EMAIL_APP_PASSWORD')
+        ]) {
+          sh 'docker-compose up -d'
+        }
+      }
+    }
+  }
+
+  post {
+    always  { echo "🧹 Cleaning workspace"; cleanWs() }
+    success { echo "✅ Pipeline completed successfully!" }
+    failure { echo "❌ Pipeline failed — check the logs!" }
+  }
 }
