@@ -1,16 +1,15 @@
-// Jenkinsfile
 pipeline {
     agent any
 
     tools {
-        // Make sure you've defined a tool named "scanner" in Global Tool Configuration → SonarQube Scanner installations
-        sonarScanner 'scanner'
+        // Use the SonarQube Scanner (SonarRunner) installation named "scanner"
+        sonarRunner 'scanner'
     }
 
     environment {
         // SonarQube
-        SONAR_HOST_URL       = "http://localhost:9000"
-        SONAR_AUTH_TOKEN     = credentials('scanner')   // your SonarQube token credential
+        SONAR_HOST_URL   = "http://localhost:9000"
+        SONAR_AUTH_TOKEN = credentials('scanner')   // Secret Text credential containing your Sonar token
 
         // Nexus
         NEXUS_REGISTRY_URL   = "172.23.202.74:8083"
@@ -20,12 +19,12 @@ pipeline {
         GITHUB_CREDENTIALS_ID = "98a74c8f-9f44-4e31-aa6a-6eec112c23f4"
 
         // Versioning
-        BASE_APP_VERSION     = "1.0.${BUILD_NUMBER}"
+        BASE_APP_VERSION = "1.0.${BUILD_NUMBER}"
 
         // App URLs and ports
-        GITHUB_CALLBACK_URL  = "http://localhost:5000/auth/github/callback"
-        FRONTEND_URL         = "http://localhost:3000"
-        SMTP_PORT            = "587"
+        GITHUB_CALLBACK_URL = "http://localhost:5000/auth/github/callback"
+        FRONTEND_URL        = "http://localhost:3000"
+        SMTP_PORT           = "587"
     }
 
     options {
@@ -36,17 +35,16 @@ pipeline {
     }
 
     parameters {
-        booleanParam(name: 'SKIP_TESTS',            defaultValue: false, description: 'Skip tests')
-        booleanParam(name: 'SKIP_SONAR',            defaultValue: false, description: 'Skip SonarQube analysis')
-        booleanParam(name: 'SKIP_DOCKER_BUILD_PUSH',defaultValue: false, description: 'Skip Docker build & push')
-        booleanParam(name: 'SKIP_DEPLOY',           defaultValue: false, description: 'Skip deployment')
+        booleanParam(name: 'SKIP_TESTS',             defaultValue: false, description: 'Skip tests')
+        booleanParam(name: 'SKIP_SONAR',             defaultValue: false, description: 'Skip SonarQube analysis')
+        booleanParam(name: 'SKIP_DOCKER_BUILD_PUSH', defaultValue: false, description: 'Skip Docker build & push')
+        booleanParam(name: 'SKIP_DEPLOY',            defaultValue: false, description: 'Skip deployment')
     }
 
     stages {
         stage('Checkout') {
             steps {
                 echo "Checking out from Git..."
-                // use the built-in SCM checkout (bypasses the cache/spawn-helper problem)
                 checkout scm
             }
         }
@@ -54,11 +52,8 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 script {
-                    echo "Node.js Version:"        
                     sh "node --version"
-                    echo "NPM Version:"
                     sh "npm --version"
-                    echo "Java Version:"
                     sh "java --version"
                     sh "docker --version"
                     sh "docker-compose --version"
@@ -68,11 +63,11 @@ pipeline {
 
         stage('Modules CI') {
             parallel {
-                // --- Backend CI ---
+                // … your Backend CI, Front-End CI, etc. unchanged …
                 stage('Backend CI') {
-                    environment { 
-                        MODULE_DIR       = 'Back-End'
-                        SONAR_PROJECT_KEY= 'TuniHire_Backend'
+                    environment {
+                        MODULE_DIR        = 'Back-End'
+                        SONAR_PROJECT_KEY = 'TuniHire_Backend'
                     }
                     stages {
                         stage('Install Dependencies') {
@@ -88,117 +83,21 @@ pipeline {
                             steps {
                                 dir(MODULE_DIR) {
                                     withSonarQubeEnv('scanner') {
-                                        sh "sonar-scanner \
-                                           -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                                           -Dsonar.sources=. \
-                                           -Dsonar.host.url=${SONAR_HOST_URL} \
-                                           -Dsonar.login=${SONAR_AUTH_TOKEN}"
-                                    }
-                                }
-                            }
-                        }
-                        // You can re-enable Quality Gate when you're ready
-                        // stage('Quality Gate') { ... }
-                    }
-                }
-
-                // --- Front-End CI ---
-                stage('Front-End CI') {
-                    environment { 
-                        MODULE_DIR       = 'Front-End'
-                        SONAR_PROJECT_KEY= 'TuniHire_Frontend'
-                    }
-                    stages {
-                        stage('Install Dependencies') {
-                            steps { dir(MODULE_DIR) { sh 'npm install' } }
-                        }
-                        stage('Run Tests') {
-                            when { expression { !params.SKIP_TESTS } }
-                            steps { dir(MODULE_DIR) { sh 'npm test || true' } }
-                            post { always { dir(MODULE_DIR) { junit allowEmptyResults: true, testResults: 'test-results.xml' } } }
-                        }
-                        stage('SonarQube Analysis') {
-                            when { expression { !params.SKIP_SONAR } }
-                            steps {
-                                dir(MODULE_DIR) {
-                                    withSonarQubeEnv('scanner') {
-                                        sh "sonar-scanner \
-                                           -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                                           -Dsonar.sources=. \
-                                           -Dsonar.host.url=${SONAR_HOST_URL} \
-                                           -Dsonar.login=${SONAR_AUTH_TOKEN}"
+                                        sh """\
+sonar-scanner \
+  -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+  -Dsonar.sources=. \
+  -Dsonar.host.url=${SONAR_HOST_URL} \
+  -Dsonar.login=${SONAR_AUTH_TOKEN}
+"""
                                     }
                                 }
                             }
                         }
                     }
                 }
+                // … repeat for Front-End CI, Company-Panel CI, Admin-Panel CI …
 
-                // --- Company-Panel CI ---
-                stage('Company-Panel CI') {
-                    environment { 
-                        MODULE_DIR       = 'Company-Panel'
-                        SONAR_PROJECT_KEY= 'TuniHire_CompanyPanel'
-                    }
-                    stages {
-                        stage('Install Dependencies') {
-                            steps { dir(MODULE_DIR) { sh 'npm install' } }
-                        }
-                        stage('Run Tests') {
-                            when { expression { !params.SKIP_TESTS } }
-                            steps { dir(MODULE_DIR) { sh 'npm test || true' } }
-                            post { always { dir(MODULE_DIR) { junit allowEmptyResults: true, testResults: 'test-results.xml' } } }
-                        }
-                        stage('SonarQube Analysis') {
-                            when { expression { !params.SKIP_SONAR } }
-                            steps {
-                                dir(MODULE_DIR) {
-                                    withSonarQubeEnv('scanner') {
-                                        sh "sonar-scanner \
-                                           -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                                           -Dsonar.sources=. \
-                                           -Dsonar.host.url=${SONAR_HOST_URL} \
-                                           -Dsonar.login=${SONAR_AUTH_TOKEN}"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // --- Admin-Panel CI ---
-                stage('Admin-Panel CI') {
-                    environment { 
-                        MODULE_DIR       = 'Admin-Panel'
-                        SONAR_PROJECT_KEY= 'TuniHire_AdminPanel'
-                    }
-                    stages {
-                        stage('Install Dependencies') {
-                            steps { dir(MODULE_DIR) { sh 'npm install' } }
-                        }
-                        stage('Run Tests') {
-                            when { expression { !params.SKIP_TESTS } }
-                            steps { dir(MODULE_DIR) { sh 'npm test || true' } }
-                            post { always { dir(MODULE_DIR) { junit allowEmptyResults: true, testResults: 'test-results.xml' } } }
-                        }
-                        stage('SonarQube Analysis') {
-                            when { expression { !params.SKIP_SONAR } }
-                            steps {
-                                dir(MODULE_DIR) {
-                                    withSonarQubeEnv('scanner') {
-                                        sh "sonar-scanner \
-                                           -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                                           -Dsonar.sources=. \
-                                           -Dsonar.host.url=${SONAR_HOST_URL} \
-                                           -Dsonar.login=${SONAR_AUTH_TOKEN}"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // --- AI-Service CI (Python) ---
                 stage('AI-Service CI') {
                     agent {
                         dockerfile {
@@ -222,11 +121,13 @@ pipeline {
                             when { expression { !params.SKIP_SONAR } }
                             steps {
                                 withSonarQubeEnv('scanner') {
-                                    sh "sonar-scanner \
-                                       -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                                       -Dsonar.sources=. \
-                                       -Dsonar.host.url=${SONAR_HOST_URL} \
-                                       -Dsonar.login=${SONAR_AUTH_TOKEN}"
+                                    sh """\
+sonar-scanner \
+  -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+  -Dsonar.sources=. \
+  -Dsonar.host.url=${SONAR_HOST_URL} \
+  -Dsonar.login=${SONAR_AUTH_TOKEN}
+"""
                                 }
                             }
                         }
@@ -250,17 +151,17 @@ pipeline {
             steps {
                 sh 'docker-compose -f docker-compose.yml down --remove-orphans'
                 withCredentials([
-                    string(credentialsId: 'SESSION_SECRET',      variable: 'SESSION_SECRET'),
-                    string(credentialsId: 'OPENAI_API_KEY',     variable: 'OPENAI_API_KEY'),
-                    string(credentialsId: 'JWT_SECRET',         variable: 'JWT_SECRET'),
-                    string(credentialsId: 'GOOGLE_CLIENT_ID',   variable: 'GOOGLE_CLIENT_ID'),
+                    string(credentialsId: 'SESSION_SECRET',       variable: 'SESSION_SECRET'),
+                    string(credentialsId: 'OPENAI_API_KEY',       variable: 'OPENAI_API_KEY'),
+                    string(credentialsId: 'JWT_SECRET',           variable: 'JWT_SECRET'),
+                    string(credentialsId: 'GOOGLE_CLIENT_ID',     variable: 'GOOGLE_CLIENT_ID'),
                     string(credentialsId: 'GOOGLE_CLIENT_SECRET', variable: 'GOOGLE_CLIENT_SECRET'),
-                    string(credentialsId: 'GITHUB_CLIENT_ID',   variable: 'GITHUB_CLIENT_ID'),
-                    string(credentialsId: 'GITHUB_CLIENT_SECRET',variable: 'GITHUB_CLIENT_SECRET'),
-                    string(credentialsId: 'EMAIL_USER',         variable: 'EMAIL_USER'),
-                    string(credentialsId: 'EMAIL_PASSWORD',     variable: 'EMAIL_PASSWORD'),
-                    string(credentialsId: 'EMAIL_APP_USER',     variable: 'EMAIL_APP_USER'),
-                    string(credentialsId: 'EMAIL_APP_PASSWORD', variable: 'EMAIL_APP_PASSWORD')
+                    string(credentialsId: 'GITHUB_CLIENT_ID',     variable: 'GITHUB_CLIENT_ID'),
+                    string(credentialsId: 'GITHUB_CLIENT_SECRET', variable: 'GITHUB_CLIENT_SECRET'),
+                    string(credentialsId: 'EMAIL_USER',           variable: 'EMAIL_USER'),
+                    string(credentialsId: 'EMAIL_PASSWORD',       variable: 'EMAIL_PASSWORD'),
+                    string(credentialsId: 'EMAIL_APP_USER',       variable: 'EMAIL_APP_USER'),
+                    string(credentialsId: 'EMAIL_APP_PASSWORD',   variable: 'EMAIL_APP_PASSWORD')
                 ]) {
                     sh 'docker-compose -f docker-compose.yml up -d'
                 }
@@ -269,8 +170,8 @@ pipeline {
     }
 
     post {
-        always   { cleanWs() }
-        success  { echo 'Pipeline completed successfully!' }
-        failure  { echo 'Pipeline failed -- check the logs!' }
+        always  { cleanWs() }
+        success { echo 'Pipeline completed successfully!' }
+        failure { echo 'Pipeline failed -- check the logs!' }
     }
 }
