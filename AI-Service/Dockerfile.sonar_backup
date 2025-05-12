@@ -3,11 +3,6 @@
 # Utiliser une image Python officielle comme base
 FROM python:3.9-slim
 
-# Définir les versions et URLs pour SonarScanner
-ENV SONAR_SCANNER_VERSION="5.0.1.3006"
-ENV SONAR_SCANNER_HOME="/opt/sonar-scanner"
-ENV SONAR_SCANNER_DOWNLOAD_URL="https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}-linux.zip"
-
 # Définir le répertoire de travail dans le conteneur
 WORKDIR /app
 
@@ -15,46 +10,41 @@ WORKDIR /app
 # - build-essential: pour les outils de compilation C/C++
 # - cmake: requis par dlib et d'autres paquets
 # - libboost-python-dev: souvent requis par dlib pour les bindings Python
-# - openjdk-17-jre-headless: requis par SonarScanner
-# - curl, unzip: pour télécharger et décompresser SonarScanner
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     cmake \
     libboost-python-dev \
-    openjdk-17-jre-headless \
-    curl \
-    unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Télécharger et installer SonarScanner
-RUN curl -sSL "${SONAR_SCANNER_DOWNLOAD_URL}" -o /tmp/sonar-scanner.zip && \
-    unzip -q /tmp/sonar-scanner.zip -d /opt && \
-    mv "/opt/sonar-scanner-${SONAR_SCANNER_VERSION}-linux" "${SONAR_SCANNER_HOME}" && \
-    rm /tmp/sonar-scanner.zip
-
-# Ajouter SonarScanner au PATH
-ENV PATH="${SONAR_SCANNER_HOME}/bin:${PATH}"
-
 # Copier le fichier des dépendances en premier pour profiter du cache Docker
+# Contexte de build est AI-Service/, donc requirements.txt est à la racine du contexte
 COPY requirements.txt .
 
 # Créer un virtualenv pour isoler les dépendances et éviter les problèmes de permission
 RUN python -m venv /opt/venv
 
 # Activer le virtualenv et installer les dépendances Python
+# Utiliser --no-cache-dir peut être utile pendant le débogage.
 RUN . /opt/venv/bin/activate && \
     pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copier tout le code du module AI-Service dans le répertoire de travail
+# Contexte de build est AI-Service/, donc copier tout depuis la racine du contexte
 COPY . .
 
-# S'assurer que le virtualenv est utilisé pour les commandes suivantes (SonarScanner est déjà dans le PATH global)
-ENV PATH="/opt/venv/bin:${PATH}"
+# S'assurer que le virtualenv est utilisé pour les commandes suivantes
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Exposer le port sur lequel l'application Flask tourne
+# Exposer le port sur lequel l'application Flask tourne (par exemple 5001 ou ce qui est défini dans app.py)
+# Vérifiez le port utilisé par votre app.py
 EXPOSE 5001
 
 # Commande pour démarrer l'application Flask
+# Assurez-vous que votre app.py est configuré pour écouter sur 0.0.0.0
+# et que le port correspond à celui exposé.
+# Par exemple, si vous utilisez gunicorn :
+# CMD ["gunicorn", "--bind", "0.0.0.0:5001", "app:app"]
+# Ou si vous lancez directement avec python (pour développement/tests, gunicorn est mieux pour la prod) :
 CMD ["python", "app.py"]
 
