@@ -1,11 +1,54 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PredefinedDateRanges from '../../../core/common/datePicker'
 import ImageWithBasePath from '../../../core/common/imageWithBasePath'
 import { all_routes } from '../../router/all_routes'
 import CollapseHeader from '../../../core/common/collapse-header/collapse-header'
+import axios from 'axios'
+
+// Interface for Candidate
+interface Candidate {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+    profilePicture?: string;
+    phone?: string;
+    location?: string;
+}
 
 const CandidateGrid = () => {
+    const [candidates, setCandidates] = useState<Candidate[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        fetchCandidates();
+    }, []);
+
+    const fetchCandidates = async () => {
+        try {
+            setLoading(true);
+            const response = await axios.get('http://localhost:5000/api/users/allusers');
+            
+            if (response.data && response.data.users) {
+                // Filter for users with role 'candidate'
+                const candidateUsers = response.data.users.filter(
+                    (user: any) => user.role?.toLowerCase() === 'candidate'
+                );
+                setCandidates(candidateUsers);
+            } else {
+                throw new Error('Invalid response format from server');
+            }
+            setError(null);
+        } catch (err: any) {
+            console.error('Error fetching candidates:', err);
+            setError(err.message || 'Failed to fetch candidates');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <>
@@ -228,713 +271,76 @@ const CandidateGrid = () => {
                     </div>
                     {/* Candidates Grid */}
                     <div className="row">
-                        <div className="col-xxl-3 col-xl-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="d-flex justify-content-between align-items-start mb-3">
-                                        <div className="d-flex align-items-center flex-shrink-0">
-                                            <Link
-                                                to="#"
-                                                className="avatar avatar-lg avatar rounded-circle me-2"
-                                                data-bs-toggle="offcanvas"
-                                                data-bs-target="#candidate_details"
-                                            >
-                                                <ImageWithBasePath
-                                                    src="assets/img/users/user-39.jpg"
-                                                    className="img-fluid h-auto w-auto"
-                                                    alt="img"
-                                                />
-                                            </Link>
-                                            <div className="d-flex flex-column">
-                                                <div className="d-flex flex-wrap mb-1">
-                                                    <h6 className="fs-16 fw-semibold me-1">
-                                                        <Link
-                                                            to="#"
-                                                            data-bs-toggle="offcanvas"
-                                                            data-bs-target="#candidate_details"
-                                                        >
-                                                            Harold Gaynor
-                                                        </Link>
-                                                    </h6>
-                                                    <span className="badge bg-primary-transparent">
-                                                        Cand-001
-                                                    </span>
+                        {loading ? (
+                            <div className="col-12 text-center">
+                                <p>Loading...</p>
+                            </div>
+                        ) : error ? (
+                            <div className="col-12 text-center">
+                                <p className="text-danger">{error}</p>
+                            </div>
+                        ) : (
+                            candidates.map((candidate) => (
+                                <div className="col-xxl-3 col-xl-4 col-md-6" key={candidate._id}>
+                                    <div className="card">
+                                        <div className="card-body">                            <div className="text-center mb-4">
+                                                <Link
+                                                    to="#"
+                                                    className="avatar avatar-xl rounded-circle mb-3"
+                                                    data-bs-toggle="offcanvas"
+                                                    data-bs-target="#candidate_details"
+                                                >
+                                                    <ImageWithBasePath
+                                                        src={candidate.profilePicture || "assets/img/users/default.jpg"}
+                                                        className="img-fluid rounded-circle"
+                                                        alt="img"
+                                                    />
+                                                </Link>
+                                                <h5 className="fs-18 fw-semibold mb-1">
+                                                    <Link
+                                                        to="#"
+                                                        data-bs-toggle="offcanvas"
+                                                        data-bs-target="#candidate_details"
+                                                        className="text-dark"
+                                                    >
+                                                        {candidate.firstName} {candidate.lastName}
+                                                    </Link>
+                                                </h5>
+                                                <p className="text-muted fs-14 mb-3">{candidate.email}</p>
+                                                <div className="d-flex justify-content-center gap-2 mb-3">
+                                                    {candidate.location && (
+                                                        <span className="badge bg-light text-dark">
+                                                            <i className="ti ti-map-pin me-1"></i>
+                                                            {candidate.location}
+                                                        </span>
+                                                    )}
+                                                    {candidate.phone && (
+                                                        <span className="badge bg-light text-dark">
+                                                            <i className="ti ti-phone me-1"></i>
+                                                            {candidate.phone}
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                <p className="text-gray fs-13 fw-normal">
-                                                    harold@example.com
-                                                </p>
+                                            </div>
+                                            <div className="border-top pt-3">
+                                                <div className="row text-center">
+                                                    <div className="col-6 border-end">
+                                                        <h6 className="text-muted fs-12 mb-1">Role</h6>
+                                                        <p className="mb-0 fs-14 fw-medium text-primary">{candidate.role}</p>
+                                                    </div>
+                                                    <div className="col-6">
+                                                        <h6 className="text-muted fs-12 mb-1">Status</h6>
+                                                        <span className="badge bg-success-transparent">
+                                                            <i className="ti ti-point-filled"></i> Available
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="bg-light rounder p-2">
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Role</h6>
-                                            <span className="text-dark fs-14 fw-medium">Accountant</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Date</h6>
-                                            <span className="text-dark fs-14 fw-medium">12 Sep 2024</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between">
-                                            <h6 className="text-gray fs-14 fw-normal">Status</h6>
-                                            <span className="fs-10 fw-medium badge bg-purple">
-                                                {" "}
-                                                <i className="ti ti-point-filled" /> New
-                                            </span>
-                                        </div>
-                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                        <div className="col-xxl-3 col-xl-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="d-flex justify-content-between align-items-start mb-3">
-                                        <div className="d-flex align-items-center flex-shrink-0">
-                                            <Link
-                                                to="#"
-                                                className="avatar avatar-lg avatar rounded-circle me-2"
-                                                data-bs-toggle="offcanvas"
-                                                data-bs-target="#candidate_details"
-                                            >
-                                                <ImageWithBasePath
-                                                    src="assets/img/users/user-40.jpg"
-                                                    className="img-fluid h-auto w-auto"
-                                                    alt="img"
-                                                />
-                                            </Link>
-                                            <div className="d-flex flex-column">
-                                                <div className="d-flex flex-wrap mb-1">
-                                                    <h6 className="fs-16 fw-semibold me-1">
-                                                        {" "}
-                                                        <Link
-                                                            to="#"
-                                                            data-bs-toggle="offcanvas"
-                                                            data-bs-target="#candidate_details"
-                                                        >
-                                                            Sandra Ornellas
-                                                        </Link>
-                                                    </h6>
-                                                    <span className="badge bg-primary-transparent">
-                                                        Cand-002
-                                                    </span>
-                                                </div>
-                                                <p className="text-gray fs-13 fw-normal">
-                                                    sandra@example.com
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-light rounder p-2">
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Role</h6>
-                                            <span className="text-dark fs-14 fw-medium">Accountant</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Date</h6>
-                                            <span className="text-dark fs-14 fw-medium">12 Sep 2024</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between">
-                                            <h6 className="text-gray fs-14 fw-normal">Status</h6>
-                                            <span className="fs-10 fw-medium badge bg-pink">
-                                                {" "}
-                                                <i className="ti ti-point-filled" /> Scheduled
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xxl-3 col-xl-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="d-flex justify-content-between align-items-start mb-3">
-                                        <div className="d-flex align-items-center flex-shrink-0">
-                                            <Link
-                                                to="#"
-                                                className="avatar avatar-lg avatar rounded-circle me-2"
-                                                data-bs-toggle="offcanvas"
-                                                data-bs-target="#candidate_details"
-                                            >
-                                                <ImageWithBasePath
-                                                    src="assets/img/users/user-41.jpg"
-                                                    className="img-fluid h-auto w-auto"
-                                                    alt="img"
-                                                />
-                                            </Link>
-                                            <div className="d-flex flex-column">
-                                                <div className="d-flex flex-wrap mb-1">
-                                                    <h6 className="fs-16 fw-semibold me-1">
-                                                        <Link
-                                                            to="#"
-                                                            data-bs-toggle="offcanvas"
-                                                            data-bs-target="#candidate_details"
-                                                        >
-                                                            John Harris
-                                                        </Link>
-                                                    </h6>
-                                                    <span className="badge bg-primary-transparent">
-                                                        Cand-003
-                                                    </span>
-                                                </div>
-                                                <p className="text-gray fs-13 fw-normal">
-                                                    john@example.com
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-light rounder p-2">
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Role</h6>
-                                            <span className="text-dark fs-14 fw-medium">Technician</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Date</h6>
-                                            <span className="text-dark fs-14 fw-medium">12 Sep 2024</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between">
-                                            <h6 className="text-gray fs-14 fw-normal">Status</h6>
-                                            <span className="fs-10 fw-medium badge bg-info">
-                                                {" "}
-                                                <i className="ti ti-point-filled" /> Interviewed
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xxl-3 col-xl-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="d-flex justify-content-between align-items-start mb-3">
-                                        <div className="d-flex align-items-center flex-shrink-0">
-                                            <Link
-                                                to="#"
-                                                className="avatar avatar-lg avatar rounded-circle me-2"
-                                                data-bs-toggle="offcanvas"
-                                                data-bs-target="#candidate_details"
-                                            >
-                                                <ImageWithBasePath
-                                                    src="assets/img/users/user-42.jpg"
-                                                    className="img-fluid h-auto w-auto"
-                                                    alt="img"
-                                                />
-                                            </Link>
-                                            <div className="d-flex flex-column">
-                                                <div className="d-flex flex-wrap mb-1">
-                                                    <h6 className="fs-16 fw-semibold me-1">
-                                                        <Link
-                                                            to="#"
-                                                            data-bs-toggle="offcanvas"
-                                                            data-bs-target="#candidate_details"
-                                                        >
-                                                            Carole Langan
-                                                        </Link>
-                                                    </h6>
-                                                    <span className="badge bg-primary-transparent">
-                                                        Cand-004
-                                                    </span>
-                                                </div>
-                                                <p className="text-gray fs-13 fw-normal">
-                                                    carole@example.com
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-light rounder p-2">
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Role</h6>
-                                            <span className="text-dark fs-14 fw-medium">
-                                                Web Developer
-                                            </span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Date</h6>
-                                            <span className="text-dark fs-14 fw-medium">12 Sep 2024</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between">
-                                            <h6 className="text-gray fs-14 fw-normal">Status</h6>
-                                            <span className="fs-10 fw-medium badge bg-warning">
-                                                {" "}
-                                                <i className="ti ti-point-filled" /> Offered
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xxl-3 col-xl-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="d-flex justify-content-between align-items-start mb-3">
-                                        <div className="d-flex align-items-center flex-shrink-0">
-                                            <Link
-                                                to="#"
-                                                className="avatar avatar-lg avatar rounded-circle me-2"
-                                                data-bs-toggle="offcanvas"
-                                                data-bs-target="#candidate_details"
-                                            >
-                                                <ImageWithBasePath
-                                                    src="assets/img/users/user-44.jpg"
-                                                    className="img-fluid h-auto w-auto"
-                                                    alt="img"
-                                                />
-                                            </Link>
-                                            <div className="d-flex flex-column">
-                                                <div className="d-flex flex-wrap mb-1">
-                                                    <h6 className="fs-16 fw-semibold me-1">
-                                                        <Link
-                                                            to="#"
-                                                            data-bs-toggle="offcanvas"
-                                                            data-bs-target="#candidate_details"
-                                                        >
-                                                            Charles Marks
-                                                        </Link>
-                                                    </h6>
-                                                    <span className="badge bg-primary-transparent">
-                                                        Cand-005
-                                                    </span>
-                                                </div>
-                                                <p className="text-gray fs-13 fw-normal">
-                                                    charles@example.com
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-light rounder p-2">
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Role</h6>
-                                            <span className="text-dark fs-14 fw-medium">SEO</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Date</h6>
-                                            <span className="text-dark fs-14 fw-medium">12 Sep 2024</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between">
-                                            <h6 className="text-gray fs-14 fw-normal">Status</h6>
-                                            <span className="fs-10 fw-medium badge bg-success">
-                                                {" "}
-                                                <i className="ti ti-point-filled" /> Hired
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xxl-3 col-xl-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="d-flex justify-content-between align-items-start mb-3">
-                                        <div className="d-flex align-items-center flex-shrink-0">
-                                            <Link
-                                                to="#"
-                                                className="avatar avatar-lg avatar rounded-circle me-2"
-                                                data-bs-toggle="offcanvas"
-                                                data-bs-target="#candidate_details"
-                                            >
-                                                <ImageWithBasePath
-                                                    src="assets/img/users/user-43.jpg"
-                                                    className="img-fluid h-auto w-auto"
-                                                    alt="img"
-                                                />
-                                            </Link>
-                                            <div className="d-flex flex-column">
-                                                <div className="d-flex flex-wrap mb-1">
-                                                    <h6 className="fs-16 fw-semibold me-1">
-                                                        <Link
-                                                            to="#"
-                                                            data-bs-toggle="offcanvas"
-                                                            data-bs-target="#candidate_details"
-                                                        >
-                                                            Kerry Drake
-                                                        </Link>
-                                                    </h6>
-                                                    <span className="badge bg-primary-transparent">
-                                                        Cand-006
-                                                    </span>
-                                                </div>
-                                                <p className="text-gray fs-13 fw-normal">
-                                                    kerry@example.com
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-light rounder p-2">
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Role</h6>
-                                            <span className="text-dark fs-14 fw-medium">Designer</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Date</h6>
-                                            <span className="text-dark fs-14 fw-medium">12 Sep 2024</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between">
-                                            <h6 className="text-gray fs-14 fw-normal">Status</h6>
-                                            <span className="fs-10 fw-medium badge bg-danger">
-                                                {" "}
-                                                <i className="ti ti-point-filled" /> Rejected
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xxl-3 col-xl-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="d-flex justify-content-between align-items-start mb-3">
-                                        <div className="d-flex align-items-center flex-shrink-0">
-                                            <Link
-                                                to="#"
-                                                className="avatar avatar-lg avatar rounded-circle me-2"
-                                                data-bs-toggle="offcanvas"
-                                                data-bs-target="#candidate_details"
-                                            >
-                                                <ImageWithBasePath
-                                                    src="assets/img/users/user-46.jpg"
-                                                    className="img-fluid h-auto w-auto"
-                                                    alt="img"
-                                                />
-                                            </Link>
-                                            <div className="d-flex flex-column">
-                                                <div className="d-flex flex-wrap mb-1">
-                                                    <h6 className="fs-16 fw-semibold me-1">
-                                                        <Link
-                                                            to="#"
-                                                            data-bs-toggle="offcanvas"
-                                                            data-bs-target="#candidate_details"
-                                                        >
-                                                            David Carmona
-                                                        </Link>
-                                                    </h6>
-                                                    <span className="badge bg-primary-transparent">
-                                                        Cand-007
-                                                    </span>
-                                                </div>
-                                                <p className="text-gray fs-13 fw-normal">
-                                                    david@example.com
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-light rounder p-2">
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Role</h6>
-                                            <span className="text-dark fs-14 fw-medium">
-                                                Account Manager
-                                            </span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Date</h6>
-                                            <span className="text-dark fs-14 fw-medium">12 Sep 2024</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between">
-                                            <h6 className="text-gray fs-14 fw-normal">Status</h6>
-                                            <span className="fs-10 fw-medium badge bg-success">
-                                                {" "}
-                                                <i className="ti ti-point-filled" /> Hired
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xxl-3 col-xl-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="d-flex justify-content-between align-items-start mb-3">
-                                        <div className="d-flex align-items-center flex-shrink-0">
-                                            <Link
-                                                to="#"
-                                                className="avatar avatar-lg avatar rounded-circle me-2"
-                                                data-bs-toggle="offcanvas"
-                                                data-bs-target="#candidate_details"
-                                            >
-                                                <ImageWithBasePath
-                                                    src="assets/img/users/user-45.jpg"
-                                                    className="img-fluid h-auto w-auto"
-                                                    alt="img"
-                                                />
-                                            </Link>
-                                            <div className="d-flex flex-column">
-                                                <div className="d-flex flex-wrap mb-1">
-                                                    <h6 className="fs-16 fw-semibold me-1">
-                                                        <Link
-                                                            to="#"
-                                                            data-bs-toggle="offcanvas"
-                                                            data-bs-target="#candidate_details"
-                                                        >
-                                                            Margaret Soto
-                                                        </Link>
-                                                    </h6>
-                                                    <span className="badge bg-primary-transparent">
-                                                        Cand-008
-                                                    </span>
-                                                </div>
-                                                <p className="text-gray fs-13 fw-normal">
-                                                    margaret@example.com
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-light rounder p-2">
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Role</h6>
-                                            <span className="text-dark fs-14 fw-medium">SEO Analyst</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Date</h6>
-                                            <span className="text-dark fs-14 fw-medium">12 Sep 2024</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between">
-                                            <h6 className="text-gray fs-14 fw-normal">Status</h6>
-                                            <span className="fs-10 fw-medium badge bg-pink">
-                                                {" "}
-                                                <i className="ti ti-point-filled" /> Scheduled
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xxl-3 col-xl-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="d-flex justify-content-between align-items-start mb-3">
-                                        <div className="d-flex align-items-center flex-shrink-0">
-                                            <Link
-                                                to="#"
-                                                className="avatar avatar-lg avatar rounded-circle me-2"
-                                                data-bs-toggle="offcanvas"
-                                                data-bs-target="#candidate_details"
-                                            >
-                                                <ImageWithBasePath
-                                                    src="assets/img/users/user-48.jpg"
-                                                    className="img-fluid h-auto w-auto"
-                                                    alt="img"
-                                                />
-                                            </Link>
-                                            <div className="d-flex flex-column">
-                                                <div className="d-flex flex-wrap mb-1">
-                                                    <h6 className="fs-16 fw-semibold me-1">
-                                                        <Link
-                                                            to="#"
-                                                            data-bs-toggle="offcanvas"
-                                                            data-bs-target="#candidate_details"
-                                                        >
-                                                            Jeffrey Thaler
-                                                        </Link>
-                                                    </h6>
-                                                    <span className="badge bg-primary-transparent">
-                                                        Cand-009
-                                                    </span>
-                                                </div>
-                                                <p className="text-gray fs-13 fw-normal">
-                                                    jeffrey@example.com
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-light rounder p-2">
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Role</h6>
-                                            <span className="text-dark fs-14 fw-medium">Admin</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Date</h6>
-                                            <span className="text-dark fs-14 fw-medium">12 Sep 2024</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between">
-                                            <h6 className="text-gray fs-14 fw-normal">Status</h6>
-                                            <span className="fs-10 fw-medium badge bg-purple">
-                                                {" "}
-                                                <i className="ti ti-point-filled" /> New
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xxl-3 col-xl-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="d-flex justify-content-between align-items-start mb-3">
-                                        <div className="d-flex align-items-center flex-shrink-0">
-                                            <Link
-                                                to="#"
-                                                className="avatar avatar-lg avatar rounded-circle me-2"
-                                                data-bs-toggle="offcanvas"
-                                                data-bs-target="#candidate_details"
-                                            >
-                                                <ImageWithBasePath
-                                                    src="assets/img/users/user-47.jpg"
-                                                    className="img-fluid h-auto w-auto"
-                                                    alt="img"
-                                                />
-                                            </Link>
-                                            <div className="d-flex flex-column">
-                                                <div className="d-flex flex-wrap mb-1">
-                                                    <h6 className="fs-16 fw-semibold me-1">
-                                                        <Link
-                                                            to="#"
-                                                            data-bs-toggle="offcanvas"
-                                                            data-bs-target="#candidate_details"
-                                                        >
-                                                            Joyce Golston
-                                                        </Link>
-                                                    </h6>
-                                                    <span className="badge bg-primary-transparent">
-                                                        Cand-010
-                                                    </span>
-                                                </div>
-                                                <p className="text-gray fs-13 fw-normal">
-                                                    joyce@example.com
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-light rounder p-2">
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Role</h6>
-                                            <span className="text-dark fs-14 fw-medium">
-                                                Business Analyst
-                                            </span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Date</h6>
-                                            <span className="text-dark fs-14 fw-medium">12 Sep 2024</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between">
-                                            <h6 className="text-gray fs-14 fw-normal">Status</h6>
-                                            <span className="fs-10 fw-medium badge bg-success">
-                                                {" "}
-                                                <i className="ti ti-point-filled" /> Hired
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xxl-3 col-xl-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="d-flex justify-content-between align-items-start mb-3">
-                                        <div className="d-flex align-items-center flex-shrink-0">
-                                            <Link
-                                                to="#"
-                                                className="avatar avatar-lg avatar rounded-circle me-2"
-                                                data-bs-toggle="offcanvas"
-                                                data-bs-target="#candidate_details"
-                                            >
-                                                <ImageWithBasePath
-                                                    src="assets/img/users/user-49.jpg"
-                                                    className="img-fluid h-auto w-auto"
-                                                    alt="img"
-                                                />
-                                            </Link>
-                                            <div className="d-flex flex-column">
-                                                <div className="d-flex flex-wrap mb-1">
-                                                    <h6 className="fs-16 fw-semibold me-1">
-                                                        <Link
-                                                            to="#"
-                                                            data-bs-toggle="offcanvas"
-                                                            data-bs-target="#candidate_details"
-                                                        >
-                                                            Cedric Rosalez
-                                                        </Link>
-                                                    </h6>
-                                                    <span className="badge bg-primary-transparent">
-                                                        Cand-011
-                                                    </span>
-                                                </div>
-                                                <p className="text-gray fs-13 fw-normal">
-                                                    cedric@example.com
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-light rounder p-2">
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Role</h6>
-                                            <span className="text-dark fs-14 fw-medium">
-                                                Financial Analyst
-                                            </span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Date</h6>
-                                            <span className="text-dark fs-14 fw-medium">12 Sep 2024</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between">
-                                            <h6 className="text-gray fs-14 fw-normal">Status</h6>
-                                            <span className="fs-10 fw-medium badge bg-purple">
-                                                {" "}
-                                                <i className="ti ti-point-filled" /> New
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xxl-3 col-xl-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="d-flex justify-content-between align-items-start mb-3">
-                                        <div className="d-flex align-items-center flex-shrink-0">
-                                            <Link
-                                                to="#"
-                                                className="avatar avatar-lg avatar rounded-circle me-2"
-                                                data-bs-toggle="offcanvas"
-                                                data-bs-target="#candidate_details"
-                                            >
-                                                <ImageWithBasePath
-                                                    src="assets/img/users/user-50.jpg"
-                                                    className="img-fluid h-auto w-auto"
-                                                    alt="img"
-                                                />
-                                            </Link>
-                                            <div className="d-flex flex-column">
-                                                <div className="d-flex flex-wrap mb-1">
-                                                    <h6 className="fs-16 fw-semibold me-1">
-                                                        <Link
-                                                            to="#"
-                                                            data-bs-toggle="offcanvas"
-                                                            data-bs-target="#candidate_details"
-                                                        >
-                                                            Lillie Diaz
-                                                        </Link>
-                                                    </h6>
-                                                    <span className="badge bg-primary-transparent">
-                                                        Cand-012
-                                                    </span>
-                                                </div>
-                                                <p className="text-gray fs-13 fw-normal">
-                                                    lillie@example.com
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-light rounder p-2">
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Role</h6>
-                                            <span className="text-dark fs-14 fw-medium">
-                                                Receptionist
-                                            </span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between mb-2">
-                                            <h6 className="text-gray fs-14 fw-normal">Applied Date</h6>
-                                            <span className="text-dark fs-14 fw-medium">12 Sep 2024</span>
-                                        </div>
-                                        <div className="d-flex align-items-center justify-content-between">
-                                            <h6 className="text-gray fs-14 fw-normal">Status</h6>
-                                            <span className="fs-10 fw-medium badge bg-danger">
-                                                {" "}
-                                                <i className="ti ti-point-filled" /> Rejected
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                            ))
+                        )}
                         <div className="col-md-12">
                             <div className="text-center mb-4">
                                 <Link to="#" className="btn btn-primary">
