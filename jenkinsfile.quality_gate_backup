@@ -96,10 +96,10 @@ pipeline {
                                 }
                             }
                         }
-                        // stage('Quality Gate') {
-                        //     when { expression { !params.SKIP_SONAR } }
-                        //     steps { waitForQualityGate abortPipeline:true }
-                        // }
+                        stage('Quality Gate') {
+                            when { expression { !params.SKIP_SONAR } }
+                            steps { waitForQualityGate abortPipeline:true }
+                        }
                     }
                 }
 
@@ -132,10 +132,10 @@ pipeline {
                                 }
                             }
                         }
-                        // stage('Quality Gate') {
-                        //     when { expression { !params.SKIP_SONAR } }
-                        //     steps { waitForQualityGate abortPipeline:true }
-                        // }
+                        stage('Quality Gate') {
+                            when { expression { !params.SKIP_SONAR } }
+                            steps { waitForQualityGate abortPipeline:true }
+                        }
                     }
                 }
 
@@ -168,10 +168,10 @@ pipeline {
                                 }
                             }
                         }
-                        // stage('Quality Gate') {
-                        //     when { expression { !params.SKIP_SONAR } }
-                        //     steps { waitForQualityGate abortPipeline:true }
-                        // }
+                        stage('Quality Gate') {
+                            when { expression { !params.SKIP_SONAR } }
+                            steps { waitForQualityGate abortPipeline:true }
+                        }
                     }
                 }
 
@@ -204,10 +204,10 @@ pipeline {
                                 }
                             }
                         }
-                        // stage('Quality Gate') {
-                        //     when { expression { !params.SKIP_SONAR } }
-                        //     steps { waitForQualityGate abortPipeline:true }
-                        // }
+                        stage('Quality Gate') {
+                            when { expression { !params.SKIP_SONAR } }
+                            steps { waitForQualityGate abortPipeline:true }
+                        }
                     }
                 }
 
@@ -248,10 +248,10 @@ pipeline {
                                 }
                             }
                         }
-                        // stage('Quality Gate') {
-                        //     when { expression { !params.SKIP_SONAR } }
-                        //     steps { waitForQualityGate abortPipeline:true }
-                        // }
+                        stage('Quality Gate') {
+                            when { expression { !params.SKIP_SONAR } }
+                            steps { waitForQualityGate abortPipeline:true }
+                        }
                     }
                 }
             }
