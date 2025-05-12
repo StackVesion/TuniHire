@@ -7,24 +7,15 @@ pipeline {
   }
 
   environment {
-    // SonarQube
     SONAR_HOST_URL   = "http://localhost:9000"
-    SONAR_AUTH_TOKEN = credentials('scanner')    // your Sonar token stored as Secret Text
-
-    // Nexus Docker registry
+    SONAR_AUTH_TOKEN = credentials('scanner')
     NEXUS_REGISTRY_URL   = "172.23.202.74:8083"
     NEXUS_CREDENTIALS_ID = "nexus"
-
-    // GitHub credential (if you ever need to push/tag)
     GITHUB_CREDENTIALS_ID = "98a74c8f-9f44-4e31-aa6a-6eec112c23f4"
-
-    // App version (build number suffix)
-    BASE_APP_VERSION = "1.0.${BUILD_NUMBER}"
-
-    // App config URLs
-    GITHUB_CALLBACK_URL = "http://localhost:5000/auth/github/callback"
-    FRONTEND_URL        = "http://localhost:3000"
-    SMTP_PORT           = "587"
+    BASE_APP_VERSION     = "1.0.${BUILD_NUMBER}"
+    GITHUB_CALLBACK_URL  = "http://localhost:5000/auth/github/callback"
+    FRONTEND_URL         = "http://localhost:3000"
+    SMTP_PORT            = "587"
   }
 
   options {
@@ -34,7 +25,7 @@ pipeline {
     parallelsAlwaysFailFast()
   }
 
-  parameters {
+   parameters {
     booleanParam(name: 'SKIP_TESTS',             defaultValue: false, description: 'Skip tests')
     booleanParam(name: 'SKIP_SONAR',             defaultValue: false, description: 'Skip SonarQube analysis')
     booleanParam(name: 'SKIP_DOCKER_BUILD_PUSH', defaultValue: false, description: 'Skip Docker build & push')
@@ -51,13 +42,12 @@ pipeline {
 
     stage('Setup Environment') {
       steps {
-        script {
-          echo "🖥  Node: $(node --version)"
-          echo "📦 NPM : $(npm --version)"
-          echo "☕️ Java: $(java --version)"
-          echo "🐳 Docker: $(docker --version)"
-          echo "🐳 Compose: $(docker-compose --version)"
-        }
+        echo "🔧 Verifying tool versions"
+        sh 'node --version'
+        sh 'npm --version'
+        sh 'java --version'
+        sh 'docker --version'
+        sh 'docker-compose --version'
       }
     }
 
@@ -272,8 +262,9 @@ pipeline {
   }
 
   post {
-    always  { echo "🧹 Cleaning workspace"; cleanWs() }
-    success { echo "✅ Pipeline completed successfully!" }
-    failure { echo "❌ Pipeline failed — check the logs!" }
+    always  { cleanWs() }
+    success { echo '✅ Pipeline completed successfully!' }
+    failure { echo '❌ Pipeline failed — check the logs!' }
   }
+
 }
