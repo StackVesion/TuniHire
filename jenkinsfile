@@ -1,11 +1,6 @@
 pipeline {
   agent any
 
-  // Make sure you've configured a SonarQube Scanner installation named "scanner" 
-  tools {
-    sonarRunner 'scanner'
-  }
-
   environment {
     SONAR_HOST_URL   = "http://localhost:9000"
     SONAR_AUTH_TOKEN = credentials('scanner')
@@ -71,9 +66,10 @@ pipeline {
               when { expression { !params.SKIP_SONAR } }
               steps {
                 dir(MODULE_DIR) {
+                def scannerHome = tool 'scanner'
                   withSonarQubeEnv('scanner') {
                     sh """
-                      sonar-scanner \
+                        ${scannerHome}/bin/sonar-scanner \
                         -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                         -Dsonar.sources=. \
                         -Dsonar.host.url=${SONAR_HOST_URL} \
@@ -104,9 +100,10 @@ pipeline {
               when { expression { !params.SKIP_SONAR } }
               steps {
                 dir(MODULE_DIR) {
+                def scannerHome = tool 'scanner'
                   withSonarQubeEnv('scanner') {
                     sh """
-                      sonar-scanner \
+                        ${scannerHome}/bin/sonar-scanner \
                         -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                         -Dsonar.sources=. \
                         -Dsonar.host.url=${SONAR_HOST_URL} \
@@ -137,9 +134,10 @@ pipeline {
               when { expression { !params.SKIP_SONAR } }
               steps {
                 dir(MODULE_DIR) {
+                def scannerHome = tool 'scanner'
                   withSonarQubeEnv('scanner') {
                     sh """
-                      sonar-scanner \
+                        ${scannerHome}/bin/sonar-scanner \
                         -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                         -Dsonar.sources=. \
                         -Dsonar.host.url=${SONAR_HOST_URL} \
@@ -170,9 +168,10 @@ pipeline {
               when { expression { !params.SKIP_SONAR } }
               steps {
                 dir(MODULE_DIR) {
+                def scannerHome = tool 'scanner'
                   withSonarQubeEnv('scanner') {
                     sh """
-                      sonar-scanner \
+                        ${scannerHome}/bin/sonar-scanner \
                         -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                         -Dsonar.sources=. \
                         -Dsonar.host.url=${SONAR_HOST_URL} \
@@ -207,15 +206,16 @@ pipeline {
             stage('SonarQube Analysis') {
               when { expression { !params.SKIP_SONAR } }
               steps {
-                withSonarQubeEnv('scanner') {
-                  sh """
-                    sonar-scanner \
-                      -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                      -Dsonar.sources=. \
-                      -Dsonar.host.url=${SONAR_HOST_URL} \
-                      -Dsonar.login=${SONAR_AUTH_TOKEN}
-                  """
-                }
+                def scannerHome = tool 'scanner'
+                  withSonarQubeEnv('scanner') {
+                    sh """
+                        ${scannerHome}/bin/sonar-scanner \
+                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=${SONAR_HOST_URL} \
+                        -Dsonar.login=${SONAR_AUTH_TOKEN}
+                    """
+                  }
               }
             }
           }
