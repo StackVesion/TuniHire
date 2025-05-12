@@ -7,7 +7,7 @@ pipeline {
         scannerHome = tool 'scanner' // This might still be used by other stages or for general SonarQube plugin functionality
         // WSL & Docker Configuration
         SONAR_HOST_URL        = "http://localhost:9000"
-        NEXUS_REGISTRY_URL    = "172.23.202.74:8083" 
+        NEXUS_REGISTRY_URL    = "localhost:8083"
         NEXUS_CREDENTIALS_ID   = "nexus"
         SONAR_TOKEN_ID         = "scanner" // This is the Jenkins credential ID for SonarQube token
         GITHUB_CREDENTIALS_ID  = "98a74c8f-9f44-4e31-aa6a-6eec112c23f4"
@@ -271,10 +271,6 @@ pipeline {
             when { expression { !params.SKIP_DEPLOY } }
             steps {
                 sh 'docker-compose -f docker-compose.yml down --remove-orphans'
-                // Pull explicite des dernières images depuis Nexus, comme suggéré par le guide et les bonnes pratiques
-                withDockerRegistry(credentialsId: env.NEXUS_CREDENTIALS_ID, url: "http://${env.NEXUS_REGISTRY_URL}") {
-                    sh 'docker-compose -f docker-compose.yml pull'
-                }
                 withCredentials([
                         string(credentialsId: 'SESSION_SECRET',      variable: 'SESSION_SECRET'),
                         string(credentialsId: 'OPENAI_API_KEY',     variable: 'OPENAI_API_KEY'),

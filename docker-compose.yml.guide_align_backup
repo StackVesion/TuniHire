@@ -2,7 +2,6 @@ version: '3.8'
 
 services:
   tunihire_backend:
-    image: ${NEXUS_REGISTRY_URL}/tunihire-backend:${BASE_APP_VERSION}
     build:
       context: ./Back-End
       dockerfile: Dockerfile
@@ -47,7 +46,6 @@ services:
       - tunihire_network
 
   tunihire_frontend:
-    image: ${NEXUS_REGISTRY_URL}/tunihire-frontend:${BASE_APP_VERSION}
     build:
       context: ./Front-End
       dockerfile: Dockerfile
@@ -64,7 +62,6 @@ services:
       - tunihire_network
 
   tunihire_company_panel:
-    image: ${NEXUS_REGISTRY_URL}/tunihire-company-panel:${BASE_APP_VERSION}
     build:
       context: ./Company-Panel
       dockerfile: Dockerfile
@@ -82,7 +79,6 @@ services:
       - tunihire_network
 
   tunihire_admin_panel:
-    image: ${NEXUS_REGISTRY_URL}/tunihire-admin-panel:${BASE_APP_VERSION}
     build:
       context: ./Admin-Panel
       dockerfile: Dockerfile
@@ -99,7 +95,6 @@ services:
       - tunihire_network
 
   tunihire_ai_service:
-    image: ${NEXUS_REGISTRY_URL}/tunihire-ai-service:${BASE_APP_VERSION}
     build:
       context: ./AI-Service
       dockerfile: Dockerfile
