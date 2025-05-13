@@ -1,12 +1,15 @@
 import React, { useState } from 'react'
-// Import Swiper React components
+import ImageWithBasePath from '../../../core/common/imageWithBasePath';
+
+// Importations simplifiées pour Swiper v8
+import SwiperCore, { Pagination, Navigation, Mousewheel, Keyboard, Scrollbar, EffectCube, EffectFade, EffectFlip, EffectCoverflow, FreeMode, Thumbs, Autoplay } from 'swiper';
 import { Swiper, SwiperSlide } from 'swiper/react';
 
 // Import Swiper styles
+import 'swiper/css';
 
-// import required modules
-import { Pagination, Navigation, Mousewheel, Keyboard, Scrollbar, EffectCube, EffectFade, EffectFlip, EffectCoverflow, FreeMode, Thumbs, Autoplay } from 'swiper/modules';
-import ImageWithBasePath from '../../../core/common/imageWithBasePath';
+// Installer les modules Swiper
+SwiperCore.use([Pagination, Navigation, Mousewheel, Keyboard, Scrollbar, EffectCube, EffectFade, EffectFlip, EffectCoverflow, FreeMode, Thumbs, Autoplay]);
 
 const Swiperjs = () => {
 

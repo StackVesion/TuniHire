@@ -20,7 +20,15 @@ const JobGrid = () => {
     const fetchApplications = async () => {
         try {
             setLoading(true);
-            const response = await axios.get('http://localhost:5000/api/applications');
+            // Récupérer le token d'authentification du stockage local
+            const token = localStorage.getItem('token');
+            
+            // Faire l'appel API avec le token dans les en-têtes
+            const response = await axios.get('http://localhost:5000/api/applications', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
             setApplications(response.data);
         } catch (err) {
             console.error('Error fetching applications:', err);
@@ -32,8 +40,15 @@ const JobGrid = () => {
 
     const handleStatusChange = async (applicationId: string, newStatus: 'Accepted' | 'Rejected') => {
         try {
+            // Récupérer le token d'authentification
+            const token = localStorage.getItem('token');
+            
             await axios.patch(`http://localhost:5000/api/applications/${applicationId}/status`, {
                 status: newStatus
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
             });
             // Mettre à jour l'état local après le changement de statut
             setApplications(applications.map(app => 
@@ -138,17 +153,17 @@ const JobGrid = () => {
                                                         <Link to="#" className="me-2">
                                                             <span className="avatar avatar-lg bg-white">
                                                                 <ImageWithBasePath
-                                                                    src={application.userId.profilePicture || "assets/img/profiles/avatar-01.jpg"}
-                                                                    alt={application.userId.firstName}
+                                                                    src={(application.userId && application.userId.profilePicture) || "assets/img/profiles/avatar-01.jpg"}
+                                                                    alt={(application.userId && application.userId.firstName) || "User"}
                                                                     className="rounded-circle"
                                                                 />
                                                             </span>
                                                         </Link>
                                                         <div>
                                                             <h6 className="fw-medium mb-1 text-truncate">
-                                                                {`${application.userId.firstName} ${application.userId.lastName}`}
+                                                                {application.userId ? `${application.userId.firstName || ""} ${application.userId.lastName || ""}` : "Anonymous User"}
                                                             </h6>
-                                                            <p className="fs-12 text-gray fw-normal">{application.userId.email}</p>
+                                                            <p className="fs-12 text-gray fw-normal">{application.userId ? application.userId.email : "No email available"}</p>
                                                         </div>
                                                     </div>
                                                 </div>

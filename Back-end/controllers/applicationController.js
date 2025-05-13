@@ -47,10 +47,15 @@ exports.uploadResume = upload.single('resume');
 exports.getAllApplications = async (req, res) => {
   try {
     const applications = await Application.find()
-      .populate('userId')
-      .populate('jobId');
+      .populate('userId', 'firstName lastName email profilePicture')
+      .populate({
+        path: 'jobId',
+        populate: { path: 'companyId', select: 'name logo' }
+      })
+      .sort({ createdAt: -1 });
     res.status(200).json(applications);
   } catch (error) {
+    console.error('Error fetching all applications:', error);
     res.status(500).json({ error: error.message });
   }
 };
