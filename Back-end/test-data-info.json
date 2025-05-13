@@ -1,0 +1,57 @@
+{
+  "timestamp": "2025-05-06T17:21:59.210Z",
+  "testUserCredentials": {
+    "hr": {
+      "email": "mohamed.benali@example.com",
+      "password": "password123"
+    },
+    "candidate": {
+      "email": "ahmed.mejri@example.com",
+      "password": "password123"
+    }
+  },
+  "sampleIds": {
+    "companies": [
+      "681a4536ac8558e08d82d2e2",
+      "681a4536ac8558e08d82d2e4"
+    ],
+    "hrUsers": [
+      "681a4536ac8558e08d82d2e6",
+      "681a4536ac8558e08d82d2e8"
+    ],
+    "candidateUsers": [
+      "681a4536ac8558e08d82d2ea",
+      "681a4536ac8558e08d82d2ec",
+      "681a4537ac8558e08d82d2ee",
+      "681a4537ac8558e08d82d2f0",
+      "681a4537ac8558e08d82d2f2"
+    ],
+    "portfolios": [
+      "681a4537ac8558e08d82d2f4",
+      "681a4537ac8558e08d82d2fa",
+      "681a4537ac8558e08d82d300",
+      "681a4537ac8558e08d82d306",
+      "681a4537ac8558e08d82d30c"
+    ],
+    "jobPosts": [
+      "681a4537ac8558e08d82d312",
+      "681a4537ac8558e08d82d314",
+      "681a4537ac8558e08d82d316",
+      "681a4537ac8558e08d82d318",
+      "681a4537ac8558e08d82d31a"
+    ],
+    "applications": [
+      "681a4537ac8558e08d82d31c",
+      "681a4537ac8558e08d82d31e",
+      "681a4537ac8558e08d82d320",
+      "681a4537ac8558e08d82d322",
+      "681a4537ac8558e08d82d324",
+      "681a4537ac8558e08d82d326",
+      "681a4537ac8558e08d82d328",
+      "681a4537ac8558e08d82d32a",
+      "681a4537ac8558e08d82d32c",
+      "681a4537ac8558e08d82d32e"
+    ]
+  },
+  "recommendationTestEndpoint": "http://localhost:5001/api/recommendation?user_id=681a4536ac8558e08d82d2ea&job_id=681a4537ac8558e08d82d312"
+}

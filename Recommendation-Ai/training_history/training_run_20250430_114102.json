@@ -1,0 +1,13 @@
+{
+  "event": "application_startup",
+  "database_status": "Connected",
+  "collections": [],
+  "port": 5000,
+  "debug_mode": true,
+  "environment": {
+    "python_version": "3.10.9 (tags/v3.10.9:1dd9be6, Dec  6 2022, 20:01:21) [MSC v.1934 64 bit (AMD64)]",
+    "os": "nt"
+  },
+  "timestamp": "20250430_114102",
+  "datetime": "2025-04-30 11:41:02"
+}

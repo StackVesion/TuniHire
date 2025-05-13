@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<testsuites><testsuite name="Face Recognition Tests" tests="1" errors="0" failures="0" skipped="0" timestamp="2025-05-11T19:02:04.171296"><testcase name="test_dummy" classname="DummyFaceTest" /></testsuite></testsuites>

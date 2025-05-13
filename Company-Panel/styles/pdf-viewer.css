@@ -1,0 +1,132 @@
+/* PDF Viewer Styles */
+.pdf-viewer-container {
+  font-family: 'Inter', sans-serif;
+}
+
+.pdf-viewer-header {
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.file-name {
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.pdf-viewer-content {
+  position: relative;
+  border: 1px solid #e9ecef;
+  border-radius: 0.375rem;
+  background-color: #f8f9fa;
+  overflow: hidden;
+}
+
+.pdf-viewer-content.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.pdf-loading {
+  text-align: center;
+}
+
+.pdf-document-container {
+  max-width: 100%;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.pdf-document {
+  max-width: 100%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.pdf-page {
+  border-radius: 0.25rem;
+  margin-bottom: 0.5rem;
+  background-color: white;
+}
+
+.pdf-navigation {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.current-page {
+  margin: 0 1rem;
+  display: inline-block;
+  min-width: 100px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.fullscreen-overlay {
+  backdrop-filter: blur(5px);
+}
+
+/* Resume styles in application dialog */
+.pdf-icon-wrapper {
+  transition: transform 0.2s;
+}
+
+.pdf-icon-wrapper:hover {
+  transform: scale(1.05);
+}
+
+.pdf-actions .btn {
+  transition: all 0.2s;
+}
+
+/* HR Contact section styling */
+.hr-contact-section {
+  transition: all 0.3s ease;
+}
+
+.hr-contact-section:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.hr-avatar {
+  transition: transform 0.3s ease;
+}
+
+.hr-avatar:hover {
+  transform: scale(1.05);
+}
+
+.icon-wrapper {
+  transition: all 0.2s ease;
+}
+
+.icon-wrapper:hover {
+  transform: scale(1.1);
+  background-color: rgba(var(--primary-rgb), 0.2) !important;
+}
+
+/* Job detail sidebar styles */
+.job-detail-sidebar {
+  scrollbar-width: thin;
+}
+
+.job-detail-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.job-detail-sidebar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.job-detail-sidebar::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.job-detail-sidebar::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}

@@ -1,0 +1,34 @@
+# Environment Variables - exclude all environment files except examples
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.backup
+.env.docker
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.ci
+
+# Node modules
+node_modules/
+
+# Next.js build files
+.next/
+out/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Local IDE files
+.idea/
+.vscode/
+*.swp
+*.swo

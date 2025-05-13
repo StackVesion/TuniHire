@@ -1,0 +1,28 @@
+FROM node:18
+
+WORKDIR /app
+
+COPY package*.json ./
+
+# Install build tools and dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3 \
+    make \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Clean npm cache and node_modules
+RUN npm cache clean --force
+
+# Install dependencies with explicit rebuild of bcrypt
+RUN npm install
+RUN npm uninstall bcrypt --no-save && npm install bcrypt --build-from-source
+
+# Copy the rest of the application
+COPY . .
+
+EXPOSE 5000
+
+CMD ["node", "server.js"]
