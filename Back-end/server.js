@@ -16,12 +16,14 @@ const path = require('path');
 require('./config/githubAuth');
 const upload = require('./utils/fileUpload');
 
+const API_URLL = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
+
 // Express app
 const app = express();
 
 // Update CORS configuration
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'https://tunihire-front-5oz083brc-fadi-zaghdouds-projects.vercel.app'],
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'https://tunihire-front-end.vercel.app', 'https://tuni-hire-wu9j.vercel.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true,
@@ -42,7 +44,7 @@ app.use(
         imgSrc: ["'self'", "data:", "blob:", "https:"],
         connectSrc: ["'self'", "https:"],
         frameSrc: ["'self'"],
-        frameAncestors: ["'self'", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
+        frameAncestors: ["'self'", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002","https://tunihire-front-end.vercel.app","https://tuni-hire-wu9j.vercel.app"],
       },
     },
     crossOriginEmbedderPolicy: false,
@@ -241,8 +243,9 @@ app.get('/api/routes', (req, res) => {
 app.get('/auth/google',
   passport.authenticate('google', { scope: ['profile', 'email'] }));
 
+
 app.get('/auth/google/callback', 
-  passport.authenticate('google', { failureRedirect: 'http://localhost:3000/page-signin' }),
+  passport.authenticate('google', { failureRedirect: `${API_URLL}/page-signin` }),
   async function(req, res) {
     try {
       const token = jwt.sign(
@@ -259,12 +262,12 @@ app.get('/auth/google/callback',
         role: req.user.role,
         googleId: req.user.googleId
       };
-
+        
       const userDataParam = encodeURIComponent(JSON.stringify(userData));
-      res.redirect(`http://localhost:3000/?token=${token}&userData=${userDataParam}`);
+      res.redirect(`${API_URLL}/?token=${token}&userData=${userDataParam}`);
     } catch (error) {
       console.error("Error in Google callback:", error);
-      res.redirect('http://localhost:3000/page-signin?error=Authentication failed');
+      res.redirect(`${API_URLL}/page-signin?error=Authentication failed`);
     }
   });
 
@@ -276,7 +279,7 @@ app.get('/auth/github/callback',
   function(req, res, next) {
     console.log("GitHub callback received, authenticating with passport");
     passport.authenticate('github', { 
-      failureRedirect: 'http://localhost:3000/page-signin?error=github_auth_failed',
+      failureRedirect: `${API_URLL}/page-signin?error=github_auth_failed`,
       failWithError: true 
     })(req, res, next);
   },
@@ -300,15 +303,15 @@ app.get('/auth/github/callback',
       };
       
       const userDataParam = encodeURIComponent(JSON.stringify(userData));
-      res.redirect(`http://localhost:3000/?token=${token}&userData=${userDataParam}`);
+      res.redirect(`${API_URLL}/?token=${token}&userData=${userDataParam}`);
     } catch (error) {
       console.error("Error in GitHub callback:", error);
-      res.redirect('http://localhost:3000/page-signin?error=Authentication failed');
+      res.redirect(`${API_URLL}/page-signin?error=Authentication failed`);
     }
   },
   function(err, req, res, next) {
     console.error("GitHub auth error:", err);
-    res.redirect(`http://localhost:3000/page-signin?error=${encodeURIComponent(err.message || 'Authentication failed')}`);
+    res.redirect(`${API_URLL}/page-signin?error=${encodeURIComponent(err.message || 'Authentication failed')}`);
   }
 );
 
@@ -341,7 +344,7 @@ app.get('/auth/logout', (req, res) => {
     req.session.destroy((err) => {
       if (err) console.error("Session destruction error:", err);
       res.clearCookie('connect.sid', { path: '/' });
-      res.redirect('http://localhost:3000/page-signin');
+      res.redirect(`${API_URLL}/page-signin`);
     });
   });
 });
