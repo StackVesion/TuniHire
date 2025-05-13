@@ -9,6 +9,28 @@ const Company = require("../models/Company");
 const path = require("path");
 const fs = require("fs");
 
+// Route for Admin Panel to get all applications
+router.get("/", verifyToken, async (req, res) => {
+  try {
+    // Verify the user is an admin
+    if (!req.user.role || req.user.role.toString().toUpperCase() !== 'ADMIN') {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Unauthorized: Only admin users can view all applications' 
+      });
+    }
+    
+    // Use the controller to get all applications
+    await applicationController.getAllApplications(req, res);
+  } catch (error) {
+    console.error('Error in admin applications route:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
+});
+
 // Get all applications for current user (both endpoints for compatibility)
 router.get("/my-applications", verifyToken, async (req, res) => {
   try {

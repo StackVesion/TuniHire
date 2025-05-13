@@ -6,7 +6,9 @@ const path = require("path");
 const crypto = require("crypto");
 const jwt = require('jsonwebtoken'); // Add this line to import jwt
 const { sendVerificationEmail } = require('../config/emailService');
-const { getUsers, createUser, signIn, signInn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, updateUser, deleteUser, validateToken, generateNewVerificationToken, updateUserRole, getAllUsers, getPublicUserProfile, forgotPassword, resetPassword } = require("../controllers/userController");
+
+const { getUsers, createUser, signIn, signInn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, updateUser, deleteUser, validateToken, generateNewVerificationToken, updateUserRole, getAllUsers, getPublicUserProfile, forgotPassword, resetPassword, verifyResetToken } = require("../controllers/userController");
+
 const fs = require('fs');
 
 const router = express.Router();
@@ -607,7 +609,7 @@ router.post('/refresh-token', async (req, res) => {
     
     // Generate new access token
     const accessToken = jwt.sign(
-      { userId: user._id, email: user.email, role: user.role },
+       : user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'your-jwt-secret',
       { expiresIn: '1h' } // You can adjust expiration time
     );
@@ -620,10 +622,11 @@ router.post('/refresh-token', async (req, res) => {
   }
 });
 
-// Route pour le mot de passe oublié
-router.post("/forgot-password", forgotPassword);
 
-// Route pour réinitialiser le mot de passe avec token
-router.post("/reset-password", resetPassword);
+// Routes pour la réinitialisation de mot de passe
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
+router.get('/verify-reset-token', verifyResetToken);
+>>>>>
 
 module.exports = router;
