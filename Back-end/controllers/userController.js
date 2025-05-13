@@ -1273,6 +1273,81 @@ const verifyUserProfile = async (req, res) => {
     }
 };
 
+// Generate reset password token
+const forgotPassword = async (req, res) => {
+    try {
+        const { email, role } = req.body;
+        const user = await User.findOne({ email, role });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Generate reset token
+        const resetToken = crypto.randomBytes(32).toString("hex");
+        const resetTokenExpiry = Date.now() + 3600000; // Token valid for 1 hour
+
+        // Save token to user
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordExpires = resetTokenExpiry;
+        await user.save();
+
+        // Send reset email
+        const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+        const emailSubject = "Password Reset Request";
+        const emailText = `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n
+            Please click on the following link, or paste this into your browser to complete the process:\n\n
+            ${resetUrl}\n\n
+            If you did not request this, please ignore this email and your password will remain unchanged.\n`;
+
+        await sendVerificationEmail(email, emailSubject, emailText);
+
+        res.status(200).json({
+            message: "Reset password link sent to your email address"
+        });
+    } catch (error) {
+        console.error("Password reset error:", error);
+        res.status(500).json({
+            message: "Error sending reset password email"
+        });
+    }
+};
+
+// Reset password with token
+const resetPassword = async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        
+        const user = await User.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpires: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            return res.status(400).json({
+                message: "Password reset token is invalid or has expired"
+            });
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        
+        await user.save();
+
+        res.status(200).json({
+            message: "Password has been reset successfully"
+        });
+    } catch (error) {
+        console.error("Reset password error:", error);
+        res.status(500).json({
+            message: "Error resetting password"
+        });
+    }
+};
+
 // Keep the main module.exports with all functions
 module.exports = {
     getUsers,
@@ -1293,5 +1368,7 @@ module.exports = {
     updateUserRole,
     getAllUsers,
     getPublicUserProfile,
-    verifyUserProfile
+    verifyUserProfile,
+    forgotPassword,
+    resetPassword
 };

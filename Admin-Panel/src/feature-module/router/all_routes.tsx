@@ -18,6 +18,10 @@ export const all_routes = {
   socialFeed: "/application/social-feed",
   kanbanView: "/application/kanban-view",
   invoice: "/application/invoices",
+  
+  // Applications management routes
+  applicationsList: "/applications",
+  applicationDetail: "/applications/:id",
 
   //super admin module
   superAdminDashboard: "/super-admin/dashboard",
