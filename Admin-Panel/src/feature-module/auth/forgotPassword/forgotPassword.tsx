@@ -1,15 +1,52 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { all_routes } from "../../router/all_routes";
 import ImageWithBasePath from "../../../core/common/imageWithBasePath";
+import { forgotPassword } from "../../../services/authService";
 
 const ForgotPassword = () => {
   const routes = all_routes;
-  const navigation = useNavigate();
-
-  const navigationPath = () => {
-    navigation(routes.resetPassword);
+  const navigate = useNavigate();
+  
+  // State
+  const [email, setEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState({ text: "", isError: false });
+  
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate email
+    if (!email || !email.includes('@')) {
+      setMessage({ text: "Please enter a valid email address", isError: true });
+      return;
+    }
+    
+    // Submit form
+    setIsSubmitting(true);
+    setMessage({ text: "", isError: false });
+    
+    try {
+      const response = await forgotPassword(email);
+      
+      if (response.success) {
+        setMessage({ text: response.message, isError: false });
+        // Optionally redirect after a delay
+        setTimeout(() => {
+          navigate(routes.login);
+        }, 3000);
+      } else {
+        setMessage({ text: response.message, isError: true });
+      }
+    } catch (error) {
+      setMessage({ text: "An unexpected error occurred", isError: true });
+      console.error("Password reset error:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+  
   return (
     <div className="container-fuild">
       <div className="w-100 overflow-hidden position-relative flex-wrap d-block vh-100">
@@ -42,7 +79,7 @@ const ForgotPassword = () => {
           <div className="col-lg-7 col-md-12 col-sm-12">
             <div className="row justify-content-center align-items-center vh-100 overflow-auto flex-wrap">
               <div className="col-md-7 mx-auto vh-100">
-                <form className="vh-100">
+                <form className="vh-100" onSubmit={handleSubmit}>
                   <div className="vh-100 d-flex flex-column justify-content-between p-4 pb-0">
                     <div className=" mx-auto mb-5 text-center">
                       <ImageWithBasePath
@@ -59,13 +96,30 @@ const ForgotPassword = () => {
                           instructions to reset your password.
                         </p>
                       </div>
+                      
+                      {/* Display error or success message */}
+                      {message.text && (
+                        <div className={`alert ${message.isError ? 'alert-danger' : 'alert-success'} alert-dismissible fade show`} role="alert">
+                          {message.text}
+                          <button 
+                            type="button" 
+                            className="btn-close" 
+                            data-bs-dismiss="alert" 
+                            aria-label="Close"
+                            onClick={() => setMessage({ text: "", isError: false })}
+                          ></button>
+                        </div>
+                      )}
+                      
                       <div className="mb-3">
                         <label className="form-label">Email Address</label>
                         <div className="input-group">
                           <input
-                            type="text"
-                            defaultValue=""
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                             className="form-control border-end-0"
+                            required
                           />
                           <span className="input-group-text border-start-0">
                             <i className="ti ti-mail" />
@@ -73,8 +127,12 @@ const ForgotPassword = () => {
                         </div>
                       </div>
                       <div className="mb-3">
-                        <button type="submit" onClick={navigationPath} className="btn btn-primary w-100">
-                          Submit
+                        <button 
+                          type="submit" 
+                          className="btn btn-primary w-100"
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? 'Submitting...' : 'Submit'}
                         </button>
                       </div>
                       <div className="text-center">
@@ -97,7 +155,6 @@ const ForgotPassword = () => {
         </div>
       </div>
     </div>
-
   );
 };
 

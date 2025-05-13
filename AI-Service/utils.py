@@ -96,6 +96,24 @@ def format_api_response(data: Any, success: bool = True, message: str = None) ->
         
     return response
 
+def allowed_file(filename: str, allowed_extensions: List[str] = None) -> bool:
+    """
+    Check if a filename has an allowed extension.
+    
+    Args:
+        filename: The filename to check
+        allowed_extensions: List of allowed extensions (without dot)
+                           If None, defaults to ['pdf', 'doc', 'docx', 'txt']
+    
+    Returns:
+        True if the file extension is allowed, False otherwise
+    """
+    if allowed_extensions is None:
+        allowed_extensions = ['pdf', 'doc', 'docx', 'txt']
+        
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in allowed_extensions
+
 def safe_execute(default_return: Any = None):
     """
     Décorateur pour exécuter des fonctions en toute sécurité et capturer les exceptions.

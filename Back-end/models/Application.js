@@ -13,22 +13,53 @@ const ApplicationSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  // Resume data for Cloudinary uploads
+  // Resume data for local file storage
   resume: {
-    originalName: { type: String },
-    fileType: { type: String },
+    // Local file storage properties
+    filename: { type: String },
+    originalname: { type: String },
+    path: { type: String },
+    mimetype: { type: String },
     size: { type: Number },
     uploadDate: { type: Date, default: Date.now },
-    publicId: { type: String },
-    url: { type: String }
+    
+    // Storage type always set to local
+    storageType: { 
+      type: String, 
+      default: "local" 
+    }
+  },
+  // Resume extracted data
+  extractedData: {
+    extractedText: { type: String },
+    skills: [{ type: String }],
+    education: [{ type: String }],
+    languages: [{ type: String }],
+    experienceYears: { type: Number },
+    possibleJobTitles: [{ type: String }],
+    lastAnalyzed: { type: Date },
+    matchScore: { type: Number }
   },
   status: { 
     type: String, 
-    enum: ["Pending", "Accepted", "Rejected"], 
+    enum: ["Pending", "Accepted", "Rejected", "Interview"], 
     default: "Pending" 
   },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  feedback: { 
+    type: String 
+  },
+  appliedDate: { 
+    type: Date, 
+    default: Date.now 
+  },
+  createdAt: { 
+    type: Date, 
+    default: Date.now 
+  },
+  updatedAt: { 
+    type: Date, 
+    default: Date.now 
+  }
 });
 
 module.exports = mongoose.model("Application", ApplicationSchema);

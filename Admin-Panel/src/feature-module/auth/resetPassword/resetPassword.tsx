@@ -1,24 +1,45 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { all_routes } from "../../router/all_routes";
 import ImageWithBasePath from "../../../core/common/imageWithBasePath";
-type PasswordField = "password";
+import { resetPassword } from "../../../services/authService";
 
 const ResetPassword = () => {
   const routes = all_routes;
-  const navigation = useNavigate();
-  const navigationPath = () => {
-    navigation(routes.resetPasswordSuccess);
-  };
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Extract token from URL path or query parameters
+  const { token: pathToken } = useParams<{ token: string }>();
+  const queryParams = new URLSearchParams(location.search);
+  const queryToken = queryParams.get("token");
+  const token = pathToken || queryToken;
+  
+  // State
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState({ text: "", isError: false });
+  
   const [passwordVisibility, setPasswordVisibility] = useState({
     password: false,
     confirmPassword: false,
   });
-  const [password, setPassword] = useState("");
-  const [passwordResponce, setPasswordResponce] = useState({
-    passwordResponceText: "Use 8 or more characters with a mix of letters, numbers, and symbols.",
-    passwordResponceKey: "",
+  
+  const [passwordResponse, setPasswordResponse] = useState({
+    passwordResponseText: "Use 8 or more characters with a mix of letters, numbers, and symbols.",
+    passwordResponseKey: "",
   });
+
+  // Check if token exists
+  useEffect(() => {
+    if (!token) {
+      setMessage({
+        text: "Invalid or missing reset token. Please request a new password reset link.",
+        isError: true
+      });
+    }
+  }, [token]);
 
   const togglePasswordVisibility = (field: "password" | "confirmPassword") => {
     setPasswordVisibility((prevState) => ({
@@ -30,39 +51,92 @@ const ResetPassword = () => {
   const onChangePassword = (password: string) => {
     setPassword(password);
     if (password.match(/^$|\s+/)) {
-      setPasswordResponce({
-        passwordResponceText: "Use 8 or more characters with a mix of letters, numbers & symbols",
-        passwordResponceKey: "",
+      setPasswordResponse({
+        passwordResponseText: "Use 8 or more characters with a mix of letters, numbers & symbols",
+        passwordResponseKey: "",
       });
     } else if (password.length === 0) {
-      setPasswordResponce({
-        passwordResponceText: "",
-        passwordResponceKey: "",
+      setPasswordResponse({
+        passwordResponseText: "",
+        passwordResponseKey: "",
       });
     } else if (password.length < 8) {
-      setPasswordResponce({
-        passwordResponceText: "Weak. Must contain at least 8 characters",
-        passwordResponceKey: "0",
+      setPasswordResponse({
+        passwordResponseText: "Weak. Must contain at least 8 characters",
+        passwordResponseKey: "0",
       });
     } else if (
       password.search(/[a-z]/) < 0 ||
       password.search(/[A-Z]/) < 0 ||
       password.search(/[0-9]/) < 0
     ) {
-      setPasswordResponce({
-        passwordResponceText: "Average. Must contain at least 1 upper case and number",
-        passwordResponceKey: "1",
+      setPasswordResponse({
+        passwordResponseText: "Average. Must contain at least 1 upper case and number",
+        passwordResponseKey: "1",
       });
     } else if (password.search(/(?=.*?[#?!@$%^&*-])/) < 0) {
-      setPasswordResponce({
-        passwordResponceText: "Almost. Must contain a special symbol",
-        passwordResponceKey: "2",
+      setPasswordResponse({
+        passwordResponseText: "Almost. Must contain a special symbol",
+        passwordResponseKey: "2",
       });
     } else {
-      setPasswordResponce({
-        passwordResponceText: "Awesome! You have a secure password.",
-        passwordResponceKey: "3",
+      setPasswordResponse({
+        passwordResponseText: "Awesome! You have a secure password.",
+        passwordResponseKey: "3",
       });
+    }
+  };
+  
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate inputs
+    if (!token) {
+      setMessage({
+        text: "Reset token is missing. Please request a new password reset link.",
+        isError: true
+      });
+      return;
+    }
+    
+    if (!password || password.length < 8) {
+      setMessage({
+        text: "Please enter a strong password (at least 8 characters)",
+        isError: true
+      });
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      setMessage({
+        text: "Passwords do not match",
+        isError: true
+      });
+      return;
+    }
+    
+    // Submit form
+    setIsSubmitting(true);
+    setMessage({ text: "", isError: false });
+    
+    try {
+      const response = await resetPassword(token, password);
+      
+      if (response.success) {
+        setMessage({ text: response.message, isError: false });
+        // Redirect after successful password reset
+        setTimeout(() => {
+          navigate(routes.resetPasswordSuccess);
+        }, 2000);
+      } else {
+        setMessage({ text: response.message, isError: true });
+      }
+    } catch (error) {
+      setMessage({ text: "An unexpected error occurred", isError: true });
+      console.error("Password reset error:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -98,7 +172,7 @@ const ResetPassword = () => {
           <div className="col-lg-7 col-md-12 col-sm-12">
             <div className="row justify-content-center align-items-center vh-100 overflow-auto flex-wrap">
               <div className="col-md-7 mx-auto vh-100">
-                <form action="success.html" className="vh-100">
+                <form onSubmit={handleSubmit} className="vh-100">
                   <div className="vh-100 d-flex flex-column justify-content-between p-4 pb-0">
                     <div className=" mx-auto mb-5 text-center">
                       <ImageWithBasePath
@@ -115,6 +189,21 @@ const ResetPassword = () => {
                           passwords.
                         </p>
                       </div>
+                      
+                      {/* Display error or success message */}
+                      {message.text && (
+                        <div className={`alert ${message.isError ? 'alert-danger' : 'alert-success'} alert-dismissible fade show`} role="alert">
+                          {message.text}
+                          <button 
+                            type="button" 
+                            className="btn-close" 
+                            data-bs-dismiss="alert" 
+                            aria-label="Close"
+                            onClick={() => setMessage({ text: "", isError: false })}
+                          ></button>
+                        </div>
+                      )}
+                      
                       <div>
                         <div className="input-block mb-3">
                           <div className="mb-3">
@@ -126,6 +215,7 @@ const ResetPassword = () => {
                                 onChange={(e) => onChangePassword(e.target.value)}
                                 className="form-control pass-input"
                                 placeholder="Enter your password"
+                                required
                               />
                               <span
                                 className={`ti toggle-passwords ${passwordVisibility.password ? "ti-eye" : "ti-eye-off"
@@ -136,13 +226,13 @@ const ResetPassword = () => {
                             </div>
                           </div>
                           <div
-                            className={`password-strength d-flex ${passwordResponce.passwordResponceKey === "0"
+                            className={`password-strength d-flex ${passwordResponse.passwordResponseKey === "0"
                                 ? "poor-active"
-                                : passwordResponce.passwordResponceKey === "1"
+                                : passwordResponse.passwordResponseKey === "1"
                                   ? "avg-active"
-                                  : passwordResponce.passwordResponceKey === "2"
+                                  : passwordResponse.passwordResponseKey === "2"
                                     ? "strong-active"
-                                    : passwordResponce.passwordResponceKey === "3"
+                                    : passwordResponse.passwordResponseKey === "3"
                                       ? "heavy-active"
                                       : ""
                               }`}
@@ -155,7 +245,7 @@ const ResetPassword = () => {
                           </div>
                          
                         </div>
-                        <p className="fs-12">{passwordResponce.passwordResponceText}</p>
+                        <p className="fs-12">{passwordResponse.passwordResponseText}</p>
                         <div className="mb-3">
                           <label className="form-label">Confirm Password</label>
                           <div className="pass-group">
@@ -165,7 +255,10 @@ const ResetPassword = () => {
                                 ? "text"
                                 : "password"
                             }
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
                             className="pass-input form-control"
+                            required
                           />
                           <span
                             className={`ti toggle-passwords ${passwordVisibility.confirmPassword
@@ -179,9 +272,21 @@ const ResetPassword = () => {
                           </div>
                         </div>
                         <div className="mb-3">
-                          <button type="submit" onClick={navigationPath} className="btn btn-primary w-100">
-                            Submit
+                          <button 
+                            type="submit" 
+                            className="btn btn-primary w-100"
+                            disabled={isSubmitting || !token}
+                          >
+                            {isSubmitting ? 'Processing...' : 'Reset Password'}
                           </button>
+                        </div>
+                        <div className="text-center">
+                          <h6 className="fw-normal text-dark mb-0">
+                            Remember your password?
+                             <Link to={all_routes.login} className="hover-a ms-1">
+                              Sign In
+                            </Link>
+                          </h6>
                         </div>
                       </div>
                     </div>
@@ -196,7 +301,6 @@ const ResetPassword = () => {
         </div>
       </div>
     </div>
-
   );
 };
 

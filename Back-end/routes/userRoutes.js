@@ -6,7 +6,7 @@ const path = require("path");
 const crypto = require("crypto");
 const jwt = require('jsonwebtoken'); // Add this line to import jwt
 const { sendVerificationEmail } = require('../config/emailService');
-const { getUsers, createUser, signIn, signInn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, updateUser, deleteUser, validateToken, generateNewVerificationToken, updateUserRole, getAllUsers, getPublicUserProfile } = require("../controllers/userController");
+const { getUsers, createUser, signIn, signInn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, updateUser, deleteUser, validateToken, generateNewVerificationToken, updateUserRole, getAllUsers, getPublicUserProfile, forgotPassword, resetPassword } = require("../controllers/userController");
 const fs = require('fs');
 
 const router = express.Router();
@@ -66,7 +66,7 @@ router.post('/upload-profile-picture', verifyToken, profileUpload.single('profil
     }
 
     // Generate URL for the uploaded file
-    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5050';
     const profilePicturePath = `/uploads/profile-pictures/${req.file.filename}`;
     const profilePictureUrl = `${baseUrl}${profilePicturePath}`;
 
@@ -131,7 +131,7 @@ router.post('/verify-profile', verifyToken, verificationUpload.single('verificat
     }
 
     // Generate URL for the uploaded verification photo
-    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5050';
     const verificationPhotoPath = `/uploads/verification-photos/${req.file.filename}`;
     const verificationPhotoUrl = `${baseUrl}${verificationPhotoPath}`;
 
@@ -619,5 +619,11 @@ router.post('/refresh-token', async (req, res) => {
     return res.status(401).json({ message: 'Invalid refresh token' });
   }
 });
+
+// Route pour le mot de passe oublié
+router.post("/forgot-password", forgotPassword);
+
+// Route pour réinitialiser le mot de passe avec token
+router.post("/reset-password", resetPassword);
 
 module.exports = router;

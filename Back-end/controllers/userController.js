@@ -1273,6 +1273,171 @@ const verifyUserProfile = async (req, res) => {
     }
 };
 
+// Forgot Password - Send reset password email
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Email is required" 
+      });
+    }
+    
+    // Find user with this email
+    const user = await User.findOne({ email });
+    
+    // Don't reveal if user exists for security reasons
+    if (!user) {
+      console.log(`Forgot password attempt for non-existent email: ${email}`);
+      return res.status(200).json({ 
+        success: true,
+        message: "If your email is registered, you will receive password reset instructions." 
+      });
+    }
+    
+    // Generate reset token (valid for 1 hour)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpires = Date.now() + 3600000; // 1 hour
+    
+    // Store token and expiry in user document
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = resetTokenExpires;
+    await user.save();
+    
+    // Create reset URL
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+    const resetUrl = `${baseUrl}/reset-password/${resetToken}`;
+    
+    // Prepare email
+    const mailOptions = {
+      to: user.email,
+      from: process.env.EMAIL_FROM || 'noreply@tunihire.com',
+      subject: 'TuniHire - Password Reset',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRzSk7MJXKv8qNqMxQ9OqfG-lgcGzZEI3VtGTI5i7I4&s" alt="TuniHire Logo" style="max-height: 60px;">
+          </div>
+          <h2 style="color: #333;">Password Reset Request</h2>
+          <p>Hello ${user.firstName || user.email},</p>
+          <p>We received a request to reset your password. Please click the button below to reset your password:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="background-color: #4CAF50; color: white; padding: 12px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;">Reset Password</a>
+          </div>
+          <p>This link will expire in 1 hour for security reasons.</p>
+          <p>If you did not request a password reset, please ignore this email or contact support if you have concerns.</p>
+          <p style="margin-top: 30px; font-size: 12px; color: #777; text-align: center;">
+            &copy; ${new Date().getFullYear()} TuniHire. All rights reserved.
+          </p>
+        </div>
+      `
+    };
+    
+    try {
+      // Send email using the configured transport
+      await verificationEmailTransporter.sendMail(mailOptions);
+      
+      console.log(`Password reset email sent to: ${email}`);
+      return res.status(200).json({ 
+        success: true,
+        message: "Password reset instructions sent to your email." 
+      });
+    } catch (emailError) {
+      console.error("Error sending password reset email:", emailError);
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save();
+      
+      return res.status(500).json({ 
+        success: false,
+        message: "Failed to send password reset email. Please try again later." 
+      });
+    }
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Internal server error",
+      error: error.message 
+    });
+  }
+};
+
+// Reset Password - Process the reset using token
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    
+    if (!token || !newPassword) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Token and new password are required" 
+      });
+    }
+    
+    // Find user with valid reset token
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+    
+    if (!user) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Password reset token is invalid or has expired" 
+      });
+    }
+    
+    // Update password and clear reset token fields
+    user.password = newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+    
+    // Send confirmation email
+    const mailOptions = {
+      to: user.email,
+      from: process.env.EMAIL_FROM || 'noreply@tunihire.com',
+      subject: 'TuniHire - Your password has been changed',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRzSk7MJXKv8qNqMxQ9OqfG-lgcGzZEI3VtGTI5i7I4&s" alt="TuniHire Logo" style="max-height: 60px;">
+          </div>
+          <h2 style="color: #333;">Password Changed Successfully</h2>
+          <p>Hello ${user.firstName || user.email},</p>
+          <p>This is a confirmation that the password for your account has been changed successfully.</p>
+          <p>If you did not make this change, please contact our support team immediately.</p>
+          <p style="margin-top: 30px; font-size: 12px; color: #777; text-align: center;">
+            &copy; ${new Date().getFullYear()} TuniHire. All rights reserved.
+          </p>
+        </div>
+      `
+    };
+    
+    try {
+      await verificationEmailTransporter.sendMail(mailOptions);
+    } catch (emailError) {
+      console.error("Error sending password change confirmation email:", emailError);
+      // Don't block the process if confirmation email fails
+    }
+    
+    return res.status(200).json({ 
+      success: true,
+      message: "Password has been reset successfully" 
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Internal server error",
+      error: error.message 
+    });
+  }
+};
+
 // Keep the main module.exports with all functions
 module.exports = {
     getUsers,
@@ -1293,5 +1458,7 @@ module.exports = {
     updateUserRole,
     getAllUsers,
     getPublicUserProfile,
-    verifyUserProfile
+    verifyUserProfile,
+    forgotPassword: exports.forgotPassword,
+    resetPassword: exports.resetPassword
 };

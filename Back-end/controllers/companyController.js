@@ -208,8 +208,7 @@ exports.createCompany = async (req, res) => {
     // Handle logo file if uploaded
     if (req.file) {
       // Generate URL for the uploaded file
-      // In a production environment, you'd use your actual domain
-      const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+      const baseUrl = process.env.BASE_URL || 'http://localhost:5050';
       const relativePath = req.file.path.replace(/\\/g, '/').split('/uploads/')[1];
       company.logo = `${baseUrl}/uploads/${relativePath}`;
     }
@@ -297,7 +296,7 @@ exports.updateCompany = async (req, res) => {
       }
       
       // Generate URL for the new uploaded file
-      const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+      const baseUrl = process.env.BASE_URL || 'http://localhost:5050';
       const relativePath = req.file.path.replace(/\\/g, '/').split('/uploads/')[1];
       company.logo = `${baseUrl}/uploads/${relativePath}`;
     }

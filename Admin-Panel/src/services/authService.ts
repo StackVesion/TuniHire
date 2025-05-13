@@ -227,4 +227,73 @@ export const debugToken = async () => {
       console.error('Error parsing token locally:', parseError);
     }
   }
+};
+
+// Forgot password function
+export const forgotPassword = async (email: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await axios.post(`${API_URL}/users/forgot-password`, { email });
+    return {
+      success: true,
+      message: response.data.message || 'Password reset instructions sent to your email.'
+    };
+  } catch (error: any) {
+    console.error('Forgot password error:', error);
+    
+    // Handle different error types
+    if (error.response) {
+      // Server responded with a status code outside the 2xx range
+      return {
+        success: false,
+        message: error.response.data.message || 'An error occurred while processing your request.'
+      };
+    } else if (error.request) {
+      // Request was made but no response received
+      return {
+        success: false,
+        message: 'No response from server. Please try again later.'
+      };
+    } else {
+      // Something happened in setting up the request
+      return {
+        success: false,
+        message: 'Failed to send request. Please try again.'
+      };
+    }
+  }
+};
+
+// Reset password with token
+export const resetPassword = async (token: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await axios.post(`${API_URL}/users/reset-password`, { 
+      token, 
+      newPassword 
+    });
+    
+    return {
+      success: true,
+      message: response.data.message || 'Your password has been reset successfully.'
+    };
+  } catch (error: any) {
+    console.error('Reset password error:', error);
+    
+    // Handle different error types
+    if (error.response) {
+      return {
+        success: false,
+        message: error.response.data.message || 'An error occurred while resetting your password.'
+      };
+    } else if (error.request) {
+      return {
+        success: false,
+        message: 'No response from server. Please try again later.'
+      };
+    } else {
+      return {
+        success: false,
+        message: 'Failed to send request. Please try again.'
+      };
+    }
+  }
 }; 
