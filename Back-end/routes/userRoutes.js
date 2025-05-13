@@ -66,7 +66,7 @@ router.post('/upload-profile-picture', verifyToken, profileUpload.single('profil
     }
 
     // Generate URL for the uploaded file
-    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
     const profilePicturePath = `/uploads/profile-pictures/${req.file.filename}`;
     const profilePictureUrl = `${baseUrl}${profilePicturePath}`;
 
@@ -131,7 +131,7 @@ router.post('/verify-profile', verifyToken, verificationUpload.single('verificat
     }
 
     // Generate URL for the uploaded verification photo
-    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
     const verificationPhotoPath = `/uploads/verification-photos/${req.file.filename}`;
     const verificationPhotoUrl = `${baseUrl}${verificationPhotoPath}`;
 
