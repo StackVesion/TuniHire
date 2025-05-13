@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { getCurrentUser, clearUserData } from '../../utils/authUtils';
 
+const API_URLL = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
+const API_URLLL= process.env.NEXT_ADMIN_API_URL || 'http://localhost:3002';
 /**
  * Role-based access control component
  * Validates user has required role, redirects if unauthorized
@@ -31,9 +33,10 @@ const RoleGuard = ({ children, allowedRoles, redirectTo = '/' }) => {
         if (!token || !user) {
           console.warn('RoleGuard: No valid session found');
           // Not authenticated, redirect to login
-          window.location.href = 'http://localhost:3000/page-signin';
+          window.location.href = `${API_URLL}/page-signin`;
           return;
         }
+        
         
         // Check if user has required role
         const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
@@ -52,7 +55,7 @@ const RoleGuard = ({ children, allowedRoles, redirectTo = '/' }) => {
             // Force localStorage update for cross-domain consistency
             localStorage.setItem('token', token);
             localStorage.setItem('user', JSON.stringify(user));
-            window.location.href = 'http://localhost:3002/';
+            window.location.href = `${API_URLLL}/`;  
           } else if (user.role === 'HR' || user.role === 'candidate') {
             // Force localStorage update for cross-domain consistency
             localStorage.setItem('token', token);
@@ -61,14 +64,14 @@ const RoleGuard = ({ children, allowedRoles, redirectTo = '/' }) => {
             router.push(redirectTo);
           } else {
             // Unknown role, back to main site
-            window.location.href = 'http://localhost:3000';
+            window.location.href = `${API_URLL}/`;
           }
         }
       } catch (error) {
         console.error('Error checking authorization:', error);
         clearUserData(); // Clear any corrupted data
-        window.location.href = 'http://localhost:3000/page-signin';
-      } finally {
+        window.location.href = `${API_URLL}/page-signin`;
+      } finally {   
         setLoading(false);
       }
     };
