@@ -6,6 +6,8 @@ import axios from "axios";
 import Modal from 'react-bootstrap/Modal';
 import ProfileVerificationModal from "../components/ProfileVerificationModal";
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 export default function CandidateProfile() {
     const [activeIndex, setActiveIndex] = useState(1);
     const [userData, setUserData] = useState(null);
@@ -42,7 +44,6 @@ export default function CandidateProfile() {
     const fetchCompleteProfileData = async () => {
         try {
             setLoading(true); // Show loading indicator
-         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
             const token = localStorage.getItem("token");
             if (!token) {
                 setError("Vous devez être connecté pour voir votre profil");
