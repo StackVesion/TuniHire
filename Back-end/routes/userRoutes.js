@@ -6,7 +6,7 @@ const path = require("path");
 const crypto = require("crypto");
 const jwt = require('jsonwebtoken'); // Add this line to import jwt
 const { sendVerificationEmail } = require('../config/emailService');
-const { getUsers, createUser, signIn, signInn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, updateUser, deleteUser, validateToken, generateNewVerificationToken, updateUserRole, getAllUsers, getPublicUserProfile } = require("../controllers/userController");
+const { getUsers, createUser, signIn, signInn, signOut, signInWithFaceID, updateUserProfile, changeUserPassword, verifyOtp, resendOtp, verifyEmail, updateUser, deleteUser, validateToken, generateNewVerificationToken, updateUserRole, getAllUsers, getPublicUserProfile, forgotPassword, resetPassword, verifyResetToken } = require("../controllers/userController");
 const fs = require('fs');
 
 const router = express.Router();
@@ -619,5 +619,10 @@ router.post('/refresh-token', async (req, res) => {
     return res.status(401).json({ message: 'Invalid refresh token' });
   }
 });
+
+// Routes pour la réinitialisation de mot de passe
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
+router.get('/verify-reset-token', verifyResetToken);
 
 module.exports = router;

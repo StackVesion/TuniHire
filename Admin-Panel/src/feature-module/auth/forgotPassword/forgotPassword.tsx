@@ -1,15 +1,67 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { all_routes } from "../../router/all_routes";
 import ImageWithBasePath from "../../../core/common/imageWithBasePath";
+import axios from "axios";
+import Swal from "sweetalert2";
 
 const ForgotPassword = () => {
   const routes = all_routes;
-  const navigation = useNavigate();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
-  const navigationPath = () => {
-    navigation(routes.resetPassword);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email) {
+      Swal.fire({
+        title: "Erreur",
+        text: "Veuillez entrer votre adresse email",
+        icon: "error",
+        confirmButtonText: "OK"
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Send request to the server
+      const response = await axios.post("http://localhost:5000/api/users/forgot-password", {
+        email: email
+      });
+      
+      // Set email sent state to true
+      setEmailSent(true);
+      
+      // Show success message
+      Swal.fire({
+        title: "Email envoyé !",
+        text: "Les instructions pour réinitialiser votre mot de passe ont été envoyées à votre adresse email. Veuillez vérifier votre boîte de réception et vos spams.",
+        icon: "success",
+        confirmButtonText: "OK"
+      });
+      
+    } catch (error: any) {
+      let errorMessage = "Impossible d'envoyer l'email de réinitialisation";
+      
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      Swal.fire({
+        title: "Erreur",
+        text: errorMessage,
+        icon: "error",
+        confirmButtonText: "Réessayer"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
   return (
     <div className="container-fuild">
       <div className="w-100 overflow-hidden position-relative flex-wrap d-block vh-100">
@@ -42,52 +94,73 @@ const ForgotPassword = () => {
           <div className="col-lg-7 col-md-12 col-sm-12">
             <div className="row justify-content-center align-items-center vh-100 overflow-auto flex-wrap">
               <div className="col-md-7 mx-auto vh-100">
-                <form className="vh-100">
+                <form className="vh-100" onSubmit={handleSubmit}>
                   <div className="vh-100 d-flex flex-column justify-content-between p-4 pb-0">
                     <div className=" mx-auto mb-5 text-center">
                       <ImageWithBasePath
-                        src="assets/img/logo.svg"
+                        src="assets/logoBanner.png"
                         className="img-fluid"
                         alt="Logo"
                       />
                     </div>
                     <div className="">
-                      <div className="text-center mb-3">
-                        <h2 className="mb-2">Forgot Password?</h2>
-                        <p className="mb-0">
-                          If you forgot your password, well, then we'll email you
-                          instructions to reset your password.
-                        </p>
-                      </div>
-                      <div className="mb-3">
-                        <label className="form-label">Email Address</label>
-                        <div className="input-group">
-                          <input
-                            type="text"
-                            defaultValue=""
-                            className="form-control border-end-0"
-                          />
-                          <span className="input-group-text border-start-0">
-                            <i className="ti ti-mail" />
-                          </span>
+                      {emailSent ? (
+                        <div className="alert alert-success text-center">
+                          <h2 className="mb-2">Email Envoyé!</h2>
+                          <p className="mb-4">
+                            Nous avons envoyé un email à <strong>{email}</strong> avec les instructions pour réinitialiser votre mot de passe.
+                          </p>
+                          <p className="mb-4">
+                            Veuillez vérifier votre boîte de réception et suivre les instructions dans l'email.
+                          </p>
+                          <div className="mt-4">
+                            <Link to={all_routes.login} className="btn btn-outline-primary">
+                              Retour à la connexion
+                            </Link>
+                          </div>
                         </div>
-                      </div>
-                      <div className="mb-3">
-                        <button type="submit" onClick={navigationPath} className="btn btn-primary w-100">
-                          Submit
-                        </button>
-                      </div>
-                      <div className="text-center">
-                        <h6 className="fw-normal text-dark mb-0">
-                          Return to
-                           <Link to={all_routes.login} className="hover-a ms-1">
-                            Sign In
-                          </Link>
-                        </h6>
-                      </div>
+                      ) : (
+                        <>
+                          <div className="text-center mb-3">
+                            <h2 className="mb-2">Mot de passe oublié?</h2>
+                            <p className="mb-0">
+                              Entrez votre adresse email et nous vous enverrons un lien
+                              pour réinitialiser votre mot de passe.
+                            </p>
+                          </div>
+                          <div className="mb-3">
+                            <label className="form-label">Adresse Email</label>
+                            <div className="input-group">
+                              <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="form-control border-end-0"
+                                required
+                              />
+                              <span className="input-group-text border-start-0">
+                                <i className="ti ti-mail" />
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mb-3">
+                            <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+                              {loading ? "Envoi en cours..." : "Envoyer le lien de réinitialisation"}
+                            </button>
+                          </div>
+                          <div className="text-center">
+                            <h6 className="fw-normal text-dark mb-0">
+                              Retour à la
+                              <Link to={all_routes.login} className="hover-a ms-1">
+                                Connexion
+                              </Link>
+                            </h6>
+                          </div>
+                        </>
+                      )}
                     </div>
                     <div className="mt-5 pb-4 text-center">
-                      <p className="mb-0 text-gray-9">Copyright © 2024 - Smarthr</p>
+                      <p className="mb-0 text-gray-9">Copyright © 2024 - TuniHire</p>
                     </div>
                   </div>
                 </form>
@@ -97,7 +170,6 @@ const ForgotPassword = () => {
         </div>
       </div>
     </div>
-
   );
 };
 
