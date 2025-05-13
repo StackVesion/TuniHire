@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { all_routes } from "../../router/all_routes";
 import ImageWithBasePath from "../../../core/common/imageWithBasePath";
@@ -7,19 +8,23 @@ import Swal from "sweetalert2";
 
 type PasswordField = "password";
 
+
 const ResetPassword = () => {
   const routes = all_routes;
   const navigate = useNavigate();
   const location = useLocation();
+
   const [token, setToken] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [tokenValid, setTokenValid] = useState(true);
   const [resetSuccess, setResetSuccess] = useState(false);
+
   const [passwordVisibility, setPasswordVisibility] = useState({
     password: false,
     confirmPassword: false,
   });
+
   const [password, setPassword] = useState("");
   const [passwordResponce, setPasswordResponce] = useState({
     passwordResponceText: "Utilisez 8 caractères ou plus avec des lettres, des chiffres et des symboles.",
@@ -74,6 +79,7 @@ const ResetPassword = () => {
     }
   };
 
+
   const togglePasswordVisibility = (field: "password" | "confirmPassword") => {
     setPasswordVisibility((prevState) => ({
       ...prevState,
@@ -84,25 +90,30 @@ const ResetPassword = () => {
   const onChangePassword = (password: string) => {
     setPassword(password);
     if (password.match(/^$|\s+/)) {
+
       setPasswordResponce({
         passwordResponceText: "Utilisez 8 caractères ou plus avec des lettres, des chiffres et des symboles",
         passwordResponceKey: "",
+
       });
     } else if (password.length === 0) {
-      setPasswordResponce({
-        passwordResponceText: "",
-        passwordResponceKey: "",
+      setPasswordResponse({
+        passwordResponseText: "",
+        passwordResponseKey: "",
       });
     } else if (password.length < 8) {
+
       setPasswordResponce({
         passwordResponceText: "Faible. Doit contenir au moins 8 caractères",
         passwordResponceKey: "0",
+
       });
     } else if (
       password.search(/[a-z]/) < 0 ||
       password.search(/[A-Z]/) < 0 ||
       password.search(/[0-9]/) < 0
     ) {
+
       setPasswordResponce({
         passwordResponceText: "Moyen. Doit contenir au moins 1 majuscule et 1 chiffre",
         passwordResponceKey: "1",
@@ -116,7 +127,48 @@ const ResetPassword = () => {
       setPasswordResponce({
         passwordResponceText: "Excellent! Votre mot de passe est sécurisé.",
         passwordResponceKey: "3",
+
       });
+      return;
+    }
+    
+    if (!password || password.length < 8) {
+      setMessage({
+        text: "Please enter a strong password (at least 8 characters)",
+        isError: true
+      });
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      setMessage({
+        text: "Passwords do not match",
+        isError: true
+      });
+      return;
+    }
+    
+    // Submit form
+    setIsSubmitting(true);
+    setMessage({ text: "", isError: false });
+    
+    try {
+      const response = await resetPassword(token, password);
+      
+      if (response.success) {
+        setMessage({ text: response.message, isError: false });
+        // Redirect after successful password reset
+        setTimeout(() => {
+          navigate(routes.resetPasswordSuccess);
+        }, 2000);
+      } else {
+        setMessage({ text: response.message, isError: true });
+      }
+    } catch (error) {
+      setMessage({ text: "An unexpected error occurred", isError: true });
+      console.error("Password reset error:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -297,6 +349,7 @@ const ResetPassword = () => {
                       />
                     </div>
                     <div className="">
+
                       {resetSuccess ? (
                         <SuccessView />
                       ) : !tokenValid ? (
@@ -364,6 +417,7 @@ const ResetPassword = () => {
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 className="pass-input form-control"
                                 placeholder="Confirmez votre mot de passe"
+
                                 required
                               />
                               <span
@@ -391,8 +445,10 @@ const ResetPassword = () => {
                               </h6>
                             </div>
                           </div>
+
                         </>
                       )}
+
                     </div>
                     <div className="mt-5 pb-4 text-center">
                       <p className="mb-0 text-gray-9">Copyright © 2024 - TuniHire</p>

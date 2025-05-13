@@ -206,11 +206,7 @@ export default function Sidebar() {
                             </>
                         )}
                         {user && (
-                            <li onClick={() => {
-                                localStorage.removeItem('token');
-                                localStorage.removeItem('user');
-                                window.location.href = '/login';
-                            }} className="cursor-pointer">
+                            <li onClick={handleLogout} className="cursor-pointer">
                                 <a className="dashboard2">
                                     <img src="/assets/imgs/page/dashboard/logout.svg" alt="jobBox" />
                                     <span className="name">Logout</span>

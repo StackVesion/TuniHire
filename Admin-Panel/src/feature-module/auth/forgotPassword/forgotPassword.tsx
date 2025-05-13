@@ -2,12 +2,15 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { all_routes } from "../../router/all_routes";
 import ImageWithBasePath from "../../../core/common/imageWithBasePath";
+
 import axios from "axios";
 import Swal from "sweetalert2";
+
 
 const ForgotPassword = () => {
   const routes = all_routes;
   const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -62,6 +65,7 @@ const ForgotPassword = () => {
     }
   };
 
+
   return (
     <div className="container-fuild">
       <div className="w-100 overflow-hidden position-relative flex-wrap d-block vh-100">
@@ -104,6 +108,7 @@ const ForgotPassword = () => {
                       />
                     </div>
                     <div className="">
+
                       {emailSent ? (
                         <div className="alert alert-success text-center">
                           <h2 className="mb-2">Email Envoyé!</h2>
@@ -158,6 +163,7 @@ const ForgotPassword = () => {
                           </div>
                         </>
                       )}
+
                     </div>
                     <div className="mt-5 pb-4 text-center">
                       <p className="mb-0 text-gray-9">Copyright © 2024 - TuniHire</p>

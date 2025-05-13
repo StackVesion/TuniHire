@@ -201,7 +201,7 @@ export default function Header() {
                                 <Link className="d-flex" href="/">
                                     <img 
                                         alt="TuniHire" 
-                                        src="/assets/logoBanner.png" 
+                                        src="/assets/jobhub-logo.svg" 
                                         style={getLogoStyle(windowWidth)} 
                                         className={`logo-img ${scroll ? 'logo-scrolled' : ''}`}
                                     />

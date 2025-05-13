@@ -122,14 +122,14 @@ export default function Header() {
             
             const response = await authAxios.get('/api/companies/user/my-company');
             
-            console.log('Company status:', response.data);
-            setCompanyStatus(response.data);
-        } catch (error) {
-            console.log('Error fetching company status:', error.response?.data || error.message);
-            // If error is 404, it means the user doesn't have a company yet
-            if (error.response && error.response.status === 404) {
-                setCompanyStatus({ exists: false });
+            if (response.data && response.data.success && response.data.company) {
+                setCompanyStatus(response.data.company);
+                console.log("Company status:", response.data.company || "No company data");
+            } else {
+                console.log("No company found for user:", response.data);
             }
+        } catch (error) {
+            console.error("Error fetching company:", error);
         }
     };
     
@@ -347,7 +347,7 @@ export default function Header() {
                                 <Link className="d-flex" href="/">
                                     <img 
                                         alt="TuniHire" 
-                                        src="/assets/logoBanner.png" 
+                                        src="/assets/jobhub-logo.svg" 
                                         style={getLogoStyle(windowWidth)} 
                                         className={`logo-img ${scroll ? 'logo-scrolled' : ''}`}
                                     />

@@ -1273,6 +1273,7 @@ const verifyUserProfile = async (req, res) => {
     }
 };
 
+
 // Generate reset password token
 const forgotPassword = async (req, res) => {
     try {
@@ -1469,7 +1470,7 @@ const resetPassword = async (req, res) => {
     }
 };
 
-// Keep the main module.exports with all functions, but add the new verifyResetToken function
+
 module.exports = {
     getUsers,
     createUser,
@@ -1490,7 +1491,9 @@ module.exports = {
     getAllUsers,
     getPublicUserProfile,
     verifyUserProfile,
+
     forgotPassword,
     resetPassword,
     verifyResetToken
+
 };
