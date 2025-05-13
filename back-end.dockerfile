@@ -19,7 +19,7 @@ RUN npm install --no-save bcrypt --build-from-source
 # Set non-sensitive environment variables
 ENV NODE_ENV=development 
 ENV PORT=5000
-ENV MONGODB_URI=mongodb://tunihire_db:27017/tunihire_prod
+ENV MONGO_URI=mongodb://tunihire_db:27017/tunihire_prod
 ENV GITHUB_CALLBACK_URL="http://localhost:5000/auth/github/callback"
 ENV FRONTEND_URL="http://localhost:3000"
 ENV SMTP_PORT="587"

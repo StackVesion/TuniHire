@@ -9,11 +9,11 @@ services:
     ports:
       - "5000:5000"
     depends_on:
-      - tunihire_db    
+      - tunihire_db      
     environment:
       NODE_ENV: development
       PORT: 5000
-      MONGODB_URI: mongodb://tunihire_db:27017/tunihire_prod
+      MONGO_URI: mongodb://tunihire_db:27017/tunihire_prod
       # Using environment variables for secrets
       SESSION_SECRET: ${SESSION_SECRET}
       JWT_SECRET: ${JWT_SECRET}
