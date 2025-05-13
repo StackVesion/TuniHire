@@ -9,6 +9,8 @@ import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-webgl';
 import VerificationMessage from '../components/VerificationMessage';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 export default function Register() {
     const [formData, setFormData] = useState({
         firstName: "",
@@ -106,7 +108,7 @@ export default function Register() {
         console.log("📤 Données envoyées :", requestBody);
 
         try {
-            const response = await axios.post("http://localhost:5000/api/users/signup", requestBody);
+            const response = await axios.post(`${API_URL}/api/users/signup`, requestBody);
             setRegisteredEmail(formData.email);
             setShowVerification(true);
             if (response.data.token) {
@@ -118,11 +120,11 @@ export default function Register() {
         }
     };
     const handleGoogleSignIn = () => {
-        window.location.href = "http://localhost:5000/auth/google";
+        window.location.href = `${API_URL}/auth/google`;
     };
 
     const handleGitHubSignIn = () => {
-        window.location.href = "http://localhost:5000/auth/github";
+        window.location.href = `${API_URL}/auth/github`;
     };  
 
     return (

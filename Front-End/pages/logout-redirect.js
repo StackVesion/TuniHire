@@ -12,6 +12,7 @@ import { clearUserData } from '../utils/authUtils';
  * 2. Clears local storage data
  * 3. Redirects to the sign-in page
  */
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 export default function LogoutRedirect() {
   const router = useRouter();
 
@@ -24,11 +25,11 @@ export default function LogoutRedirect() {
         
         // Call appropriate logout endpoint based on auth type
         if (user && user.googleId) {
-          await axios.get("http://localhost:5000/api/users/google/logout", { withCredentials: true });
+          await axios.get(`${API_URL}/api/users/google/logout`, { withCredentials: true });
         } else if (user && user.githubId) {
-          await axios.get("http://localhost:5000/api/users/github/logout", { withCredentials: true });
+          await axios.get(`${API_URL}/api/users/github/logout`, { withCredentials: true });
         } else {
-          await axios.post("http://localhost:5000/api/users/signout", {}, { withCredentials: true });
+          await axios.post(`${API_URL}/api/users/signout`, {}, { withCredentials: true });
         }
       } catch (error) {
         console.error("Error during logout:", error);

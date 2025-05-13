@@ -6,6 +6,9 @@ import axios from 'axios';
 import styles from '../../styles/dashboard-button.module.css';
 import { getCurrentUser, clearUserData } from '../../utils/authUtils';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URLL = process.env.NEXT_COMPANY_API_URL || 'http://localhost:3001';
+const API_URLLL = process.env.NEXT_ADMIN_API_URL || 'http://localhost:3002';
 const Header = ({handleOpen,handleRemove,openClass}) => {
     const [scroll, setScroll] = useState(false);
     const [isToggled, setToggled] = useState(false);
@@ -52,7 +55,7 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
             
             try {
                 console.log("Validating token with server...");
-                const response = await axios.get("http://localhost:5000/api/users/validate-token", {
+                const response = await axios.get(`${API_URL}/api/users/validate-token`, {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }
@@ -111,13 +114,13 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                 // Check authentication type
                 if (user && user.googleId) {
                     // Google logout
-                    await axios.get("http://localhost:5000/api/users/google/logout", { withCredentials: true });
+                    await axios.get(`${API_URL}/api/users/google/logout`, { withCredentials: true });
                 } else if (user && user.githubId) {
                     // GitHub logout
-                    await axios.get("http://localhost:5000/api/users/github/logout", { withCredentials: true });
+                    await axios.get(`${API_URL}/api/users/github/logout`, { withCredentials: true });
                 } else {
                     // Regular logout
-                    await axios.post("http://localhost:5000/api/users/signout", {}, { withCredentials: true });
+                    await axios.post(`${API_URL}/api/users/signout`, {}, { withCredentials: true });
                 }
 
                 // Clear localStorage using auth utility
@@ -168,7 +171,7 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
 
         if (result.isConfirmed) {
             try {
-                await axios.post("http://localhost:5000/api/users/signout", {}, { withCredentials: true });
+                await axios.post(`${API_URL}/api/users/signout`, {}, { withCredentials: true });
                 localStorage.removeItem("token");
                 localStorage.removeItem("user");
                 Swal.fire({
@@ -273,7 +276,7 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                                     if (token && currentUser) {
                                                         console.log('Redirecting HR user to company panel');
                                                         // Pass token in URL for better cross-domain persistence
-                                                        window.location.href = `http://localhost:3001?token=${token}`;
+                                                        window.location.href = `${API_URLL}?token=${token}`;
                                                     } else {
                                                         console.error('No valid session found');
                                                         router.push('/page-signin');
@@ -292,7 +295,7 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                                     const currentUser = getCurrentUser();
                                                     const token = localStorage.getItem('token');
                                                     if (token && currentUser) {
-                                                        window.location.href = `http://localhost:3001/?token=${token}`;
+                                                        window.location.href = `${API_URLL}?token=${token}`;
                                                     } else {
                                                         router.push('/page-signin');
                                                     }
@@ -310,7 +313,7 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                                     const currentUser = getCurrentUser();
                                                     const token = localStorage.getItem('token');
                                                     if (token && currentUser) {
-                                                        window.location.href = `http://localhost:3002/?token=${token}`;
+                                                        window.location.href = `${API_URLLL}?token=${token}`;
                                                     } else {
                                                         router.push('/page-signin');
                                                     }
@@ -331,7 +334,7 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                                     const currentUser = getCurrentUser();
                                                     const token = localStorage.getItem('token');
                                                     if (token && currentUser) {
-                                                        window.location.href = `http://localhost:3001?token=${token}`;
+                                                        window.location.href = `${API_URLL}?token=${token}`;
                                                     } else {
                                                         router.push('/page-signin');
                                                     }

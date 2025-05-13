@@ -5,6 +5,7 @@ import Layout from "../components/Layout/Layout";
 import BlogSlider from "./../components/sliders/Blog";
 import axios from 'axios';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 export default function JobGrid() {
     const router = useRouter();
     const { company: companyId, location } = router.query;
@@ -49,12 +50,11 @@ export default function JobGrid() {
                 setJobsLoaded(false);
                 console.log("Fetching jobs with router ready. Company ID:", companyId);
                 
-                let url = 'http://localhost:5000/api/jobs';
-                
+                let url = `${API_URL}/api/jobs`;
                 // If companyId is provided, fetch jobs only for that company
                 if (companyId) {
                     console.log("Filtering jobs by company ID:", companyId);
-                    url = `http://localhost:5000/api/jobs/company/${companyId}`;
+                    url = `${API_URL}/api/jobs/company/${companyId}`;
                     // Fetch company info separately to ensure it's available
                     fetchCompanyInfo(companyId);
                 } else {
@@ -105,7 +105,7 @@ export default function JobGrid() {
         try {
             setCompanyLoading(true);
             console.log("Fetching company info for ID:", id);
-            const response = await axios.get(`http://localhost:5000/api/companies/${id}`);
+            const response = await axios.get(`${API_URL}/api/companies/${id}`);
             console.log("Company API response:", response);
             
             if (response.data) {

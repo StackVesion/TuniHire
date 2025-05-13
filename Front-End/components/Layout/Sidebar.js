@@ -4,6 +4,8 @@ import 'react-perfect-scrollbar/dist/css/styles.css';
 import { useState, useEffect } from "react";
 import { useRouter } from 'next/router';
 import { getCurrentUser, clearUserData } from '../../utils/authUtils';
+const API_URL = process.env.NEXT_COMPANY_API_URL || 'http://localhost:3001';
+const API_URLL = process.env.NEXT_ADMIN_API_URL || 'http://localhost:3002';
 
 const Sidebar = ({ openClass }) => {
     const router = useRouter();
@@ -139,7 +141,7 @@ const Sidebar = ({ openClass }) => {
                                                         onClick={() => {
                                                             const token = localStorage.getItem('token');
                                                             if (token) {
-                                                                window.location.href = `http://localhost:3001?token=${token}`;
+                                                                window.location.href = `${API_URL}?token=${token}`;
                                                             } else {
                                                                 router.push('/page-signin');
                                                             }
@@ -155,9 +157,9 @@ const Sidebar = ({ openClass }) => {
                                                 <li>
                                                     <a 
                                                         onClick={() => {
-                                                            const token = localStorage.getItem('token');
+                                                            const token = localStorage.getItem('token');  
                                                             if (token) {
-                                                                window.location.href = `http://localhost:3002/?token=${token}`;
+                                                                window.location.href = `${API_URLL}?token=${token}`;
                                                             } else {
                                                                 router.push('/page-signin');
                                                             }

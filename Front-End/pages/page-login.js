@@ -8,6 +8,8 @@ import * as faceapi from "face-api.js";
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-webgl';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 export default function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -92,7 +94,7 @@ export default function Login() {
         console.log("📤 Données envoyées :", requestBody);
 
         try {
-            const response = await axios.post("http://localhost:5000/api/users/signin", requestBody);
+            const response = await axios.post(`${API_URL}/api/users/signin`, requestBody);
             if (response.data.token) {
                 localStorage.setItem("token", response.data.token);
                 router.push("/dashboard");

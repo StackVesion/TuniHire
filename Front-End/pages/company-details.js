@@ -8,7 +8,7 @@ import Swal from "sweetalert2";
 import { useRouter } from "next/router";
 
 // Define the API URL
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export default function CompanyDetails() {
     const [activeIndex, setActiveIndex] = useState(1);
@@ -27,9 +27,10 @@ export default function CompanyDetails() {
         // Fetch user data when component mounts
         const fetchUserData = async () => {
             try {
+                
                 const token = localStorage.getItem('token');
                 if (token) {
-                    const response = await axios.get('http://localhost:5000/api/users/profile', {
+                    const response = await axios.get(`${API_URL}/api/users/profile`, {
                         headers: { Authorization: `Bearer ${token}` }
                     });
                     setUser(response.data.user);
@@ -60,7 +61,7 @@ export default function CompanyDetails() {
                 console.log('Fetching company with ID:', id);
                 
                 // Use direct axios call instead of the library method
-                const response = await axios.get(`${API_URL}/companies/${id}`);
+                const response = await axios.get(`${API_URL}/api/companies/${id}`);
                 
                 console.log('Company API response:', response.data);
                 if (response.data.company) {
@@ -99,7 +100,7 @@ export default function CompanyDetails() {
                 setJobsLoading(true);
                 
                 // Use direct axios call instead of the library method
-                const response = await axios.get(`${API_URL}/jobs/company/${id}`);
+                const response = await axios.get(`${API_URL}/api/jobs/company/${id}`);
                 
                 console.log('Jobs API response:', response.data);
                 
@@ -192,7 +193,7 @@ export default function CompanyDetails() {
 
                 // Call API to create company
                 const response = await axios.post(
-                    'http://localhost:5000/api/companies',
+                    `${API_URL}/api/companies`,
                     formValues,
                     { headers: { Authorization: `Bearer ${token}` } }
                 );

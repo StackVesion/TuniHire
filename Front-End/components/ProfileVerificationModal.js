@@ -3,6 +3,8 @@ import Webcam from 'react-webcam';
 import { Modal } from 'react-bootstrap';
 import axios from 'axios';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 const ProfileVerificationModal = ({ show, onHide, onVerificationSuccess }) => {
     const webcamRef = useRef(null);
     const [capturedImage, setCapturedImage] = useState(null);
@@ -88,7 +90,7 @@ const ProfileVerificationModal = ({ show, onHide, onVerificationSuccess }) => {
             
             // Send the verification request to the server
             const response = await axios.post(
-                'http://localhost:5000/api/users/verify-profile', 
+                `${API_URL}/api/users/verify-profile`,
                 formData, 
                 {
                     headers: {

@@ -42,6 +42,7 @@ export default function CandidateProfile() {
     const fetchCompleteProfileData = async () => {
         try {
             setLoading(true); // Show loading indicator
+         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
             const token = localStorage.getItem("token");
             if (!token) {
                 setError("Vous devez être connecté pour voir votre profil");
@@ -53,7 +54,7 @@ export default function CandidateProfile() {
             
             try {
                 const response = await axios.get(
-                    "http://localhost:5000/api/users/profile",
+                    `${apiUrl}/api/users/profile`,
                     {
                         headers: {
                             'Authorization': `Bearer ${token}`,
@@ -148,7 +149,7 @@ export default function CandidateProfile() {
             formData.append("profilePicture", file);
             
             const response = await axios.post(
-                "http://localhost:5000/api/users/upload-profile-picture",
+                `${apiUrl}/api/users/upload-profile-picture`,
                 formData,
                 {
                     headers: {
@@ -371,7 +372,7 @@ export default function CandidateProfile() {
             
             try {
                 const response = await axios.put(
-                    "http://localhost:5000/api/users/update-profile",
+                    `${apiUrl}/api/users/update-profile`,
                     formattedData,
                     {
                         headers: {
@@ -438,7 +439,7 @@ export default function CandidateProfile() {
             
             try {
                 const response = await axios.put(
-                    "http://localhost:5000/api/users/change-password",
+                    `${apiUrl}/api/users/change-password`,
                     {
                         currentPassword: passwordForm.currentPassword,
                         newPassword: passwordForm.newPassword
@@ -530,7 +531,7 @@ export default function CandidateProfile() {
                 }
                 
                 const response = await axios.get(
-                    "http://localhost:5000/api/applications/user",
+                    `${apiUrl}/api/applications/user`,
                     {
                         headers: {
                             'Authorization': `Bearer ${token}`,

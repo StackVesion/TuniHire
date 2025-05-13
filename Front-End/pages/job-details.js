@@ -7,6 +7,8 @@ import FeaturedSlider from "./../components/sliders/Featured";
 import axios from 'axios';
 import Swal from "sweetalert2";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 export default function JobDetails() {
     const router = useRouter();
     const { id } = router.query;
@@ -25,13 +27,13 @@ export default function JobDetails() {
             
             try {
                 // 1. Fetch job post details first
-                const jobResponse = await axios.get(`http://localhost:5000/api/jobs/${id}`);
+                const jobResponse = await axios.get(`${API_URL}/api/jobs/${id}`);
                 const jobData = jobResponse.data;
                 setJob(jobData);
                 
                 // 2. Fetch company details using our new endpoint
                 try {
-                    const companyResponse = await axios.get(`http://localhost:5000/api/jobs/job/${id}/company`);
+                    const companyResponse = await axios.get(`${API_URL}/api/jobs/job/${id}/company`);
                     setCompany(companyResponse.data);
                 } catch (companyError) {
                     console.error("Error fetching company:", companyError);

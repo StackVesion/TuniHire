@@ -7,6 +7,7 @@ import Webcam from "react-webcam";
 import * as faceapi from "face-api.js";
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-webgl';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export default function Signin() {
     const [formData, setFormData] = useState({
@@ -98,7 +99,7 @@ export default function Signin() {
             console.log("Attempting sign in with:", formData.email);
             
             const response = await axios.post(
-                "http://localhost:5000/api/users/signin", 
+                `${API_URL}/api/users/signin`, 
                 {
                     email: formData.email,
                     password: formData.password,
@@ -164,7 +165,7 @@ export default function Signin() {
 
         try {
             const response = await axios.post(
-                "http://localhost:5000/api/users/signin/faceid", 
+                `${API_URL}/api/users/signin/faceid`, 
                 requestBody, 
                 { withCredentials: true }
             );
@@ -194,11 +195,11 @@ export default function Signin() {
     };
 
     const handleGoogleSignIn = () => {
-        window.location.href = "http://localhost:5000/auth/google";
+        window.location.href = `${API_URL}/auth/google`;
     };
 
     const handleGitHubSignIn = () => {
-        window.location.href = "http://localhost:5000/auth/github";
+        window.location.href = `${API_URL}/auth/github`;
     };
     
     const openFaceIdModal = () => {

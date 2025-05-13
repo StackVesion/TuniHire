@@ -6,6 +6,7 @@ import TestimonialSlider1 from "./../components/sliders/Testimonial1";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export default function Contact() {
     const [formData, setFormData] = useState({
@@ -29,7 +30,7 @@ export default function Contact() {
 
         try {
             const token = localStorage.getItem('token');
-            await axios.post('http://localhost:5000/api/contact/submit', 
+            await axios.post(`${API_URL}/api/contact/submit`, 
                 formData,
                 {
                     withCredentials: true,
