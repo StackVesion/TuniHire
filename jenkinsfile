@@ -1,4 +1,4 @@
-pipeline {
+﻿pipeline {
     agent any // Default agent for most stages
 
     environment {
@@ -216,27 +216,28 @@ pipeline {
                         SONAR_PROJECT_KEY= 'TuniHire_AIService'
                     }
                     stages {
-                        stage('Install Dependencies') {
-                            steps {
-                                echo "Dépendances Python installées via Dockerfile."
-                                sh "/opt/venv/bin/pip list"
-                            }
-                        }
-                        stage('Run Tests') {
-                            when { expression { !params.SKIP_TESTS } }
-                            steps { 
-                                sh "/opt/venv/bin/pytest . --junitxml=test-results.xml || echo 'Tests failed or no tests found'" 
-                            }
-                            post { always { junit allowEmptyResults:true, testResults:'test-results.xml' } }
-                        }
+                     stage('Install Dependencies') {
+                      steps {
+                         echo "Python dependencies were installed inside the image already."
+                             sh "pip list"                        // instead of /opt/venv/bin/pip list
+                         }
+                     }
+                     stage('Run Tests') {
+                     when { expression { !params.SKIP_TESTS } }
+                        steps {
+                          sh "pytest . --junitxml=test-results.xml || echo 'tests failed or none found'"
+                     }
+                            post { always { junit allowEmptyResults: true, testResults: 'test-results.xml' } }
+                          }
                         stage('SonarQube Analysis') {
                             when { expression { !params.SKIP_SONAR } }
                             steps {
                                 // Utiliser le sonar-scanner installé dans l'image Docker (il est dans le PATH)
                                 // withSonarQubeEnv injecte les variables SONAR_HOST_URL et SONAR_AUTH_TOKEN (ou login/password)
                                 withSonarQubeEnv('scanner') {
-                                    sh "sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY} -Dsonar.sources=. -Dsonar.python.version=3.9 -Dsonar.python.binaries=/opt/venv/bin/python"
-                                }
+                                 // no need to point at /opt/venv/python
+                             sh "sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY} -Dsonar.sources=. -Dsonar.python.version=3.9"
+                            }
                             }
                         }
                         // stage('Quality Gate') {
@@ -286,7 +287,7 @@ pipeline {
     }
 
     post {
-        always { cleanWs() }
+       // always { cleanWs() }
         success { echo 'Pipeline completed successfully.' }
         failure { echo 'Pipeline failed.' }
     }
