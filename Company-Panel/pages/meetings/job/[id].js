@@ -523,29 +523,279 @@ export default function JobMeetingsPage() {
   const handleScheduleMeeting = (candidateId) => {
     router.push(`/meetings/schedule/${id}?candidate=${candidateId}`);
   };
-
-  if (loading) {
-    return <LoadingScreen />;
-  }
-
-  // Status badge style function
-  const getStatusBadgeClass = (status) => {
-    switch (status) {
-      case 'Scheduled':
-        return 'bg-soft-primary text-primary';
-      case 'Completed':
-        return 'bg-soft-success text-success';
-      case 'Cancelled':
-        return 'bg-soft-danger text-danger';
-      case 'Pending':
-        return 'bg-soft-warning text-warning';
-      default:
-        return 'bg-soft-secondary text-secondary';
+  
+  // Function to generate a white test using AI
+  const handleGenerateWhiteTest = async () => {
+    try {
+      setGeneratingWhiteTest(true);
+      console.log('Generating white test for job ID:', id);
+      
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
+      console.log(`Using API URL: ${baseUrl}/api/whitetests/generate/${id}`);
+      
+      const response = await authAxios.get(
+        `${baseUrl}/api/whitetests/generate/${id}`
+      );
+      
+      if (response.data && response.data.success) {
+        setWhiteTestContent(response.data.data.generatedContent);
+        console.log('White test generated successfully');
+        // Show success message
+        const Swal = (await import('sweetalert2')).default;
+        await Swal.fire({
+          title: 'Success!',
+          text: 'White test was successfully generated using AI',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } else {
+        console.error('Failed to generate white test:', response.data);
+        const Swal = (await import('sweetalert2')).default;
+        await Swal.fire({
+          title: 'Generation Failed',
+          text: 'Could not generate the white test. Please try again.',
+          icon: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error generating white test:', error);
+      const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
+      console.log('Error details:', errorMsg);
+      
+      const Swal = (await import('sweetalert2')).default;
+      await Swal.fire({
+        title: 'Error',
+        html: `Failed to generate white test.<br>Error: ${errorMsg}<br><br>Please ensure your API key is configured correctly.`,
+        icon: 'error'
+      });
+    } finally {
+      setGeneratingWhiteTest(false);
     }
   };
+  
+  // Function to save a white test
+  const handleSaveWhiteTest = async () => {
+    try {
+      if (!whiteTestContent.trim()) {
+        alert('White test content cannot be empty');
+        return;
+      }
+      
+      if (whiteTest && whiteTest._id) {
+        // Update existing white test
+        const response = await authAxios.put(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/whitetests/${whiteTest._id}`,
+          { content: whiteTestContent }
+        );
+        
+        if (response.data && response.data.success) {
+          setWhiteTest(response.data.data);
+          setShowWhiteTestDialog(false);
+          alert('White test updated successfully');
+        } else {
+          alert('Failed to update white test');
+        }
+      } else {
+        // Create new white test
+        const response = await authAxios.post(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/whitetests`,
+          {
+            job_id: id,
+            content: whiteTestContent
+          }
+        );
+        
+        if (response.data && response.data.success) {
+          setWhiteTest(response.data.data);
+          setShowWhiteTestDialog(false);
+          alert('White test created successfully');
+        } else {
+          alert('Failed to create white test');
+        }
+      }
+    } catch (error) {
+      console.error('Error saving white test:', error);
+      alert('Error saving white test: ' + (error.response?.data?.message || error.message));
+    }
+  };
+  
+  // Function to open the white test dialog in edit mode
+  const handleEditWhiteTest = () => {
+    setIsEditingWhiteTest(true);
+    setShowWhiteTestDialog(true);
+  };
+  
+  // Function to open the white test dialog in create mode
+  const handleOpenWhiteTestDialog = () => {
+    setIsEditingWhiteTest(false);
+    setShowWhiteTestDialog(true);
+  };
 
-  return (
-    <Layout>
+
+
+// Filter and search applicants
+useEffect(() => {
+  if (!applicantsWithMeetings.length) {
+    setFilteredApplicants([]);
+    return;
+  }
+  
+  // Filter applicants based on selected filter
+  let filtered = [...applicantsWithMeetings];
+  
+  if (selectedFilter === 'with-meetings') {
+    filtered = filtered.filter(item => item.hasScheduledMeeting);
+  } else if (selectedFilter === 'without-meetings') {
+    filtered = filtered.filter(item => !item.hasScheduledMeeting);
+  } else if (selectedFilter === 'scheduled') {
+    filtered = filtered.filter(item => item.hasScheduledMeeting && item.meeting.status === 'Scheduled');
+  } else if (selectedFilter === 'completed') {
+    filtered = filtered.filter(item => item.hasScheduledMeeting && item.meeting.status === 'Completed');
+  } else if (selectedFilter === 'cancelled') {
+    filtered = filtered.filter(item => item.hasScheduledMeeting && item.meeting.status === 'Cancelled');
+  }
+  
+  // Apply search term
+  if (searchTerm.trim()) {
+    const term = searchTerm.toLowerCase();
+    filtered = filtered.filter(item => {
+      const { applicant } = item;
+      return (
+        applicant.firstName?.toLowerCase().includes(term) ||
+        applicant.lastName?.toLowerCase().includes(term) ||
+        applicant.email?.toLowerCase().includes(term) ||
+        `${applicant.firstName} ${applicant.lastName}`.toLowerCase().includes(term)
+      );
+    });
+  }
+  
+  // Sort results
+  filtered.sort((a, b) => {
+    const { applicant: appA } = a;
+    const { applicant: appB } = b;
+    
+    switch (sortOption) {
+      case 'name-asc':
+        return `${appA.firstName} ${appA.lastName}`.localeCompare(`${appB.firstName} ${appB.lastName}`);
+      case 'name-desc':
+        return `${appB.firstName} ${appB.lastName}`.localeCompare(`${appA.firstName} ${appA.lastName}`);
+      case 'date-asc':
+        return new Date(appA.createdAt || 0) - new Date(appB.createdAt || 0);
+      case 'date-desc':
+        return new Date(appB.createdAt || 0) - new Date(appA.createdAt || 0);
+      default:
+        return 0;
+    }
+  });
+  
+  setFilteredApplicants(filtered);
+}, [applicantsWithMeetings, selectedFilter, searchTerm, sortOption]);
+
+
+
+
+
+
+
+if (loading) {
+  return <LoadingScreen />;
+}
+
+// Status badge style function
+const getStatusBadgeClass = (status) => {
+  switch (status) {
+    case 'Scheduled':
+      return 'bg-soft-primary text-primary';
+    case 'Completed':
+      return 'bg-soft-success text-success';
+    case 'Cancelled':
+      return 'bg-soft-danger text-danger';
+    case 'Pending':
+      return 'bg-soft-warning text-warning';
+    default:
+      return 'bg-soft-secondary text-secondary';
+  }
+};
+
+return (
+  <Layout>
+    <div>
+      <div className="box-heading">
+        <div className="box-title">
+        </div>
+        <div className="d-flex flex-wrap gap-2 my-3">
+          {!whiteTest ? (
+            <button 
+              onClick={handleOpenWhiteTestDialog} 
+              className="btn btn-primary" 
+              title="Generate a white test for this job">
+              <FontAwesomeIcon icon={faFileAlt} className="me-2" />
+              Generate White Test
+            </button>
+          ) : (
+            <button 
+              onClick={handleEditWhiteTest} 
+              className="btn btn-outline-primary" 
+              title="Edit existing white test">
+              <FontAwesomeIcon icon={faEdit} className="me-2" />
+              Edit White Test
+            </button>
+          )}
+        </div>
+      </div>
+      
+      {/* White Test Modal */}
+      {showWhiteTestDialog && (
+        <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">{isEditingWhiteTest ? 'Edit White Test' : 'Create White Test'}</h5>
+                <button type="button" className="btn-close" onClick={() => setShowWhiteTestDialog(false)}></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label htmlFor="whiteTestContent" className="form-label fw-bold">Test Content</label>
+                  <div className="d-flex mb-2 justify-content-end">
+                    <button 
+                      className="btn btn-sm btn-primary" 
+                      onClick={handleGenerateWhiteTest}
+                      disabled={generatingWhiteTest}>
+                      <FontAwesomeIcon icon={faMagic} className="me-1" />
+                      {generatingWhiteTest ? 'Generating...' : 'Generate with AI'}
+                    </button>
+                  </div>
+                  <textarea 
+                    id="whiteTestContent"
+                    className="form-control" 
+                    rows="15" 
+                    value={whiteTestContent}
+                    onChange={(e) => setWhiteTestContent(e.target.value)}
+                    placeholder="Enter white test content or generate it using AI"
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowWhiteTestDialog(false)}>
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary"
+                  onClick={handleSaveWhiteTest}
+                  disabled={!whiteTestContent.trim()}>
+                  Save White Test
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div>
         <div className="box-heading">
           <div className="box-title">
@@ -688,15 +938,14 @@ export default function JobMeetingsPage() {
                           </div>
                           
                           <button 
-                            className="btn btn-primary animate__animated animate__pulse animate__infinite"
+                            className={`btn ${whiteTest ? 'btn-primary' : 'btn-secondary'} ${whiteTest ? 'animate__animated animate__pulse animate__infinite' : ''}`}
                             style={{ animationDuration: '2s' }}
                             onClick={handleAutoSchedule}
-                            disabled={autoScheduleLoading || applicantsWithMeetings.filter(a => !a.hasScheduledMeeting).length === 0}
+                            disabled={autoScheduleLoading || applicantsWithMeetings.filter(a => !a.hasScheduledMeeting).length === 0 || !whiteTest}
+                            title={!whiteTest ? 'You must create a White Test first before scheduling meetings' : 'Automatically schedule meetings for all applicants'}
                           >
                             <FontAwesomeIcon icon={faMagic} className="me-2" />
-                            Auto-Schedule {applicantsWithMeetings.filter(a => !a.hasScheduledMeeting).length > 0 && 
-                              `(${applicantsWithMeetings.filter(a => !a.hasScheduledMeeting).length})`
-                            }
+                            {whiteTest ? `Auto-Schedule ${applicantsWithMeetings.filter(a => !a.hasScheduledMeeting).length > 0 ? `(${applicantsWithMeetings.filter(a => !a.hasScheduledMeeting).length})` : ''}` : 'Create White Test First'}
                           </button>
                         </div>
                       </div>
@@ -880,11 +1129,13 @@ export default function JobMeetingsPage() {
                                             <p className="mb-3">No meeting scheduled yet</p>
                                             <button 
                                               onClick={() => handleScheduleMeeting(applicant._id)}
-                                              className="btn btn-primary w-100 animate__animated animate__pulse animate__infinite"
+                                              className={`btn ${whiteTest ? 'btn-primary' : 'btn-secondary'} w-100 ${whiteTest ? 'animate__animated animate__pulse animate__infinite' : ''}`}
                                               style={{ animationDuration: '2s' }}
+                                              disabled={!whiteTest}
+                                              title={!whiteTest ? 'You must create a White Test first before scheduling meetings' : 'Schedule a meeting with this candidate'}
                                             >
                                               <FontAwesomeIcon icon={faCalendarPlus} className="me-2" />
-                                              Schedule Meeting
+                                              {whiteTest ? 'Schedule Meeting' : 'Create White Test First'}
                                             </button>
                                           </div>
                                         )}
@@ -1028,10 +1279,12 @@ export default function JobMeetingsPage() {
                                         ) : (
                                           <button 
                                             onClick={() => handleScheduleMeeting(applicant._id)}
-                                            className="btn btn-sm btn-outline-primary"
+                                            className={`btn btn-sm ${whiteTest ? 'btn-outline-primary' : 'btn-outline-secondary'}`}
+                                            disabled={!whiteTest}
+                                            title={!whiteTest ? 'You must create a White Test first before scheduling meetings' : 'Schedule a meeting with this candidate'}
                                           >
                                             <FontAwesomeIcon icon={faCalendarPlus} className="me-1" /> 
-                                            Schedule
+                                            {whiteTest ? 'Schedule' : 'Create Test First'}
                                           </button>
                                         )}
                                       </td>
@@ -1246,6 +1499,7 @@ export default function JobMeetingsPage() {
           }
         }
       `}</style>
+    </div>
     </Layout>
   );
 }

@@ -152,6 +152,7 @@ exports.deleteWhiteTest = async (req, res) => {
 exports.generateWhiteTest = async (req, res) => {
   try {
     const { jobId } = req.params;
+    console.log('Generating white test for job ID:', jobId);
     
     // Find job to get its details
     const job = await Job.findById(jobId).populate('companyId', 'name industry'); 
@@ -163,11 +164,13 @@ exports.generateWhiteTest = async (req, res) => {
       });
     }
     
-    // Construct prompt with job details
-    const prompt = `Create a comprehensive white test for a ${job.title} position in the ${job.companyId.industry || 'tech'} industry.
+    console.log('Job found:', job.title);
     
-Job Description: ${job.description}
-Required Skills: ${job.skills ? job.skills.join(', ') : 'Not specified'}
+    // Construct prompt with job details
+    const prompt = `Create a comprehensive white test for a ${job.title} position in the ${job.companyId?.industry || 'tech'} industry.
+    
+Job Description: ${job.description || 'Not provided'}
+Required Skills: ${job.skills && job.skills.length ? job.skills.join(', ') : 'Not specified'}
 Experience Required: ${job.experienceLevel || 'Not specified'}
 Employment Type: ${job.employmentType || 'Full-time'}
 Workplace Type: ${job.workplaceType || 'On-site'}
@@ -181,13 +184,24 @@ Please generate a formal white test document that includes:
 
 Format the response with proper headings and numbering.`;
 
+    // Get API key from config
+    const apiKey = process.env.GEMINI_API_KEY || config.geminiApiKey;
+    
+    if (!apiKey) {
+      console.error('Missing Gemini API key');
+      return res.status(500).json({
+        success: false,
+        message: 'Gemini API key not configured. Check server environment variables.'
+      });
+    }
+    
+    console.log('Using Gemini API key:', apiKey ? '✓ Key exists' : '✗ Key missing');
+    
     try {
-      // Get API key from config
-      const apiKey = process.env.GEMINI_API_KEY || config.geminiApiKey;
-      
+      console.log('Making request to Gemini API...');
       // Call Gemini API directly
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: {
@@ -201,15 +215,36 @@ Format the response with proper headings and numbering.`;
         }
       );
       
+      console.log('Gemini API response status:', response.status);
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Gemini API Error: ${JSON.stringify(errorData)}`);
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = `Gemini API Error: ${JSON.stringify(errorData)}`;
+          console.error('Error data:', errorData);
+        } catch (e) {
+          console.error('Could not parse error response:', e);
+        }
+        throw new Error(errorMessage);
       }
       
       const responseData = await response.json();
+      console.log('Received Gemini API response data', responseData ? '✓ Data received' : '✗ No data');
       
       // Extract generated text from response
+      if (!responseData.candidates || !responseData.candidates[0] || !responseData.candidates[0].content || !responseData.candidates[0].content.parts) {
+        console.error('Invalid response format from Gemini API:', responseData);
+        throw new Error('Invalid response format from Gemini API');
+      }
+      
       const generatedText = responseData.candidates[0].content.parts[0].text;
+      
+      if (!generatedText) {
+        throw new Error('No text was generated from the API');
+      }
+      
+      console.log('Successfully generated white test content');
       
       res.status(200).json({
         success: true,
