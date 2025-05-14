@@ -4,8 +4,8 @@ pipeline {
     environment {
         NODE_VERSION         = 'node:18'
         DOCKER_REGISTRY      = '172.23.202.74:8083'
-        registry             = '172.23.202.74:8083'
-        registryCredentials  = 'docker'
+        registry             = '172.23.202.74:8083' // Gardé pour référence, mais on forcera http://
+        registryCredentials  = 'docker' // Assurez-vous que cet ID de credential Jenkins est correct et a les droits de push
         APP_VERSION          = "1.0.${BUILD_NUMBER}"
 
         // Secrets...
@@ -96,11 +96,14 @@ pipeline {
         stage('Push to Nexus') {
             steps {
                 script {
-                    def imageName = "${DOCKER_REGISTRY}/docker-repo/backend:latest"
-                    // retag the registry‑built image
-                    sh "docker tag ${DOCKER_REGISTRY}/backend:latest ${imageName}"
-                    docker.withRegistry("${registry}", registryCredentials) {
-                        sh "docker push ${imageName}"
+                    // L'image construite par docker-compose est nommée ${DOCKER_REGISTRY}/backend:latest
+                    // Nous la taguons pour le dépôt Nexus
+                    def nexusImageName = "${DOCKER_REGISTRY}/docker-repo/backend:latest"
+                    sh "docker tag ${DOCKER_REGISTRY}/backend:latest ${nexusImageName}"
+                    
+                    // Utilisation explicite de http:// pour la connexion au registre Nexus
+                    docker.withRegistry("http://${DOCKER_REGISTRY}", registryCredentials) {
+                        sh "docker push ${nexusImageName}"
                     }
                 }
             }
@@ -109,11 +112,12 @@ pipeline {
         stage('Run App with Docker') {
             steps {
                 script {
-                    def imageName = "${DOCKER_REGISTRY}/docker-repo/backend:latest"
-                    docker.withRegistry("${registry}", registryCredentials) {
+                    def nexusImageName = "${DOCKER_REGISTRY}/docker-repo/backend:latest"
+                    // Utilisation explicite de http:// pour la connexion au registre Nexus
+                    docker.withRegistry("http://${DOCKER_REGISTRY}", registryCredentials) {
                         sh """
-                            docker pull ${imageName}
-                            docker tag ${imageName} backend
+                            docker pull ${nexusImageName}
+                            docker tag ${nexusImageName} backend // Retag pour docker-compose up
                             docker-compose up -d backend
                         """
                     }
@@ -128,3 +132,4 @@ pipeline {
         always  { cleanWs() }
     }
 }
+
