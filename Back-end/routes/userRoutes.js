@@ -622,11 +622,9 @@ router.post('/refresh-token', async (req, res) => {
   }
 });
 
-
 // Routes pour la réinitialisation de mot de passe
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.get('/verify-reset-token', verifyResetToken);
-
 
 module.exports = router;

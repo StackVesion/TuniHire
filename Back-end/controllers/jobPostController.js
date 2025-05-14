@@ -21,6 +21,7 @@ exports.getAllJobPosts = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
 // Get job post by ID
 exports.getJobPostById = async (req, res) => {
   try {
@@ -253,5 +254,55 @@ exports.getJobsByLocation = async (req, res) => {
   } catch (error) {
     console.error(`Error getting jobs by location: ${error.message}`);
     res.status(500).json({ error: error.message });
+  }
+};
+
+// Get job posts by HR ID
+exports.getJobsByHrId = async (req, res) => {
+  try {
+    const { hrId } = req.params;
+    console.log(`Getting jobs for HR with ID: ${hrId}`);
+    
+    if (!mongoose.Types.ObjectId.isValid(hrId)) {
+      return res.status(400).json({ message: 'Invalid HR ID format' });
+    }
+    
+    // Verify the HR user exists and has the correct role
+    const User = require('../models/User');
+    const hrUser = await User.findById(hrId);
+    if (!hrUser) {
+      return res.status(404).json({ message: 'HR user not found' });
+    }
+    
+    if (hrUser.role.toString().toUpperCase() !== 'HR') {
+      return res.status(403).json({ message: 'User is not an HR' });
+    }
+    
+    // Find all companies associated with this HR
+    // In a real implementation, you might have a direct association between HR and companies
+    // For this example, we'll find all job posts created by this HR
+    const Company = require('../models/Company');
+    const companies = await Company.find({ hrId: hrId });
+    const companyIds = companies.map(company => company._id);
+    
+    // Find all job posts for these companies
+    const jobPosts = await JobPost.find({ companyId: { $in: companyIds } })
+      .populate('companyId', 'name email website category numberOfEmployees status')
+      .sort({ createdAt: -1 });
+    
+    console.log(`Found ${jobPosts.length} jobs for HR ${hrUser.firstName} ${hrUser.lastName}`);
+    
+    return res.status(200).json({
+      success: true,
+      count: jobPosts.length,
+      data: jobPosts
+    });
+  } catch (error) {
+    console.error(`Error getting jobs by HR ID: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
   }
 };

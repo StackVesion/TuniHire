@@ -214,6 +214,7 @@ app.use("/api/courses", require("./routes/courseRoutes"));
 app.use("/api/certificates", require("./routes/certificateRoutes"));
 app.use("/api/subscriptions", require("./routes/subscriptionRoutes"));
 app.use("/api/blogs", require("./routes/blogRoutes"));
+app.use("/api/meetings", require("./routes/meetingRoutes")); // Add the meetings routes
 app.use("/health", require("./routes/health"));
 
 // API route list

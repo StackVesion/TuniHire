@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const jobPostController = require("../controllers/jobPostController");
+const jobController = require("../controllers/jobController");
 const { verifyToken } = require("../middleware/auth");
 
 // Public routes - no authentication needed
@@ -26,5 +27,11 @@ router.get("/:id", jobPostController.getJobPostById);
 router.post("/", verifyToken, jobPostController.createJobPost);
 router.put("/:id", verifyToken, jobPostController.updateJobPost);
 router.delete("/:id", verifyToken, jobPostController.deleteJobPost);
+
+// Get job applicants for a specific job
+router.get("/:jobId/applicants", verifyToken, jobController.getJobApplicants);
+
+// Get jobs by HR ID
+router.get("/hr/:hrId", verifyToken, jobPostController.getJobsByHrId);
 
 module.exports = router;

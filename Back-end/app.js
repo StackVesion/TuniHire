@@ -20,6 +20,7 @@ const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const dashboardRoutes = require('./routes/dashboard');
 const courseRoutes = require('./routes/courseRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
+const meetingRoutes = require('./routes/meetingRoutes');
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/tunihire', {
@@ -40,6 +41,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/certificates', certificateRoutes);
+app.use('/api/meetings', meetingRoutes);
 
 // ...existing code...
 
