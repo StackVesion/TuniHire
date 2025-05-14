@@ -2,8 +2,15 @@ import axios from 'axios';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-const apiUrll = process.env.NEXT_PUBLIC_FRONT_API_URL || 'http://localhost:3000';
+// Detect if we're running in a production environment
+const isProduction = process.env.NODE_ENV === 'production';
+
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || (isProduction ? 'https://tunihire-0fx9.onrender.com' : 'http://localhost:5000');
+const apiUrll = process.env.NEXT_PUBLIC_FRONT_API_URL || (isProduction ? 'https://tunihire-front-end.vercel.app' : 'http://localhost:3000');
+
+// Debug information
+console.log('authHelpers - Environment:', process.env.NODE_ENV);
+console.log('authHelpers - API URLs:', { apiUrl, apiUrll });
 
 // Get auth token from localStorage
 export const getToken = () => {

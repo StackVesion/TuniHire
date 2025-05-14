@@ -5,7 +5,13 @@ import { useRouter } from 'next/router'
 import axios from 'axios'
 import { getCurrentUser, clearUserData, getToken, createAuthAxios } from '../../utils/authUtils'
 
-const apiUrl = process.env.NEXT_PUBLIC_FRONT_API_URL || 'http://localhost:3000';
+// Detect if we're running in a production environment
+const isProduction = process.env.NODE_ENV === 'production';
+const apiUrl = process.env.NEXT_PUBLIC_FRONT_API_URL || (isProduction ? 'https://tunihire-front-end.vercel.app' : 'http://localhost:3000');
+
+// Debug information
+console.log('Header - Environment:', process.env.NODE_ENV);
+console.log('Header - API URL:', apiUrl);
 
 // Logo style for responsive design with adaptive sizing
 const getLogoStyle = (windowWidth) => {

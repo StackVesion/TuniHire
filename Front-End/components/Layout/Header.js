@@ -6,10 +6,18 @@ import axios from 'axios';
 import styles from '../../styles/dashboard-button.module.css';
 import { getCurrentUser, clearUserData } from '../../utils/authUtils';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+// Detect if we're running in a production environment
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Set API URLs based on environment with correct Vercel URLs
+const API_URL = process.env.NEXT_PUBLIC_API_URL || (isProduction ? 'https://tunihire-0fx9.onrender.com' : 'http://localhost:5000');
 // Using NEXT_PUBLIC_ prefix to make sure these are accessible client-side
-const API_URLL = process.env.NEXT_PUBLIC_COMPANY_API_URL || 'http://localhost:3001';
-const API_URLLL = process.env.NEXT_PUBLIC_ADMIN_API_URL || 'http://localhost:3002';
+const API_URLL = process.env.NEXT_PUBLIC_COMPANY_API_URL || (isProduction ? 'https://tunihire-company-panel.vercel.app' : 'http://localhost:3001');
+const API_URLLL = process.env.NEXT_PUBLIC_ADMIN_API_URL || (isProduction ? 'https://tuni-hire-wu9j.vercel.app' : 'http://localhost:3002');
+
+// Debug information
+console.log('Environment:', process.env.NODE_ENV);
+console.log('API URLs:', { API_URL, API_URLL, API_URLLL });
 
 
 const Header = ({handleOpen,handleRemove,openClass}) => {
@@ -291,8 +299,7 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                                 <i className="fi-rr-building me-1"></i> My Company
                                             </a>
                                         )}
-                                        
-                                        {(user.role === 'candidate' || user.role === 'Candidate') && (                                            <a 
+                                          {(user.role === 'candidate' || user.role === 'Candidate') && (                                            <a 
                                                 onClick={() => {
                                                     const currentUser = getCurrentUser();
                                                     const token = localStorage.getItem('token');
@@ -301,11 +308,13 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                                     console.log('Company Dashboard redirect with:', { 
                                                         API_URLL, 
                                                         token: token ? 'exists' : 'missing',
-                                                        currentUser: currentUser ? 'exists' : 'missing'
+                                                        currentUser: currentUser ? 'exists' : 'missing',
+                                                        isProduction: process.env.NODE_ENV === 'production'
                                                     });
                                                     
                                                     if (token && currentUser) {
-                                                        window.location.href = `${API_URLL}?token=${token}`;
+                                                        // Redirect directly with token parameter for authentication
+                                                        window.location.href = `${API_URLL}/login?token=${token}`;
                                                     } else {
                                                         router.push('/page-signin');
                                                     }
@@ -316,8 +325,7 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                                 <i className="fi-rr-dashboard me-1"></i> Dashboard
                                             </a>
                                         )}
-                                        
-                                        {(user.role === 'admin' || user.role === 'Admin') && (                                            <a 
+                                          {(user.role === 'admin' || user.role === 'Admin') && (                                            <a 
                                                 onClick={() => {
                                                     const currentUser = getCurrentUser();
                                                     const token = localStorage.getItem('token');
@@ -326,11 +334,13 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                                     console.log('Admin Dashboard redirect with:', { 
                                                         API_URLLL, 
                                                         token: token ? 'exists' : 'missing',
-                                                        currentUser: currentUser ? 'exists' : 'missing'
+                                                        currentUser: currentUser ? 'exists' : 'missing',
+                                                        isProduction: process.env.NODE_ENV === 'production'
                                                     });
                                                     
                                                     if (token && currentUser) {
-                                                        window.location.href = `${API_URLLL}?token=${token}`;
+                                                        // Redirect directly with token parameter for authentication
+                                                        window.location.href = `${API_URLLL}/login?token=${token}`;
                                                     } else {
                                                         router.push('/page-signin');
                                                     }
@@ -341,8 +351,7 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                                 <i className="fi-rr-dashboard me-1"></i> Dashboard
                                             </a>
                                         )}
-                                        
-                                        {/* Fallback button if needed - defaults to Dashboard text */}
+                                          {/* Fallback button if needed - defaults to Dashboard text */}
                                         {!(user.role && (user.role.toString().toUpperCase() === 'HR') || 
                                           user.role === 'candidate' || user.role === 'Candidate' || 
                                           user.role === 'admin' || user.role === 'Admin') && (
@@ -350,8 +359,17 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                                 onClick={() => {
                                                     const currentUser = getCurrentUser();
                                                     const token = localStorage.getItem('token');
+                                                    // Log for debugging
+                                                    console.log('Fallback Dashboard redirect with:', { 
+                                                        API_URLL, 
+                                                        token: token ? 'exists' : 'missing',
+                                                        currentUser: currentUser ? 'exists' : 'missing',
+                                                        isProduction: process.env.NODE_ENV === 'production'
+                                                    });
+                                                    
                                                     if (token && currentUser) {
-                                                        window.location.href = `${API_URLL}?token=${token}`;
+                                                        // Redirect directly with token parameter for authentication
+                                                        window.location.href = `${API_URLL}/login?token=${token}`;
                                                     } else {
                                                         router.push('/page-signin');
                                                     }

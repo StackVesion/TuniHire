@@ -9,9 +9,16 @@ import PageHead from "./PageHead";
 import Sidebar from "./Sidebar";
 import { getCurrentUser, clearUserData, checkAndRefreshToken, redirectToLogin } from "../../utils/authUtils";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-const apiUrll = process.env.NEXT_PUBLIC_FRONT_API_URL || 'http://localhost:3000';
-const apiUrlll = process.env.NEXT_PUBLIC_ADMIN_API_URL || 'http://localhost:3002';
+// Detect if we're running in a production environment
+const isProduction = process.env.NODE_ENV === 'production';
+
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || (isProduction ? 'https://tunihire-0fx9.onrender.com' : 'http://localhost:5000');
+const apiUrll = process.env.NEXT_PUBLIC_FRONT_API_URL || (isProduction ? 'https://tunihire-front-end.vercel.app' : 'http://localhost:3000');
+const apiUrlll = process.env.NEXT_PUBLIC_ADMIN_API_URL || (isProduction ? 'https://tuni-hire-wu9j.vercel.app' : 'http://localhost:3002');
+
+// Debug information
+console.log('Layout - Environment:', process.env.NODE_ENV);
+console.log('Layout - API URLs:', { apiUrl, apiUrll, apiUrlll });
 
 export default function Layout({ headTitle, breadcrumbTitle, breadcrumbActive, children }) {
   const [isToggled, setToggled] = useState(false);

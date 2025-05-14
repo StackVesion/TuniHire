@@ -5,9 +5,16 @@ import { useRouter } from "next/router"
 import axios from "axios"
 import { saveUserData, getCurrentUser } from "../utils/authUtils"
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-// Use the vercel URL for frontend redirections, not localhost
-const apiUrll = process.env.NEXT_PUBLIC_FRONT_API_URL || 'https://localhost:3000';
+// Detect if we're running in a production environment
+const isProduction = process.env.NODE_ENV === 'production';
+
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || (isProduction ? 'https://tunihire-0fx9.onrender.com' : 'http://localhost:5000');
+// Use the vercel URL for frontend redirections in production, localhost in development
+const apiUrll = process.env.NEXT_PUBLIC_FRONT_API_URL || (isProduction ? 'https://tunihire-front-end.vercel.app' : 'http://localhost:3000');
+
+// Debug information
+console.log('Environment:', process.env.NODE_ENV);
+console.log('API URLs:', { apiUrl, apiUrll });
 
 export default function Login() {
     const [loginData, setLoginData] = useState({
@@ -19,7 +26,38 @@ export default function Login() {
     const router = useRouter();
     
     // Check if user is already logged in
-    useEffect(() => {
+    useEffect(() => {        // Check if token is provided in URL for automatic login
+        const { token } = router.query;
+        
+        console.log('Login page loaded with query params:', router.query);
+        
+        if (token) {
+            console.log('Token found in URL, attempting auto-login');
+            // Attempt to validate the token and get user data
+            axios.get(`${apiUrl}/api/auth/validate-token`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                if (response.data.user) {
+                    console.log('Token validated successfully:', response.data.user.role);
+                    // Save the token and user data
+                    localStorage.setItem('token', token);
+                    saveUserData(response.data.user);
+                    
+                    // Redirect to dashboard
+                    router.replace('/');
+                }
+            })
+            .catch(err => {
+                console.error('Error validating token:', err);
+                setError('Invalid or expired token. Please log in again.');
+            });
+            return;
+        }
+        
+        // Normal login check
         const currentUser = getCurrentUser();
         if (currentUser) {
             // Redirect based on role
@@ -32,7 +70,7 @@ export default function Login() {
                 window.location.href = `${apiUrll}`;
             }
         }
-    }, [router]);
+    }, [router.query, router]);
     
     // Handle form input changes
     const handleChange = (e) => {

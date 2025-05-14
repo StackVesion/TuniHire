@@ -2,9 +2,17 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { getCurrentUser, saveUserData } from './authUtils';
 import axios from 'axios';
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-// Use the vercel URL for frontend redirections, not localhost
-const apiUrll = process.env.NEXT_PUBLIC_FRONT_API_URL || 'https://tunihire-frontend.vercel.app';
+
+// Detect if we're running in a production environment
+const isProduction = process.env.NODE_ENV === 'production';
+
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || (isProduction ? 'https://tunihire-0fx9.onrender.com' : 'http://localhost:5000');
+// Use the vercel URL for frontend redirections in production, localhost in development
+const apiUrll = process.env.NEXT_PUBLIC_FRONT_API_URL || (isProduction ? 'https://tunihire-front-end.vercel.app' : 'http://localhost:3000');
+
+// Debug information
+console.log('withAuth - Environment:', process.env.NODE_ENV);
+console.log('withAuth - API URLs:', { apiUrl, apiUrll });
 /**
  * Higher-order component that handles authentication and role-based access
  * @param {Component} WrappedComponent - The component to wrap with authentication

@@ -5,7 +5,14 @@ import { buildStyles, CircularProgressbar } from 'react-circular-progressbar'
 import 'react-circular-progressbar/dist/styles.css'
 import { getCurrentUser, clearUserData } from "../../utils/authUtils"
 import axios from 'axios';
-const apiUrl = process.env.NEXT_PUBLIC_FRONT_API_URL || 'http://localhost:3000';
+
+// Detect if we're running in a production environment
+const isProduction = process.env.NODE_ENV === 'production';
+const apiUrl = process.env.NEXT_PUBLIC_FRONT_API_URL || (isProduction ? 'https://tunihire-front-end.vercel.app' : 'http://localhost:3000');
+
+// Debug information
+console.log('Sidebar - Environment:', process.env.NODE_ENV);
+console.log('Sidebar - API URL:', apiUrl);
 const percentage = 67;
 export default function Sidebar() {
     const [isToggled, setToggled] = useState(false);

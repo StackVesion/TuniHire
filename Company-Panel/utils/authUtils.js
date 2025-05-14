@@ -217,8 +217,16 @@ export const redirectToLogin = () => {
   // Check if we're in a browser environment
   if (typeof window === 'undefined') return;
   
-  const mainAppUrl = process.env.NEXT_PUBLIC_FRONT_API_URL || 'https://tunihire-frontend.vercel.app';
+  // Detect if we're running in production
+  const isProduction = process.env.NODE_ENV === 'production';
+  const mainAppUrl = process.env.NEXT_PUBLIC_FRONT_API_URL || (isProduction ? 'https://tunihire-front-end.vercel.app' : 'http://localhost:3000');
   const returnUrl = encodeURIComponent(window.location.href);
+  
+  console.log('Redirecting to login with:', {
+    mainAppUrl,
+    returnUrl,
+    environment: process.env.NODE_ENV
+  });
   
   // Redirect to the main application's login page with return URL
   window.location.href = `${mainAppUrl}/login?returnUrl=${returnUrl}`;
@@ -277,6 +285,14 @@ export const checkAndRefreshToken = async () => {
 // Function to handle logout and redirect to main application
 export const logout = () => {
   clearUserData();
-  const mainAppUrl = process.env.NEXT_PUBLIC_FRONT_API_URL || 'http://localhost:3000';
+  // Detect if we're running in production
+  const isProduction = process.env.NODE_ENV === 'production';
+  const mainAppUrl = process.env.NEXT_PUBLIC_FRONT_API_URL || (isProduction ? 'https://tunihire-front-end.vercel.app' : 'http://localhost:3000');
+  
+  console.log('Logging out and redirecting with:', {
+    mainAppUrl,
+    environment: process.env.NODE_ENV
+  });
+  
   window.location.href = `${mainAppUrl}/login?logout=true`;
 };
