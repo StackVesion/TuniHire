@@ -27,7 +27,8 @@ const ComingSoon = () => {
           <div className="col-md-8 d-flex justify-content-end align-items-center mx-auto">
             <div className="comming-soon-pg d-flex flex-column align-items-center justify-content-center">
               <div className="mb-4 p-4">
-                <ImageWithBasePath src="assets/img/logo.svg" alt="logo" className="img-fluid" />
+                <h1 className="display-4 text-primary fw-bold">TuniHire</h1>
+                <p className="text-muted">Your contract is here!</p>
               </div>
               <div>
                 <ImageWithBasePath

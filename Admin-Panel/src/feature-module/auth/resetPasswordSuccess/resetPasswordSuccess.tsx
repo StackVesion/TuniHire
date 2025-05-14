@@ -46,7 +46,7 @@ const ResetPasswordSuccess = () => {
                   <div className="vh-100 d-flex flex-column justify-content-between p-4 pb-0">
                     <div className=" mx-auto mb-5 text-center">
                       <ImageWithBasePath
-                        src="assets/img/logo.svg"
+                        src="assets/img/logos.png"
                         className="img-fluid"
                         alt="Logo"
                       />

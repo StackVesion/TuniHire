@@ -78,16 +78,7 @@ export const SidebarDataTest = [
     showAsTab: false,
     separateRoute: false,
     submenuItems: [
-      {
-        label: 'Sponsors',
-        link: routes.contactGrid,
-        submenu: false,
-        showSubRoute: false,
-        icon: 'user-shield',
-        base: 'contact',
-        materialicons: 'confirmation_number',
-        submenuItems: [],
-      },
+      
       {
         label: 'Companies',
         link: routes.companiesGrid,
@@ -121,11 +112,7 @@ export const SidebarDataTest = [
             link: routes.blogs,
             base2: 'All Blogs',
           },
-          {
-            label: 'Comments',
-            link: routes.blogComments,
-            base: '/blog-comments',
-          },
+         
           
         ],
       },
@@ -227,22 +214,14 @@ export const SidebarDataTest = [
         icon: 'user-star',
         submenuItems: [
           
-          {
-            label: 'Payment Report',
-            link: routes.paymentreport,
-            base: 'payment-report',
-          },
+         
           
           {
             label: 'User Report',
             link: routes.userreport,
             base: 'user-report',
           },
-          {
-            label: 'Employee Report',
-            link: routes.employeereport,
-            base: 'employee-report',
-          },
+         
          
         ],
       },

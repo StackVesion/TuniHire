@@ -116,14 +116,14 @@ const Header = () => {
 						{user?.profilePicture ? (
 							<img src={user.profilePicture} alt="User Profile" className="profile-img" style={{width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover'}} />
 						) : (
-							<ImageWithBasePath src="assets/Image1.png" alt="Logo"/>
+							<span className="text-primary fw-bold fs-4">TuniHire</span>
 						)}
 					</Link>
 					<Link to={routes.adminDashboard} className="dark-logo">
 						{user?.profilePicture ? (
 							<img src={user.profilePicture} alt="User Profile" className="profile-img" style={{width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover'}} />
 						) : (
-							<ImageWithBasePath src="assets/Image1.png" alt="Logo"/>
+							<span className="text-primary fw-bold fs-4">TuniHire</span>
 						)}
 					</Link>
 				</div>

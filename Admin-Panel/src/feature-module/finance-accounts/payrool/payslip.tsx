@@ -52,9 +52,9 @@ const PaySlip = () => {
                                                 <div className="mb-3">
                                                     <div className="mb-2">
                                                         <ImageWithBasePath
-                                                            src="assets/img/logo.svg"
+                                                            src="assets/img/logos.png"
                                                             className="img-fluid"
-                                                            alt="logo"
+                                                            alt="Logo"
                                                         />
                                                     </div>
                                                     <p>3099 Kennedy Court Framingham, MA 01702</p>

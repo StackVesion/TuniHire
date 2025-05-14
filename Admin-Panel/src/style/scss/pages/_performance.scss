@@ -369,34 +369,6 @@
     }
 }
 
-.contact-grids-tab {
-    padding: 20px 20px 16px 20px;
-
-    .nav-underline {
-        border-bottom: 1px solid $gray-200 ;
-
-        .nav-item {
-            .nav-link {
-                font-weight: $font-weight-medium;
-
-                &.active {
-                    background-color: $white;
-                    color: $primary;
-                    border-radius: 0;
-                    font-weight: $font-weight-medium;
-                }
-
-                &:hover {
-                    background-color: $white;
-                    color: $primary;
-                    border-radius: 0;
-                }
-            }
-        }
-    }
-
-
-}
 
 .kanban-list-items {
     border: 1px solid #E8E8E8;

@@ -131,7 +131,7 @@ const ContactList = () => {
             >
               <i className="ti ti-list-tree" />
             </Link>
-            <Link to={routes.contactGrid} className="btn btn-icon btn-sm">
+            <Link to={routes.contactList} className="btn btn-icon btn-sm">
               <i className="ti ti-layout-grid" />
             </Link>
           </div>

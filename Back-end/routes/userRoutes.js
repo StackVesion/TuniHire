@@ -609,7 +609,7 @@ router.post('/refresh-token', async (req, res) => {
     
     // Generate new access token
     const accessToken = jwt.sign(
-       : user._id, email: user.email, role: user.role },
+      { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'your-jwt-secret',
       { expiresIn: '1h' } // You can adjust expiration time
     );
@@ -627,6 +627,5 @@ router.post('/refresh-token', async (req, res) => {
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.get('/verify-reset-token', verifyResetToken);
->>>>>
 
 module.exports = router;

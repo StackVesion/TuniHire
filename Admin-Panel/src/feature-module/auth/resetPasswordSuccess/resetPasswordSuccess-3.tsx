@@ -17,7 +17,7 @@ const ResetPasswordSuccess3 = () => {
             <form className="digit-group vh-100">
               <div className="vh-100 d-flex flex-column justify-content-between p-4 pb-0">
                 <div className=" mx-auto mb-5 text-center">
-                  <ImageWithBasePath src="assets/img/logo.svg" className="img-fluid" alt="Logo" />
+                  <ImageWithBasePath src="assets/img/logos.png" className="img-fluid" alt="Logo" />
                 </div>
                 <div className="">
                   <div className="text-center mb-3">

@@ -56,9 +56,9 @@ const InvoiceDetails = () => {
                                             <div className="col-md-6">
                                                 <div className="mb-2">
                                                     <ImageWithBasePath
-                                                        src="assets/img/logo.svg"
+                                                        src="assets/img/logos.png"
                                                         className="img-fluid"
-                                                        alt="logo"
+                                                        alt="Logo"
                                                     />
                                                 </div>
                                                 <p>3099 Kennedy Court Framingham, MA 01702</p>
@@ -278,9 +278,9 @@ const InvoiceDetails = () => {
                                         <div className="text-center">
                                             <div className="mb-3">
                                                 <ImageWithBasePath
-                                                    src="assets/Image1.png"
+                                                    src="assets/img/logos.png"
                                                     className="img-fluid"
-                                                    alt="logo"
+                                                    alt="Logo"
                                                 />
                                             </div>
                                             <p className="text-dark mb-1">
