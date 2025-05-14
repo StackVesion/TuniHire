@@ -4,8 +4,13 @@ const mongoose = require('mongoose');
 const app = express();
 require('dotenv').config();
 
-// Enable CORS for front-end communication
-app.use(cors());
+// Enable CORS for front-end communication with credentials support
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // JSON parsing middleware
 app.use(express.json());

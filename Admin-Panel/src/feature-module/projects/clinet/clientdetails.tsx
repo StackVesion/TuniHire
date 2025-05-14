@@ -3897,36 +3897,7 @@ const ClientDetails = () => {
                             </button>
                         </div>
                         <form>
-                            <div className="contact-grids-tab">
-                                <ul className="nav nav-underline" id="myTab2" role="tablist">
-                                    <li className="nav-item" role="presentation">
-                                        <button
-                                            className="nav-link active"
-                                            id="info-tab2"
-                                            data-bs-toggle="tab"
-                                            data-bs-target="#basic-info2"
-                                            type="button"
-                                            role="tab"
-                                            aria-selected="true"
-                                        >
-                                            Basic Information
-                                        </button>
-                                    </li>
-                                    <li className="nav-item" role="presentation">
-                                        <button
-                                            className="nav-link"
-                                            id="address-tab2"
-                                            data-bs-toggle="tab"
-                                            data-bs-target="#address2"
-                                            type="button"
-                                            role="tab"
-                                            aria-selected="false"
-                                        >
-                                            Permissions
-                                        </button>
-                                    </li>
-                                </ul>
-                            </div>
+                           
                             <div className="tab-content" id="myTabContent2">
                                 <div
                                     className="tab-pane fade show active"

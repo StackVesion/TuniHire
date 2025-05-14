@@ -60,7 +60,7 @@ const TwoColumnSidebar = () => {
         <div className="sidebar sidebar-twocol">
             <div className="twocol-mini">
                 <Link to={routes.adminDashboard} className="logo-small">
-                    <ImageWithBasePath src="assets/img/logo-small.svg" alt="Logo"/>
+                    <ImageWithBasePath src="assets/img/logos.png" alt="TuniHire Logo"/>
                 </Link>
                 <Scrollbars>
                 <div className="sidebar-left slimscroll">
@@ -93,10 +93,10 @@ const TwoColumnSidebar = () => {
             <div className="sidebar-right">
                 <div className="sidebar-logo mb-4">
                     <Link to={routes.adminDashboard} className="logo logo-normal">
-                        <ImageWithBasePath src="assets/logoBanner.png" alt="Logo"/>
+                        <ImageWithBasePath src="assets/img/logos.png" alt="TuniHire Logo"/>
                     </Link>
                     <Link to={routes.adminDashboard} className="dark-logo">
-                        <ImageWithBasePath src="assets/logoBanner.png" alt="Logo"/>
+                        <ImageWithBasePath src="assets/img/logos.png" alt="TuniHire Logo"/>
                     </Link>
                 </div>
                 <div className="sidebar-scroll">
@@ -429,11 +429,9 @@ const TwoColumnSidebar = () => {
                                     <ul>
                                         <li><Link to="expenses-report.html">Expense Report</Link></li>
                                         <li><Link to="invoice-report.html">Invoice Report</Link></li>
-                                        <li><Link to="payment-report.html">Payment Report</Link></li>
                                         <li><Link to="project-report.html">Project Report</Link></li>
                                         <li><Link to="task-report.html">Task Report</Link></li>
                                         <li><Link to="user-report.html">User Report</Link></li>
-                                        <li><Link to="employee-report.html">Employee Report</Link></li>
                                         <li><Link to="payslip-report.html">Payslip Report</Link></li>
                                         <li><Link to="attendance-report.html">Attendance Report</Link></li>
                                         <li><Link to="leave-report.html">Leave Report</Link></li>
@@ -531,7 +529,6 @@ const TwoColumnSidebar = () => {
                                     <ul>
                                         <li><Link to="blogs.html">All Blogs</Link></li>
                                         <li><Link to="blog-categories.html">Categories</Link></li>
-                                        <li><Link to="blog-comments.html">Comments</Link></li>
                                         <li><Link to="blog-tags.html">Blog Tags</Link></li>
                                     </ul>
                                 </li>

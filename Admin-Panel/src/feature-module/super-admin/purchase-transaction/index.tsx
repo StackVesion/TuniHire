@@ -311,9 +311,9 @@ const PurchaseTransaction = () => {
                 <div className="col-md-6">
                   <div className="mb-4">
                     <ImageWithBasePath
-                      src="assets/Image1.png"
+                      src="assets/img/logos.png"
                       className="img-fluid"
-                      alt="logo"
+                      alt="Logo"
                     />
                   </div>
                 </div>

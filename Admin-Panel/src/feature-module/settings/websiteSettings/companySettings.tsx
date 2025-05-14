@@ -209,8 +209,8 @@ const CompanySettings = () => {
                               <div className="d-flex align-items-center">
                                 <span className="avatar avatar-xl border rounded d-flex align-items-center justify-content-center p-2 me-2">
                                   <ImageWithBasePath
-                                    src="assets/img/logo-small.svg"
-                                    alt="Img"
+                                    src="assets/img/logos.png"
+                                    alt="TuniHire Logo"
                                   />
                                 </span>
                                 <h5>Logo</h5>
@@ -257,8 +257,8 @@ const CompanySettings = () => {
                               <div className="d-flex align-items-center">
                                 <span className="avatar avatar-xl border rounded d-flex align-items-center justify-content-center p-2 me-2">
                                   <ImageWithBasePath
-                                    src="assets/img/logo-small.svg"
-                                    alt="Img"
+                                    src="assets/img/logos.png"
+                                    alt="TuniHire Logo"
                                   />
                                 </span>
                                 <h5>Favicon</h5>
@@ -306,8 +306,8 @@ const CompanySettings = () => {
                               <div className="d-flex align-items-center">
                                 <span className="avatar avatar-xl border rounded d-flex align-items-center justify-content-center p-2 me-2">
                                   <ImageWithBasePath
-                                    src="assets/img/logo-small.svg"
-                                    alt="Img"
+                                    src="assets/img/logos.png"
+                                    alt="TuniHire Logo"
                                   />
                                 </span>
                                 <h5>Icon</h5>
@@ -355,8 +355,8 @@ const CompanySettings = () => {
                               <div className="d-flex align-items-center">
                                 <span className="avatar avatar-xl border rounded d-flex align-items-center justify-content-center p-2 me-2">
                                   <ImageWithBasePath
-                                    src="assets/img/logo-small.svg"
-                                    alt="Img"
+                                    src="assets/img/logos.png"
+                                    alt="TuniHire Logo"
                                   />
                                 </span>
                                 <h5>Dark Logo</h5>

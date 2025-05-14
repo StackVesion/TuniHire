@@ -417,36 +417,7 @@ const JobList = () => {
             <form>
               <div className="modal-body pb-0">
                 <div className="row">
-                  <div className="contact-grids-tab pt-0">
-                    <ul className="nav nav-underline" id="myTab" role="tablist">
-                      <li className="nav-item" role="presentation">
-                        <button
-                          className="nav-link active"
-                          id="info-tab"
-                          data-bs-toggle="tab"
-                          data-bs-target="#basic-info"
-                          type="button"
-                          role="tab"
-                          aria-selected="true"
-                        >
-                          Basic Information
-                        </button>
-                      </li>
-                      <li className="nav-item" role="presentation">
-                        <button
-                          className="nav-link"
-                          id="address-tab"
-                          data-bs-toggle="tab"
-                          data-bs-target="#address"
-                          type="button"
-                          role="tab"
-                          aria-selected="false"
-                        >
-                          Location
-                        </button>
-                      </li>
-                    </ul>
-                  </div>
+                
                   <div className="tab-content" id="myTabContent">
                     <div
                       className="tab-pane fade show active"
@@ -795,36 +766,7 @@ const JobList = () => {
             <form>
               <div className="modal-body pb-0">
                 <div className="row">
-                  <div className="contact-grids-tab pt-0">
-                    <ul className="nav nav-underline" id="myTabs" role="tablist">
-                      <li className="nav-item" role="presentation">
-                        <button
-                          className="nav-link active"
-                          id="info-tab"
-                          data-bs-toggle="tab"
-                          data-bs-target="#basic-infos"
-                          type="button"
-                          role="tab"
-                          aria-selected="true"
-                        >
-                          Basic Information
-                        </button>
-                      </li>
-                      <li className="nav-item" role="presentation">
-                        <button
-                          className="nav-link"
-                          id="address-tabs"
-                          data-bs-toggle="tab"
-                          data-bs-target="#addresss"
-                          type="button"
-                          role="tab"
-                          aria-selected="false"
-                        >
-                          Location
-                        </button>
-                      </li>
-                    </ul>
-                  </div>
+
                   <div className="tab-content" id="myTabContents">
                     <div
                       className="tab-pane fade show active"

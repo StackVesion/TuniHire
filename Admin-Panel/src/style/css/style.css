@@ -3021,22 +3021,7 @@ body.mini-sidebar.expand-menu .sidebar .sidebar-menu > ul > li ul > li.active a 
 }
 [data-theme=dark] .bootstrap-tagsinput {
   box-shadow: none;
-}
-[data-theme=dark] .contact-grid {
-  color: #a3a6a6;
-  border-color: #393947;
-  background: #171724;
-  box-shadow: none;
-}
-[data-theme=dark] .contact-grid .grid-head .users-profile .name-user h6 a {
-  color: #FFF;
-}
-[data-theme=dark] .contact-grid .grid-body .address-info p i {
-  color: #a3a6a6;
-}
-[data-theme=dark] .contact-grid .grid-footer {
-  border-color: #393947;
-}
+
 [data-theme=dark] .company-info li span {
   border-color: #393947;
 }
@@ -3605,13 +3590,7 @@ body.mini-sidebar.expand-menu .sidebar .sidebar-menu > ul > li ul > li.active a 
 [data-theme=dark] .con-sidebar-title p, [data-theme=dark] .task-actions ul li {
   color: #FFF;
 }
-[data-theme=dark] .contact-grid.project .grid-head {
-  background-color: #28283E;
-}
-[data-theme=dark] .contact-grid.project .grid-head .users-profile .con-avatar {
-  background-color: #1E1E2D;
-  border-color: #393947;
-}
+
 [data-theme=dark] .access-wrap li:hover {
   background: #28283E;
 }
@@ -4158,7 +4137,6 @@ body.mini-sidebar.expand-menu .sidebar .sidebar-menu > ul > li ul > li.active a 
   margin: 0 0 8px;
 }
 .notification-dropdown .notification-list li .noti-sub-details {
-  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -9739,7 +9717,6 @@ button:focus {
 .main-chat-blk .theme-content p {
   margin-bottom: 0;
   text-align: start;
-  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -13691,10 +13668,7 @@ aside {
   transform: scale(1);
 }
 
-.video-section .owl-item {
-  -webkit-backface-visibility: hidden;
-  -webkit-transform: translateZ(0) scale(1, 1);
-}
+ 
 
 .video-section video {
   max-width: 100%;
@@ -17106,8 +17080,7 @@ input[type=range]::-webkit-slider-runnable-track {
   font-size: 16px;
   font-weight: 600;
   display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
+  
   overflow: hidden;
 }
 .notes-page-wrapper .content .section-notes-slider .notes-card .notes-slider-content h4 a:hover {
@@ -17119,8 +17092,7 @@ input[type=range]::-webkit-slider-runnable-track {
   font-weight: 400;
   margin-bottom: 0px;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  
   overflow: hidden;
 }
 .notes-page-wrapper .content .section-notes-slider .notes-card .notes-slider-widget {
@@ -17293,7 +17265,6 @@ input[type=range]::-webkit-slider-runnable-track {
   font-weight: 600;
   margin-bottom: 5px;
   display: -webkit-box;
-  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -17323,7 +17294,6 @@ input[type=range]::-webkit-slider-runnable-track {
   font-weight: 400;
   margin-bottom: 0px;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -24461,102 +24431,6 @@ div.badge-status {
   margin-bottom: 0;
 }
 
-.contact-grid {
-  box-shadow: 0px 4px 54px 0px rgba(224, 224, 224, 0.2509803922);
-  border: 1px solid #E8E8E8;
-  border-radius: 5px;
-  padding: 24px;
-  background: #FFF;
-  color: #6F6F6F;
-  margin-bottom: 24px;
-}
-.contact-grid .grid-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.contact-grid .grid-head .users-profile {
-  display: flex;
-  align-items: center;
-}
-.contact-grid .grid-head .users-profile .avatar {
-  width: 42px;
-  height: 42px;
-  margin-right: 8px;
-}
-.contact-grid .grid-head .users-profile .avatar img {
-  border-radius: 5px;
-}
-.contact-grid .grid-head .users-profile .name-user {
-  margin-bottom: 0;
-}
-.contact-grid .grid-head .users-profile .name-user h6 {
-  font-size: 14px;
-  font-weight: 500;
-}
-.contact-grid .grid-head .users-profile .name-user h6 a {
-  color: #262A2A;
-}
-.contact-grid .grid-head .dropdown .dropdown-toggle::after {
-  display: none;
-}
-.contact-grid .grid-head .dropdown .dropdown-toggle i {
-  color: #FFAB1A;
-}
-.contact-grid .grid-body .address-info {
-  display: flex;
-  flex-direction: column;
-  align-items: start;
-  margin: 20px 0;
-}
-.contact-grid .grid-body .address-info p {
-  display: inline-flex;
-  align-items: center;
-  line-height: normal;
-  margin-bottom: 10px;
-  color: #6F6F6F;
-}
-.contact-grid .grid-body .address-info p i {
-  color: #262A2A;
-  margin-right: 8px;
-}
-.contact-grid .grid-body .address-info p:last-child {
-  margin-bottom: 0;
-}
-.contact-grid .grid-body .grid-badges span + span {
-  margin-left: 5px;
-}
-.contact-grid .grid-footer {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #E8E8E8;
-}
-.contact-grid .grid-footer .social-links li a {
-  color: #6F6F6F;
-  width: 26px;
-  height: 26px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: 0.5s all;
-}
-.contact-grid .grid-footer .social-links li a:hover {
-  background: #FFEEEC;
-  color: #E41F07;
-  transition: 0.5s all;
-}
-.contact-grid .grid-footer .star-user {
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-align: center;
-  -ms-flex-align: center;
-  align-items: center;
-}
-.contact-grid .grid-footer .star-user .set-star {
-  margin-right: 10px;
-}
 
 .load-btn .btn i {
   margin-left: 4px;
@@ -25390,14 +25264,11 @@ div.badge-status {
   right: -23px;
   width: 45px;
   height: 45px;
-  -webkit-transform: scale(0.707) rotate(45deg);
-  -ms-transform: scale(0.707) rotate(45deg);
-  -moz-transform: scale(0.707) rotate(45deg);
+  
   -transform: scale(0.707) rotate(45deg);
   z-index: 1;
   background: #F6F6F6;
-  -webkit-box-shadow: 2px -2px 0 1px #fff, 3px -3px 0 2px rgba(255, 255, 255, 0.1);
-  box-shadow: 2px -2px 0 1px #fff, 3px -3px 0 2px rgba(255, 255, 255, 0.1);
+  
   border-radius: 0 5px 0 50px;
 }
 .pipeline-list ul li a.bg-info {
@@ -29417,7 +29288,6 @@ fieldset#first-field-file {
   font-weight: 500;
   color: #262A2A;
   margin-bottom: 5px;
-  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -29426,7 +29296,6 @@ fieldset#first-field-file {
 .activities-list ul li .activity-name p {
   font-size: 14px;
   margin-bottom: 15px;
-  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -29462,7 +29331,7 @@ fieldset#first-field-file {
 }
 .activities-list ul li .user-activity h6 {
   margin-bottom: 0;
-  -webkit-line-clamp: 1;
+ 
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -29553,79 +29422,8 @@ fieldset#first-field-file {
   color: #FDA700;
 }
 
-.contact-grid.project {
-  padding: 15px;
-}
-.contact-grid.project .status-item {
-  display: flex;
-  display: -webkit-flex;
-  align-items: center;
-  -webkit-align-items: center;
-  justify-content: space-between;
-  -webkit-justify-content: space-between;
-  margin-bottom: 15px;
-}
-.contact-grid.project .grid-head {
-  background-color: #F9F9FC;
-  border-radius: 5px;
-  margin: 0 0 15px;
-  padding: 10px;
-}
-.contact-grid.project .grid-head .users-profile .con-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 5px;
-  margin-right: 10px;
-  display: flex;
-  display: -webkit-flex;
-  align-items: center;
-  -webkit-align-items: center;
-  justify-content: center;
-  -webkit-justify-content: center;
-  border: 1px solid #E8E8E8;
-  background-color: #FFF;
-}
-.contact-grid.project .grid-head .users-profile .name-user h6 {
-  font-size: 16px;
-  font-weight: 600;
-}
-.contact-grid.project .grid-body p {
-  margin-bottom: 15px;
-}
-.contact-grid.project .grid-body .client-wrap {
-  display: flex;
-  display: -webkit-flex;
-  align-items: center;
-  -webkit-align-items: center;
-  justify-content: space-between;
-  -webkit-justify-content: space-between;
-  margin-bottom: 15px;
-}
-.contact-grid.project .grid-body .client-wrap .company-item {
-  display: flex;
-  display: -webkit-flex;
-  align-items: center;
-  -webkit-align-items: center;
-}
-.contact-grid.project .grid-body .client-wrap .company-item span {
-  width: 32px;
-  height: 32px;
-  border-radius: 5px;
-  margin-right: 10px;
-  display: flex;
-  display: -webkit-flex;
-  align-items: center;
-  -webkit-align-items: center;
-  justify-content: center;
-  -webkit-justify-content: center;
-  border: 1px solid #E8E8E8;
-  background-color: #FFF;
-  margin-right: 8px;
-}
-.contact-grid.project .grid-body .client-wrap .company-item p {
-  font-weight: 500;
-  margin-bottom: 0;
-}
+
+
 
 .rate-icon {
   width: 26px;
@@ -30707,4 +30505,4 @@ table.table.dataTable > thead > tr th {
   z-index: unset;
 }
 
-/*# sourceMappingURL=style.css.map */
+}

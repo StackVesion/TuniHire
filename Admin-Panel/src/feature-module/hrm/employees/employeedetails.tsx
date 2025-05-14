@@ -792,40 +792,7 @@ const EmployeeDetails = () => {
                                             </div>
                                             <div className="card">
                                                 <div className="card-body">
-                                                    <div className="contact-grids-tab p-0 mb-3">
-                                                        <ul
-                                                            className="nav nav-underline"
-                                                            id="myTab"
-                                                            role="tablist"
-                                                        >
-                                                            <li className="nav-item" role="presentation">
-                                                                <button
-                                                                    className="nav-link active"
-                                                                    id="info-tab2"
-                                                                    data-bs-toggle="tab"
-                                                                    data-bs-target="#basic-info2"
-                                                                    type="button"
-                                                                    role="tab"
-                                                                    aria-selected="true"
-                                                                >
-                                                                    Projects
-                                                                </button>
-                                                            </li>
-                                                            <li className="nav-item" role="presentation">
-                                                                <button
-                                                                    className="nav-link"
-                                                                    id="address-tab2"
-                                                                    data-bs-toggle="tab"
-                                                                    data-bs-target="#address2"
-                                                                    type="button"
-                                                                    role="tab"
-                                                                    aria-selected="false"
-                                                                >
-                                                                    Assets
-                                                                </button>
-                                                            </li>
-                                                        </ul>
-                                                    </div>
+                                                   
                                                     <div className="tab-content" id="myTabContent3">
                                                         <div
                                                             className="tab-pane fade show active"
@@ -1193,36 +1160,7 @@ const EmployeeDetails = () => {
                             </button>
                         </div>
                         <form>
-                            <div className="contact-grids-tab">
-                                <ul className="nav nav-underline" id="myTab2" role="tablist">
-                                    <li className="nav-item" role="presentation">
-                                        <button
-                                            className="nav-link active"
-                                            id="info-tab3"
-                                            data-bs-toggle="tab"
-                                            data-bs-target="#basic-info3"
-                                            type="button"
-                                            role="tab"
-                                            aria-selected="true"
-                                        >
-                                            Basic Information
-                                        </button>
-                                    </li>
-                                    <li className="nav-item" role="presentation">
-                                        <button
-                                            className="nav-link"
-                                            id="address-tab3"
-                                            data-bs-toggle="tab"
-                                            data-bs-target="#address3"
-                                            type="button"
-                                            role="tab"
-                                            aria-selected="false"
-                                        >
-                                            Permissions
-                                        </button>
-                                    </li>
-                                </ul>
-                            </div>
+                            
                             <div className="tab-content" id="myTabContent2">
                                 <div
                                     className="tab-pane fade show active"

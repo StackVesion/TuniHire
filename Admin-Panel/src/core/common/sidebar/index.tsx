@@ -122,13 +122,13 @@ const Sidebar = () => {
       >
   <div className="sidebar-logo">
     <Link to="routes.index" className="logo logo-normal">
-      <ImageWithBasePath src="assets/logoBanner.png" alt="Logo" />
+      <span className="text-primary fw-bold fs-4">TuniHire</span>
     </Link>
     <Link to="routes.index" className="logo-small">
-      <ImageWithBasePath src="assets/logoBanner.png" alt="Logo" />
+      <span className="text-primary fw-bold">TH</span>
     </Link>
     <Link to="routes.index" className="dark-logo">
-      <ImageWithBasePath src="assets/Image1.png" alt="Logo" />
+      <span className="text-primary fw-bold fs-4">TuniHire</span>
     </Link>
   </div>
   <div className="modern-profile p-3 pb-0">

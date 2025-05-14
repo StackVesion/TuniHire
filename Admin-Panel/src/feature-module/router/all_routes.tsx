@@ -236,7 +236,6 @@ export const all_routes = {
   // blog
   blogs: "blogs",
   blogCategories: "blog-categories",
-  blogComments: "blog-comments",
   blogTags: "blog-tags",
 
   //userManagement routes
@@ -304,7 +303,6 @@ export const all_routes = {
   tasks: "/tasks",
   tasksdetails: "/task-details",
   taskboard: "/task-board",
-  contactGrid: "/contact-grid",
   contactList: "/contact-list",
   contactDetails: "/contact-details",
   companiesGrid: "/companies-grid",
@@ -372,11 +370,9 @@ export const all_routes = {
   //Report
   expensesreport: "/expenses-report",
   invoicereport: "/invoice-report",
-  paymentreport: "/payment-report",
   projectreport: "/project-report",
   taskreport: "/task-report",
   userreport: "/user-report",
-  employeereport: "/employee-report",
   employeedetails: "/employee-details",
   payslipreport: "/payslip-report",
   attendancereport: "/attendance-report",

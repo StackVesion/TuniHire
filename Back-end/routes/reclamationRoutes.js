@@ -3,7 +3,7 @@ const router = express.Router();
 const reclamationController = require('../controllers/reclamationController');
 const auth = require('../middleware/auth');
 const { body } = require('express-validator');
-git 
+
 // Test route
 router.get('/test', function(req, res) {
   res.json({ message: 'Reclamation route test successful' });

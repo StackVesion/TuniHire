@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "express-validator": "^7.2.1",
     "react-toastify": "^9.1.3",
     "swiper": "^8.4.7"
   },
