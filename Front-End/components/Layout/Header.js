@@ -7,8 +7,22 @@ import styles from '../../styles/dashboard-button.module.css';
 import { getCurrentUser, clearUserData } from '../../utils/authUtils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-const API_URLL = process.env.NEXT_COMPANY_API_URL || 'http://localhost:3001';
-const API_URLLL = process.env.NEXT_ADMIN_API_URL || 'http://localhost:3002';
+// Using NEXT_PUBLIC_ prefix to make sure these are accessible client-side
+const API_URLL = process.env.NEXT_PUBLIC_COMPANY_API_URL || 'http://localhost:3001';
+const API_URLLL = process.env.NEXT_PUBLIC_ADMIN_API_URL || 'http://localhost:3002';
+
+// Console log for debugging purposes
+console.log('API URLs loaded in header:', {
+    API_URL,
+    API_URLL,
+    API_URLLL,
+    envVars: {
+        NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+        NEXT_PUBLIC_COMPANY_API_URL: process.env.NEXT_PUBLIC_COMPANY_API_URL,
+        NEXT_PUBLIC_ADMIN_API_URL: process.env.NEXT_PUBLIC_ADMIN_API_URL
+    }
+});
+
 const Header = ({handleOpen,handleRemove,openClass}) => {
     const [scroll, setScroll] = useState(false);
     const [isToggled, setToggled] = useState(false);
@@ -289,11 +303,18 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                             </a>
                                         )}
                                         
-                                        {(user.role === 'candidate' || user.role === 'Candidate') && (
-                                            <a 
+                                        {(user.role === 'candidate' || user.role === 'Candidate') && (                                            <a 
                                                 onClick={() => {
                                                     const currentUser = getCurrentUser();
                                                     const token = localStorage.getItem('token');
+                                                    
+                                                    // Log for debugging
+                                                    console.log('Company Dashboard redirect with:', { 
+                                                        API_URLL, 
+                                                        token: token ? 'exists' : 'missing',
+                                                        currentUser: currentUser ? 'exists' : 'missing'
+                                                    });
+                                                    
                                                     if (token && currentUser) {
                                                         window.location.href = `${API_URLL}?token=${token}`;
                                                     } else {
@@ -307,11 +328,18 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                                             </a>
                                         )}
                                         
-                                        {(user.role === 'admin' || user.role === 'Admin') && (
-                                            <a 
+                                        {(user.role === 'admin' || user.role === 'Admin') && (                                            <a 
                                                 onClick={() => {
                                                     const currentUser = getCurrentUser();
                                                     const token = localStorage.getItem('token');
+                                                    
+                                                    // Log for debugging
+                                                    console.log('Admin Dashboard redirect with:', { 
+                                                        API_URLLL, 
+                                                        token: token ? 'exists' : 'missing',
+                                                        currentUser: currentUser ? 'exists' : 'missing'
+                                                    });
+                                                    
                                                     if (token && currentUser) {
                                                         window.location.href = `${API_URLLL}?token=${token}`;
                                                     } else {

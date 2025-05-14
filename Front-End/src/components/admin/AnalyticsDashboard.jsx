@@ -34,9 +34,14 @@ const AnalyticsDashboard = () => {
       try {
         const token = localStorage.getItem('token');
         
-        const response = await axios.get(`${process.env.REACT_APP_API_URL}/companies/admin/analytics`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+       const baseUrl =
+       process.env.REACT_APP_API_URL ||
+       process.env.NEXT_FRONT_API_URL ||
+       process.env.NEXT_COMPANY_API_URL;
+      const response = await axios.get(
+      `${baseUrl}/companies/admin/analytics`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
         
         setAnalytics(response.data.data);
         setLoading(false);

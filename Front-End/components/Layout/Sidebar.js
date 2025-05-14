@@ -4,6 +4,7 @@ import 'react-perfect-scrollbar/dist/css/styles.css';
 import { useState, useEffect } from "react";
 import { useRouter } from 'next/router';
 import { getCurrentUser, clearUserData } from '../../utils/authUtils';
+
 const API_URL = process.env.NEXT_COMPANY_API_URL || 'http://localhost:3001';
 const API_URLL = process.env.NEXT_ADMIN_API_URL || 'http://localhost:3002';
 
