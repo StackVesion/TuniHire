@@ -129,7 +129,7 @@ const AIJobAnalysis = () => {
         
         // Fetch AI recommendation directly from the recommendation service
         console.log(`Fetching AI recommendation for user ${user._id} and job ${jobId}`);
-        const aiResponse = await fetch(`http://localhost:5001/api/recommendation?user_id=${user._id}&job_id=${jobId}`, {
+        const aiResponse = await fetch(`http://localhost:5003/api/recommendation?user_id=${user._id}&job_id=${jobId}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

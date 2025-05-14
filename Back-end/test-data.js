@@ -357,7 +357,7 @@ async function populateDatabase() {
           jobPosts: jobPostIds.map(id => id.toString()),
           applications: applicationIds.map(id => id.toString())
         },
-        recommendationTestEndpoint: `http://localhost:5001/api/recommendation?user_id=${candidateUserIds[0].toString()}&job_id=${jobPostIds[0].toString()}`
+        recommendationTestEndpoint: `http://localhost:5003/api/recommendation?user_id=${candidateUserIds[0].toString()}&job_id=${jobPostIds[0].toString()}`
       };
       
       fs.writeFileSync('test-data-info.json', JSON.stringify(testInfo, null, 2));

@@ -30,4 +30,5 @@ if __name__ == '__main__':
     print("- GET /api/training/stats")
     print("="*80 + "\n")
 
+    # Explicitly use the provided port
     flask_app.run(debug=debug, host='0.0.0.0', port=port)

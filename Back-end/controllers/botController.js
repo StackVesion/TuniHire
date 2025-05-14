@@ -8,7 +8,7 @@ const fetch = require('node-fetch');
 // Start an HR bot for a meeting
 exports.startHRBot = async (req, res) => {
   try {
-    const { meeting_id, dev_test_mode } = req.body;
+    const { meeting_id, dev_test_mode, force_new_room } = req.body;
     
     // Validate meeting ID
     if (!meeting_id) {
@@ -41,7 +41,23 @@ exports.startHRBot = async (req, res) => {
       });
     }
     
-    console.log('Always creating a new room URL regardless of existing one');
+    // Check if we should force a new room URL creation
+    if (force_new_room) {
+      console.log('Force creating a new room URL - ignoring any existing room URL');
+      // Continue with API call to create new room
+    } else if (meeting.roomUrl) {
+      console.log('Using existing room URL:', meeting.roomUrl);
+      // Return the existing room URL without making another API call
+      return res.status(200).json({
+        success: true,
+        data: {
+          room_url: meeting.roomUrl,
+          status: 'reused',
+          success: true,
+        },
+        message: 'Using existing room URL'
+      });
+    }
     
     // Get the white test for this job
     const whiteTest = await WhiteTest.findOne({ job_id: meeting.job_id._id });
@@ -87,11 +103,11 @@ ${whiteTest.content}
 
 Start by welcoming the candidate and making them comfortable. Then proceed with the questions from the white test in a conversational manner. Evaluate their responses and provide feedback.`;
 
-    console.log('Connecting to bot service at: http://127.0.0.1:8030/start-bot');
+    console.log('Connecting to bot service at: http://127.0.0.1:8080/start-bot');
     
     // Call the bot service
     try {
-      const botResponse = await fetch('http://127.0.0.1:8030/start-bot', {
+      const botResponse = await fetch('http://127.0.0.1:8080/start-bot', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -103,7 +119,8 @@ Start by welcoming the candidate and making them comfortable. Then proceed with 
           job_title: meeting.job_id.title,
           company_name: companyName,
           candidate_name: candidateName,
-          hr_name: hrName
+          hr_name: hrName,
+          create_new_room: true // Always force creation of a new room URL
         })
       });
       
@@ -237,11 +254,11 @@ Cover the following aspects:
 
 Ask the candidate what specific areas they'd like to focus on in their preparation and provide tailored advice.`;
 
-    console.log('Connecting to bot service at: http://127.0.0.1:8030/start-bot');
+    console.log('Connecting to bot service at: http://127.0.0.1:8080/start-bot');
     
     // Call the bot service
     try {
-      const botResponse = await fetch('http://127.0.0.1:8030/start-bot', {
+      const botResponse = await fetch('http://127.0.0.1:8080/start-bot', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -252,7 +269,8 @@ Ask the candidate what specific areas they'd like to focus on in their preparati
           meeting_id: meeting._id.toString(),
           job_title: meeting.job_id.title,
           candidate_name: candidateName,
-          is_prep: true
+          is_prep: true,
+          create_new_room: true // Always force creation of a new room URL
         })
       });
       

@@ -68,11 +68,11 @@ const AiRecommendation = ({ userId, jobId, subscription, authAxios, onViewDetail
     setError(null);
     
     // Log the API call attempt for debugging
-    console.log(`⚡ CALLING AI API: http://localhost:5001/api/recommendation?user_id=${userId}&job_id=${jobId}`);
+    console.log(`⚡ CALLING AI API: http://localhost:5003/api/recommendation?user_id=${userId}&job_id=${jobId}`);
     
     // Use XMLHttpRequest for better browser compatibility and network monitoring
     const xhr = new XMLHttpRequest();
-    const url = `http://localhost:5001/api/recommendation?user_id=${userId}&job_id=${jobId}`;
+    const url = `http://localhost:5003/api/recommendation?user_id=${userId}&job_id=${jobId}`;
     
     xhr.open('GET', url, true);
     xhr.setRequestHeader('Content-Type', 'application/json');

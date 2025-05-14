@@ -9,7 +9,7 @@ const path = require('path');
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 // Set environment variables
-process.env.PORT = process.env.PORT || '5050';
+process.env.PORT = process.env.PORT || 5000;
 process.env.MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/tunihire';
 process.env.JWT_SECRET = process.env.JWT_SECRET || '129a49a5-dda6-49f9-8b5f-86a39c5cd7d9';
 process.env.JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
