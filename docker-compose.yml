@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   backend:
     image: ${DOCKER_REGISTRY}/backend:latest
@@ -9,9 +8,8 @@ services:
       - "5000:5000"
     environment:
       - NODE_ENV=production
-      # Adapter MONGODB_CONNECTION pour pointer vers le service db interne
-      - MONGODB_URI=mongodb://root:example@db:27017/TuniHireDB?authSource=admin 
-      - APP_VERSION=${APP_VERSION}         # Fourni par l'environnement Jenkinsfile
+      - MONGODB_URI=mongodb://root:example@db:27017/TuniHireDB?authSource=admin
+      - APP_VERSION=${APP_VERSION}
       - SESSION_SECRET=${SESSION_SECRET}
       - JWT_SECRET=${JWT_SECRET}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -27,16 +25,18 @@ services:
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
     depends_on:
       - db
+
   db:
-    image: mongo:4.2 # Ou une version plus récente si compatible
+    image: mongo:4.2
     container_name: tunihire_mongo_db
     restart: always
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root # À sécuriser ou externaliser via credentials si besoin
-      MONGO_INITDB_ROOT_PASSWORD: example # À sécuriser ou externaliser via credentials si besoin
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
     ports:
       - "27017:27017"
     volumes:
-      - mongo-data:/data/db # Volume nommé pour la persistance des données
+      - mongo-data:/data/db
+
 volumes:
   mongo-data:
