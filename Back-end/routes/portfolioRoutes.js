@@ -460,8 +460,8 @@ router.post('/generate-cv', verifyToken, async (req, res) => {
     
     // Create a relative path for accessing from the web
     const relativePath = `/uploads/resumes/${cvFileName}`;
-    const downloadUrl = `http://localhost:5000${relativePath}`;
-    
+    const downloadUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${relativePath}`;
+
     console.log(`CV will be generated at: ${cvFilePath}`);
     console.log(`CV will be accessible at: ${downloadUrl}`);
     

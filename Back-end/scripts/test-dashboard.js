@@ -9,7 +9,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 // Configuration
-const API_URL = 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // Fonction pour créer un token JWT de test
