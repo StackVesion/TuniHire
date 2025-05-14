@@ -2,25 +2,25 @@ pipeline {
     agent any
 
     environment {
-        NODE_VERSION = 'node:18'
-        DOCKER_REGISTRY = '172.23.202.74:8083'
-        registry = '172.23.202.74:8083'
-        registryCredentials = 'docker'
-        APP_VERSION = "1.0.${BUILD_NUMBER}"
+        NODE_VERSION         = 'node:18'
+        DOCKER_REGISTRY      = '172.23.202.74:8083'
+        registry             = '172.23.202.74:8083'
+        registryCredentials  = 'docker'
+        APP_VERSION          = "1.0.${BUILD_NUMBER}"
 
-        // Secrets from Jenkins Credentials
-        SESSION_SECRET = credentials('SESSION_SECRET')
-        JWT_SECRET = credentials('JWT_SECRET')
-        OPENAI_API_KEY = credentials('OPENAI_API_KEY')
-        GOOGLE_CLIENT_ID = credentials('GOOGLE_CLIENT_ID')
+        // Secrets...
+        SESSION_SECRET       = credentials('SESSION_SECRET')
+        JWT_SECRET           = credentials('JWT_SECRET')
+        OPENAI_API_KEY       = credentials('OPENAI_API_KEY')
+        GOOGLE_CLIENT_ID     = credentials('GOOGLE_CLIENT_ID')
         GOOGLE_CLIENT_SECRET = credentials('GOOGLE_CLIENT_SECRET')
-        GITHUB_CLIENT_ID = credentials('GITHUB_CLIENT_ID')
+        GITHUB_CLIENT_ID     = credentials('GITHUB_CLIENT_ID')
         GITHUB_CLIENT_SECRET = credentials('GITHUB_CLIENT_SECRET')
-        EMAIL_USER = credentials('EMAIL_USER')
-        EMAIL_PASSWORD = credentials('EMAIL_PASSWORD')
-        EMAIL_APP_USER = credentials('EMAIL_APP_USER')
-        EMAIL_APP_PASSWORD = credentials('EMAIL_APP_PASSWORD')
-        STRIPE_SECRET_KEY = credentials('STRIPE_SECRET_KEY')
+        EMAIL_USER           = credentials('EMAIL_USER')
+        EMAIL_PASSWORD       = credentials('EMAIL_PASSWORD')
+        EMAIL_APP_USER       = credentials('EMAIL_APP_USER')
+        EMAIL_APP_PASSWORD   = credentials('EMAIL_APP_PASSWORD')
+        STRIPE_SECRET_KEY    = credentials('STRIPE_SECRET_KEY')
         STRIPE_PUBLISHABLE_KEY = credentials('STRIPE_PUBLISHABLE_KEY')
     }
 
@@ -31,9 +31,7 @@ pipeline {
 
     stages {
         stage('Checkout') {
-            steps {
-                checkout scm
-            }
+            steps { checkout scm }
         }
 
         stage('Install Backend Dependencies') {
@@ -45,9 +43,7 @@ pipeline {
         }
 
         stage('Run Backend Tests') {
-            when {
-                expression { params.SKIP_TESTS == false }
-            }
+            when { expression { !params.SKIP_TESTS } }
             steps {
                 dir('Back-end') {
                     sh '''
@@ -71,9 +67,7 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
-            when {
-                expression { params.SKIP_SONAR == false }
-            }
+            when { expression { !params.SKIP_SONAR } }
             steps {
                 dir('Back-end') {
                     script {
@@ -81,11 +75,11 @@ pipeline {
                         withSonarQubeEnv('scanner') {
                             sh """
                                 ${scannerHome}/bin/sonar-scanner \
-                                -Dsonar.projectKey=tunihire-backend \
-                                -Dsonar.projectName='TuniHire Backend' \
-                                -Dsonar.sources=. \
-                                -Dsonar.exclusions=node_modules/**,test/**,coverage/** \
-                                -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+                                  -Dsonar.projectKey=tunihire-backend \
+                                  -Dsonar.projectName='TuniHire Backend' \
+                                  -Dsonar.sources=. \
+                                  -Dsonar.exclusions=node_modules/**,test/**,coverage/** \
+                                  -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
                             """
                         }
                     }
@@ -103,10 +97,9 @@ pipeline {
             steps {
                 script {
                     def imageName = "${DOCKER_REGISTRY}/docker-repo/backend:latest"
-                    // Tag the registry-named image, not "backend:latest"
+                    // retag the registry‑built image
                     sh "docker tag ${DOCKER_REGISTRY}/backend:latest ${imageName}"
-
-                    docker.withRegistry("http://${registry}", registryCredentials) {
+                    docker.withRegistry("${registry}", registryCredentials) {
                         sh "docker push ${imageName}"
                     }
                 }
@@ -117,8 +110,7 @@ pipeline {
             steps {
                 script {
                     def imageName = "${DOCKER_REGISTRY}/docker-repo/backend:latest"
-
-                    docker.withRegistry("http://${registry}", registryCredentials) {
+                    docker.withRegistry("${registry}", registryCredentials) {
                         sh """
                             docker pull ${imageName}
                             docker tag ${imageName} backend
@@ -131,14 +123,8 @@ pipeline {
     }
 
     post {
-        success {
-            echo '✅ Backend pipeline completed successfully!'
-        }
-        failure {
-            echo '❌ Backend pipeline failed!'
-        }
-        always {
-            cleanWs()
-        }
+        success { echo '✅ Backend pipeline completed successfully!' }
+        failure { echo '❌ Backend pipeline failed!' }
+        always  { cleanWs() }
     }
 }
