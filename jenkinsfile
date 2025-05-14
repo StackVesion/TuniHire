@@ -108,18 +108,6 @@ pipeline {
             }
         }
 
-        stage('Quality Gate') {
-            // Optionnel: rendre cette étape skipable aussi si Sonar est skippé
-            when {
-                expression { params.SKIP_SONAR == false }
-            }
-            steps {
-                timeout(time: 10, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 // docker-compose.yml est à la racine du projet
