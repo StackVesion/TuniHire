@@ -1,84 +1,137 @@
-import React from 'react'
-import { all_routes } from '../../router/all_routes'
-import { Link } from 'react-router-dom'
-import PredefinedDateRanges from '../../../core/common/datePicker'
-import ImageWithBasePath from '../../../core/common/imageWithBasePath'
-import { DatePicker } from "antd";
-import CommonSelect from '../../../core/common/commonSelect'
-import CollapseHeader from '../../../core/common/collapse-header/collapse-header'
+import React, { useState, useEffect } from 'react';
+import { all_routes } from '../../router/all_routes';
+import { Link } from 'react-router-dom';
+import PredefinedDateRanges from '../../../core/common/datePicker';
+import ImageWithBasePath from '../../../core/common/imageWithBasePath';
+import CollapseHeader from '../../../core/common/collapse-header/collapse-header';
+import axios from 'axios';
+import { Application } from './types';
+import Swal from 'sweetalert2';
 
 const JobGrid = () => {
+    const [applications, setApplications] = useState<Application[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [sortBy, setSortBy] = useState('date'); // 'date', 'name', 'status'
+    const [sortDirection, setSortDirection] = useState('desc'); // 'asc', 'desc'
 
-    const getModalContainer = () => {
-        const modalElement = document.getElementById('modal-datepicker');
-        return modalElement ? modalElement : document.body; // Fallback to document.body if modalElement is null
+    useEffect(() => {
+        fetchApplications();
+    }, []);
+
+    const fetchApplications = async () => {
+        try {
+            setLoading(true);
+            // Récupérer le token d'authentification du stockage local
+            const token = localStorage.getItem('token');
+            
+            // Faire l'appel API avec le token dans les en-têtes
+            const response = await axios.get('http://localhost:5000/api/applications', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            console.log('Applications fetched:', response.data);
+            setApplications(response.data);
+        } catch (err) {
+            console.error('Error fetching applications:', err);
+            setError('Failed to load applications');
+            Swal.fire({
+                title: 'Error',
+                text: 'Failed to load applications. Please try again later.',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };    const handleStatusChange = async (applicationId: string, newStatus: 'Accepted' | 'Rejected') => {
+        try {
+            // Récupérer le token d'authentification
+            const token = localStorage.getItem('token');
+            
+            await axios.patch(`http://localhost:5000/api/applications/${applicationId}/status`, {
+                status: newStatus
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            // Mettre à jour l'état local après le changement de statut
+            setApplications(applications.map(app => 
+                app._id === applicationId ? { ...app, status: newStatus } : app
+            ));
+            
+            // Show success message
+            Swal.fire({
+                title: 'Success',
+                text: `Application has been ${newStatus.toLowerCase()} successfully`,
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } catch (err) {
+            console.error('Error updating application status:', err);
+            Swal.fire({
+                title: 'Error',
+                text: 'Failed to update application status',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        }
+    };
+    
+    // Sort applications based on the selected criteria
+    const sortApplications = (apps: Application[]) => {
+        return [...apps].sort((a, b) => {
+            if (sortBy === 'date') {
+                const dateA = new Date(a.createdAt).getTime();
+                const dateB = new Date(b.createdAt).getTime();
+                return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+            } else if (sortBy === 'name') {
+                const nameA = a.userId?.firstName || '';
+                const nameB = b.userId?.firstName || '';
+                return sortDirection === 'asc' 
+                    ? nameA.localeCompare(nameB) 
+                    : nameB.localeCompare(nameA);
+            } else if (sortBy === 'status') {
+                return sortDirection === 'asc' 
+                    ? a.status.localeCompare(b.status) 
+                    : b.status.localeCompare(a.status);
+            }
+            return 0;
+        });
     };
 
-    const jobCategory = [
-        { value: "Select", label: "Select" },
-        { value: "IOS", label: "IOS" },
-        { value: "Web & Application", label: "Web & Application" },
-        { value: "Networking", label: "Networking" },
-    ];
-    const jobtype = [
-        { value: "Select", label: "Select" },
-        { value: "Full Time", label: "Full Time" },
-        { value: "Part Time", label: "Part Time" },
-    ];
-    const joblevel = [
-        { value: "Select", label: "Select" },
-        { value: "Team Lead", label: "Team Lead" },
-        { value: "Manager", label: "Manager" },
-        { value: "Senior", label: "Senior" },
-    ];
-    const experience = [
-        { value: "Select", label: "Select" },
-        { value: "Entry Level", label: "Entry Level" },
-        { value: "Mid Level", label: "Mid Level" },
-        { value: "Expert", label: "Expert" },
-    ];
-    const qualification = [
-        { value: "Select", label: "Select" },
-        { value: "Bachelore Degree", label: "Bachelore Degree" },
-        { value: "Master Degree", label: "Master Degree" },
-        { value: "Others", label: "Others" },
-    ];
-    const genderChoose = [
-        { value: "Select", label: "Select" },
-        { value: "Male", label: "Male" },
-        { value: "Female", label: "Female" },
-    ];
-    const sallary = [
-        { value: "Select", label: "Select" },
-        { value: "10k - 15k", label: "10k - 15k" },
-        { value: "15k -20k", label: "15k -20k" },
-    ];
-    const maxsallary = [
-        { value: "Select", label: "Select" },
-        { value: "40k - 50k", label: "40k - 50k" },
-        { value: "50k - 60k", label: "50k - 60k" },
-    ];
-    const country = [
-        { value: "Select", label: "Select" },
-        { value: "USA", label: "USA" },
-        { value: "Canada", label: "Canada" },
-        { value: "Germany", label: "Germany" },
-        { value: "France", label: "France" },
-    ];
-    const state = [
-        { value: "Select", label: "Select" },
-        { value: "California", label: "California" },
-        { value: "New York", label: "New York" },
-        { value: "Texas", label: "Texas" },
-        { value: "Florida", label: "Florida" },
-    ];
-    const city = [
-        { value: "Select", label: "Select" },
-        { value: "Los Angeles", label: "Los Angeles" },
-        { value: "San Diego", label: "San Diego" },
-        { value: "Fresno", label: "Fresno" },
-        { value: "San Francisco", label: "San Francisco" },
-    ];
+    const toggleSortDirection = () => {
+        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    };
+
+    const getFilteredApplications = () => {
+        let filtered = applications;
+        
+        // Apply status filter
+        if (statusFilter !== 'all') {
+            filtered = filtered.filter(app => 
+                app.status.toLowerCase() === statusFilter.toLowerCase()
+            );
+        }
+        
+        // Apply sorting
+        return sortApplications(filtered);
+    };    const getStatusBadgeClass = (status: string) => {
+        switch (status) {
+            case 'Pending':
+                return 'bg-warning-transparent';
+            case 'Accepted':
+                return 'bg-success-transparent';
+            case 'Rejected':
+                return 'bg-danger-transparent';
+            default:
+                return 'bg-secondary-transparent';
+        }
+    };
 
     return (
         <>
@@ -96,1285 +149,267 @@ const JobGrid = () => {
                                             <i className="ti ti-smart-home" />
                                         </Link>
                                     </li>
-                                    <li className="breadcrumb-item">Administration</li>
+                                    <li className="breadcrumb-item">Recruitment</li>
                                     <li className="breadcrumb-item active" aria-current="page">
                                         Applications List
                                     </li>
                                 </ol>
                             </nav>
                         </div>
-                        <div className="d-flex my-xl-auto right-content align-items-center flex-wrap ">
-                            <div className="me-2 mb-2">
-                                <div className="d-flex align-items-center border bg-white rounded p-1 me-2 icon-list">
-                                    <Link to={all_routes.joblist} className="btn btn-icon btn-sm me-1">
-                                        <i className="ti ti-list-tree" />
-                                    </Link>
-                                    <Link
-                                        to={all_routes.jobgrid}
-                                        className="btn btn-icon btn-sm active bg-primary text-white"
-                                    >
-                                        <i className="ti ti-layout-grid" />
-                                    </Link>
-                                </div>
+
+                        {/* Filter Controls */}
+                        <div className="d-flex align-items-center flex-wrap gap-2">
+                            <div className="dropdown me-2">
+                                <button className="btn btn-white dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    Status: {statusFilter === 'all' ? 'All' : statusFilter}
+                                </button>
+                                <ul className="dropdown-menu">
+                                    <li><button className="dropdown-item" onClick={() => setStatusFilter('all')}>All</button></li>
+                                    <li><button className="dropdown-item" onClick={() => setStatusFilter('Pending')}>Pending</button></li>
+                                    <li><button className="dropdown-item" onClick={() => setStatusFilter('Accepted')}>Accepted</button></li>
+                                    <li><button className="dropdown-item" onClick={() => setStatusFilter('Rejected')}>Rejected</button></li>
+                                </ul>
                             </div>
-                            <div className="me-2 mb-2">
-                                <div className="dropdown">
-                                    <Link
-                                        to="#"
-                                        className="dropdown-toggle btn btn-white d-inline-flex align-items-center"
-                                        data-bs-toggle="dropdown"
-                                    >
-                                        <i className="ti ti-file-export me-1" />
-                                        Export
-                                    </Link>
-                                    <ul className="dropdown-menu  dropdown-menu-end p-3">
-                                        <li>
-                                            <Link
-                                                to="#"
-                                                className="dropdown-item rounded-1"
-                                            >
-                                                <i className="ti ti-file-type-pdf me-1" />
-                                                Export as PDF
-                                            </Link>
-                                        </li>
-                                        <li>
-                                            <Link
-                                                to="#"
-                                                className="dropdown-item rounded-1"
-                                            >
-                                                <i className="ti ti-file-type-xls me-1" />
-                                                Export as Excel{" "}
-                                            </Link>
-                                        </li>
-                                    </ul>
-                                </div>
+
+                            <div className="dropdown me-2">
+                                <button className="btn btn-white dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    Sort By: {sortBy === 'date' ? 'Date' : sortBy === 'name' ? 'Name' : 'Status'}
+                                </button>
+                                <ul className="dropdown-menu">
+                                    <li><button className="dropdown-item" onClick={() => setSortBy('date')}>Date</button></li>
+                                    <li><button className="dropdown-item" onClick={() => setSortBy('name')}>Name</button></li>
+                                    <li><button className="dropdown-item" onClick={() => setSortBy('status')}>Status</button></li>
+                                </ul>
                             </div>
-                            <div className="mb-2">
-                                <Link
-                                    to="#"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#add_post"
-                                    className="btn btn-primary d-flex align-items-center"
-                                >
-                                    <i className="ti ti-circle-plus me-2" />
-                                    Post Job
-                                </Link>
-                            </div>
-                            <div className="head-icons ms-2">
-                            <CollapseHeader />
-                            </div>
+
+                            <button className="btn btn-white me-2" onClick={toggleSortDirection}>
+                                <i className={`ti ti-sort-${sortDirection === 'asc' ? 'ascending' : 'descending'}`} />
+                                {sortDirection === 'asc' ? 'Ascending' : 'Descending'}
+                            </button>
+
+                            <button className="btn btn-outline-primary" onClick={fetchApplications}>
+                                <i className="ti ti-refresh me-1" />
+                                Refresh
+                            </button>
                         </div>
                     </div>
-                    {/* /Breadcrumb */}
-                    <div className="card">
-                        <div className="card-body p-3">
-                            <div className="d-flex align-items-center justify-content-between">
-                                <h5>Applications List</h5>
-                                <div className="d-flex my-xl-auto right-content align-items-center flex-wrap row-gap-3">
-                                    <div className="me-3">
-                                        <div className="input-icon-end position-relative">
-                                            <PredefinedDateRanges />
-                                            <span className="input-icon-addon">
-                                                <i className="ti ti-chevron-down" />
+
+                    {/* Summary Stats */}
+                    <div className="row mb-3">
+                        <div className="col-xl-3 col-sm-6 col-12">
+                            <div className="card">
+                                <div className="card-body">
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h3 className="mb-0">{applications.length}</h3>
+                                            <p className="text-muted">Total Applications</p>
+                                        </div>
+                                        <div className="avatar p-2 bg-light-primary">
+                                            <span className="avatar-title rounded-circle bg-primary">
+                                                <i className="ti ti-files"></i>
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="dropdown me-3">
-                                        <Link
-                                            to="#"
-                                            className="dropdown-toggle btn btn-white d-inline-flex align-items-center"
-                                            data-bs-toggle="dropdown"
-                                        >
-                                            Role
-                                        </Link>
-                                        <ul className="dropdown-menu  dropdown-menu-end p-3">
-                                            <li>
-                                                <Link
-                                                    to="#"
-                                                    className="dropdown-item rounded-1"
-                                                >
-                                                    Senior IOS Developer
-                                                </Link>
-                                            </li>
-                                            <li>
-                                                <Link
-                                                    to="#"
-                                                    className="dropdown-item rounded-1"
-                                                >
-                                                    Junior PHP Developer
-                                                </Link>
-                                            </li>
-                                            <li>
-                                                <Link
-                                                    to="#"
-                                                    className="dropdown-item rounded-1"
-                                                >
-                                                    Network Engineer
-                                                </Link>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    <div className="dropdown me-3">
-                                        <Link
-                                            to="#"
-                                            className="dropdown-toggle btn btn-white d-inline-flex align-items-center"
-                                            data-bs-toggle="dropdown"
-                                        >
-                                            Status
-                                        </Link>
-                                        <ul className="dropdown-menu  dropdown-menu-end p-3">
-                                            <li>
-                                                <Link
-                                                    to="#"
-                                                    className="dropdown-item rounded-1"
-                                                >
-                                                    Active
-                                                </Link>
-                                            </li>
-                                            <li>
-                                                <Link
-                                                    to="#"
-                                                    className="dropdown-item rounded-1"
-                                                >
-                                                    Inactive
-                                                </Link>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    <div className="dropdown">
-                                        <Link
-                                            to="#"
-                                            className="dropdown-toggle btn btn-white d-inline-flex align-items-center"
-                                            data-bs-toggle="dropdown"
-                                        >
-                                            Sort By : Last 7 Days
-                                        </Link>
-                                        <ul className="dropdown-menu  dropdown-menu-end p-3">
-                                            <li>
-                                                <Link
-                                                    to="#"
-                                                    className="dropdown-item rounded-1"
-                                                >
-                                                    Recently Added
-                                                </Link>
-                                            </li>
-                                            <li>
-                                                <Link
-                                                    to="#"
-                                                    className="dropdown-item rounded-1"
-                                                >
-                                                    Ascending
-                                                </Link>
-                                            </li>
-                                            <li>
-                                                <Link
-                                                    to="#"
-                                                    className="dropdown-item rounded-1"
-                                                >
-                                                    Desending
-                                                </Link>
-                                            </li>
-                                            <li>
-                                                <Link
-                                                    to="#"
-                                                    className="dropdown-item rounded-1"
-                                                >
-                                                    Last Month
-                                                </Link>
-                                            </li>
-                                            <li>
-                                                <Link
-                                                    to="#"
-                                                    className="dropdown-item rounded-1"
-                                                >
-                                                    Last 7 Days
-                                                </Link>
-                                            </li>
-                                        </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="col-xl-3 col-sm-6 col-12">
+                            <div className="card">
+                                <div className="card-body">
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h3 className="mb-0">{applications.filter(app => app.status === 'Pending').length}</h3>
+                                            <p className="text-muted">Pending</p>
+                                        </div>
+                                        <div className="avatar p-2 bg-light-warning">
+                                            <span className="avatar-title rounded-circle bg-warning">
+                                                <i className="ti ti-clock"></i>
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                        <div className="col-xl-3 col-sm-6 col-12">
+                            <div className="card">
+                                <div className="card-body">
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h3 className="mb-0">{applications.filter(app => app.status === 'Accepted').length}</h3>
+                                            <p className="text-muted">Accepted</p>
+                                        </div>
+                                        <div className="avatar p-2 bg-light-success">
+                                            <span className="avatar-title rounded-circle bg-success">
+                                                <i className="ti ti-check"></i>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="col-xl-3 col-sm-6 col-12">
+                            <div className="card">
+                                <div className="card-body">
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h3 className="mb-0">{applications.filter(app => app.status === 'Rejected').length}</h3>
+                                            <p className="text-muted">Rejected</p>
+                                        </div>
+                                        <div className="avatar p-2 bg-light-danger">
+                                            <span className="avatar-title rounded-circle bg-danger">
+                                                <i className="ti ti-x"></i>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>                    {/* Applications Grid */}
                     <div className="row">
-                        <div className="col-xl-3 col-lg-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="card bg-light">
-                                        <div className="card-body p-3">
-                                            <div className="d-flex align-items-center">
-                                                <Link to="#" className="me-2">
-                                                    <span className="avatar avatar-lg bg-gray">
-                                                        <ImageWithBasePath
-                                                            src="assets/img/icons/apple.svg"
-                                                            className="w-auto h-auto"
-                                                            alt="icon"
-                                                        />
-                                                    </span>
-                                                </Link>
-                                                <div>
-                                                    <h6 className="fw-medium mb-1 text-truncate">
-                                                        <Link to="#">Senior IOS Developer</Link>
-                                                    </h6>
-                                                    <p className="fs-12 text-gray fw-normal">25 Applicants</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="d-flex flex-column mb-3">
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-map-pin-check text-gray-5 me-2" />
-                                            New York, USA
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-currency-dollar text-gray-5 me-2" />
-                                            30, 000 - 35, 000 / month
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center">
-                                            <i className="ti ti-briefcase text-gray-5 me-2" />2 years of
-                                            experience
-                                        </p>
-                                    </div>
-                                    <div className="mb-3">
-                                        <span className="badge badge-pink-transparent me-1">
-                                            Full Time
-                                        </span>
-                                        <span className="badge bg-secondary-transparent">Expert</span>
-                                    </div>
-                                    <div className="progress progress-xs mb-2">
-                                        <div
-                                            className="progress-bar bg-warning"
-                                            role="progressbar"
-                                            style={{ width: "30%" }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <p className="fs-12 text-gray fw-normal">10 of 25 filled</p>
-                                    </div>
+                        {loading ? (
+                            <div className="col-12 text-center p-5">
+                                <div className="spinner-border text-primary" role="status">
+                                    <span className="visually-hidden">Loading...</span>
+                                </div>
+                                <p className="mt-2">Loading applications...</p>
+                            </div>
+                        ) : error ? (
+                            <div className="col-12">
+                                <div className="alert alert-danger" role="alert">
+                                    {error}
                                 </div>
                             </div>
-                        </div>
-                        <div className="col-xl-3 col-lg-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="card bg-light">
-                                        <div className="card-body p-3">
-                                            <div className="d-flex align-items-center">
-                                                <Link to="#" className="me-2">
-                                                    <span className="avatar avatar-lg bg-gray">
-                                                        <ImageWithBasePath
-                                                            src="assets/img/icons/php.svg"
-                                                            className="w-auto h-auto"
-                                                            alt="icon"
-                                                        />
-                                                    </span>
-                                                </Link>
-                                                <div>
-                                                    <h6 className="fw-medium mb-1 text-truncate">
-                                                        <Link to="#">Junior PHP Developer</Link>
-                                                    </h6>
-                                                    <p className="fs-12 text-gray fw-normal">25 Applicants</p>
-                                                </div>
-                                            </div>
+                        ) : getFilteredApplications().length === 0 ? (
+                            <div className="col-12">
+                                <div className="card">
+                                    <div className="card-body text-center p-5">
+                                        <div className="mb-4">
+                                            <i className="ti ti-clipboard-text text-primary" style={{ fontSize: '4rem' }} />
                                         </div>
-                                    </div>
-                                    <div className="d-flex flex-column mb-3">
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-map-pin-check text-gray-5 me-2" />
-                                            Los Angeles, USA
+                                        <h3>No applications found</h3>
+                                        <p className="text-muted">
+                                            {statusFilter !== 'all' 
+                                                ? `No applications with status "${statusFilter}" found.` 
+                                                : "There are no job applications to display"}
                                         </p>
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-currency-dollar text-gray-5 me-2" />
-                                            20, 000 - 25, 000 / month
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center">
-                                            <i className="ti ti-briefcase text-gray-5 me-2" />4 years of
-                                            experience
-                                        </p>
-                                    </div>
-                                    <div className="mb-3">
-                                        <span className="badge badge-pink-transparent me-1">
-                                            Full Time
-                                        </span>
-                                        <span className="badge bg-secondary-transparent">Expert</span>
-                                    </div>
-                                    <div className="progress progress-xs mb-2">
-                                        <div
-                                            className="progress-bar bg-warning"
-                                            role="progressbar"
-                                            style={{ width: "30%" }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <p className="fs-12 text-gray fw-normal">10 of 25 filled</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xl-3 col-lg-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="card bg-light">
-                                        <div className="card-body p-3">
-                                            <div className="d-flex align-items-center">
-                                                <Link to="#" className="me-2">
-                                                    <span className="avatar avatar-lg bg-gray">
-                                                        <ImageWithBasePath
-                                                            src="assets/img/icons/black.svg"
-                                                            className="w-auto h-auto"
-                                                            alt="icon"
-                                                        />
-                                                    </span>
-                                                </Link>
-                                                <div>
-                                                    <h6 className="fw-medium mb-1 text-truncate">
-                                                        <Link to="#">Network Engineer</Link>
-                                                    </h6>
-                                                    <p className="fs-12 text-gray fw-normal">25 Applicants</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="d-flex flex-column mb-3">
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-map-pin-check text-gray-5 me-2" />
-                                            Bristol, UK
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-currency-dollar text-gray-5 me-2" />
-                                            30, 000 - 35, 000 / month
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center">
-                                            <i className="ti ti-briefcase text-gray-5 me-2" />1 year of
-                                            experience
-                                        </p>
-                                    </div>
-                                    <div className="mb-3">
-                                        <span className="badge badge-pink-transparent me-1">
-                                            Full Time
-                                        </span>
-                                        <span className="badge bg-secondary-transparent">Expert</span>
-                                    </div>
-                                    <div className="progress progress-xs mb-2">
-                                        <div
-                                            className="progress-bar bg-warning"
-                                            role="progressbar"
-                                            style={{ width: "30%" }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <p className="fs-12 text-gray fw-normal">10 of 25 filled</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xl-3 col-lg-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="card bg-light">
-                                        <div className="card-body p-3">
-                                            <div className="d-flex align-items-center">
-                                                <Link to="#" className="me-2">
-                                                    <span className="avatar avatar-lg bg-gray">
-                                                        <ImageWithBasePath
-                                                            src="assets/img/icons/react.svg"
-                                                            className="w-auto h-auto"
-                                                            alt="icon"
-                                                        />
-                                                    </span>
-                                                </Link>
-                                                <div>
-                                                    <h6 className="fw-medium mb-1 text-truncate">
-                                                        <Link to="#">React Developer </Link>
-                                                    </h6>
-                                                    <p className="fs-12 text-gray fw-normal">25 Applicants</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="d-flex flex-column mb-3">
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-map-pin-check text-gray-5 me-2" />
-                                            Birmingham, UK
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-currency-dollar text-gray-5 me-2" />
-                                            28, 000 - 32, 000 / month
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center">
-                                            <i className="ti ti-briefcase text-gray-5 me-2" />3 years of
-                                            experience
-                                        </p>
-                                    </div>
-                                    <div className="mb-3">
-                                        <span className="badge badge-pink-transparent me-1">
-                                            Full Time
-                                        </span>
-                                        <span className="badge bg-secondary-transparent">Expert</span>
-                                    </div>
-                                    <div className="progress progress-xs mb-2">
-                                        <div
-                                            className="progress-bar bg-warning"
-                                            role="progressbar"
-                                            style={{ width: "30%" }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <p className="fs-12 text-gray fw-normal">10 of 25 filled</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xl-3 col-lg-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="card bg-light">
-                                        <div className="card-body p-3">
-                                            <div className="d-flex align-items-center">
-                                                <Link to="#" className="me-2">
-                                                    <span className="avatar avatar-lg bg-gray">
-                                                        <ImageWithBasePath
-                                                            src="assets/img/icons/laravel.svg"
-                                                            className="w-auto h-auto"
-                                                            alt="icon"
-                                                        />
-                                                    </span>
-                                                </Link>
-                                                <div>
-                                                    <h6 className="fw-medium mb-1 text-truncate">
-                                                        <Link to="#">Laravel Developer</Link>
-                                                    </h6>
-                                                    <p className="fs-12 text-gray fw-normal">25 Applicants</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="d-flex flex-column mb-3">
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-map-pin-check text-gray-5 me-2" />
-                                            Washington, USA
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-currency-dollar text-gray-5 me-2" />
-                                            32, 000 - 36, 000 / month
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center">
-                                            <i className="ti ti-briefcase text-gray-5 me-2" />1 years of
-                                            experience
-                                        </p>
-                                    </div>
-                                    <div className="mb-3">
-                                        <span className="badge badge-pink-transparent me-1">
-                                            Full Time
-                                        </span>
-                                        <span className="badge bg-secondary-transparent">Expert</span>
-                                    </div>
-                                    <div className="progress progress-xs mb-2">
-                                        <div
-                                            className="progress-bar bg-warning"
-                                            role="progressbar"
-                                            style={{ width: "30%" }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <p className="fs-12 text-gray fw-normal">10 of 25 filled</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xl-3 col-lg-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="card bg-light">
-                                        <div className="card-body p-3">
-                                            <div className="d-flex align-items-center">
-                                                <Link to="#" className="me-2">
-                                                    <span className="avatar avatar-lg bg-gray">
-                                                        <ImageWithBasePath
-                                                            src="assets/img/icons/devops.svg"
-                                                            className="w-auto h-auto"
-                                                            alt="icon"
-                                                        />
-                                                    </span>
-                                                </Link>
-                                                <div>
-                                                    <h6 className="fw-medium mb-1 text-truncate">
-                                                        <Link to="#">DevOps Engineer</Link>
-                                                    </h6>
-                                                    <p className="fs-12 text-gray fw-normal">25 Applicants</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="d-flex flex-column mb-3">
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-map-pin-check text-gray-5 me-2" />
-                                            Coventry, UK
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-currency-dollar text-gray-5 me-2" />
-                                            25, 000 - 35, 000 / month
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center">
-                                            <i className="ti ti-briefcase text-gray-5 me-2" />6 years of
-                                            experience
-                                        </p>
-                                    </div>
-                                    <div className="mb-3">
-                                        <span className="badge badge-pink-transparent me-1">
-                                            Full Time
-                                        </span>
-                                        <span className="badge bg-secondary-transparent">Expert</span>
-                                    </div>
-                                    <div className="progress progress-xs mb-2">
-                                        <div
-                                            className="progress-bar bg-warning"
-                                            role="progressbar"
-                                            style={{ width: "30%" }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <p className="fs-12 text-gray fw-normal">10 of 25 filled</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xl-3 col-lg-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="card bg-light">
-                                        <div className="card-body p-3">
-                                            <div className="d-flex align-items-center">
-                                                <Link to="#" className="me-2">
-                                                    <span className="avatar avatar-lg bg-gray">
-                                                        <ImageWithBasePath
-                                                            src="assets/img/icons/android.svg"
-                                                            className="w-auto h-auto"
-                                                            alt="icon"
-                                                        />
-                                                    </span>
-                                                </Link>
-                                                <div>
-                                                    <h6 className="fw-medium mb-1 text-truncate">
-                                                        <Link to="#">Android Developer</Link>
-                                                    </h6>
-                                                    <p className="fs-12 text-gray fw-normal">25 Applicants</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="d-flex flex-column mb-3">
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-map-pin-check text-gray-5 me-2" />
-                                            Chicago, USA
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-currency-dollar text-gray-5 me-2" />
-                                            28, 000 - 32, 000 / month
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center">
-                                            <i className="ti ti-briefcase text-gray-5 me-2" />5 years of
-                                            experience
-                                        </p>
-                                    </div>
-                                    <div className="mb-3">
-                                        <span className="badge badge-pink-transparent me-1">
-                                            Full Time
-                                        </span>
-                                        <span className="badge bg-secondary-transparent">Expert</span>
-                                    </div>
-                                    <div className="progress progress-xs mb-2">
-                                        <div
-                                            className="progress-bar bg-warning"
-                                            role="progressbar"
-                                            style={{ width: "30%" }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <p className="fs-12 text-gray fw-normal">10 of 25 filled</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xl-3 col-lg-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="card bg-light">
-                                        <div className="card-body p-3">
-                                            <div className="d-flex align-items-center">
-                                                <Link to="#" className="me-2">
-                                                    <span className="avatar avatar-lg bg-gray">
-                                                        <ImageWithBasePath
-                                                            src="assets/img/icons/html.svg"
-                                                            className="w-auto h-auto"
-                                                            alt="icon"
-                                                        />
-                                                    </span>
-                                                </Link>
-                                                <div>
-                                                    <h6 className="fw-medium mb-1 text-truncate">
-                                                        <Link to="#">HTML Developer</Link>
-                                                    </h6>
-                                                    <p className="fs-12 text-gray fw-normal">25 Applicants</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="d-flex flex-column mb-3">
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-map-pin-check text-gray-5 me-2" />
-                                            Carlisle, UK
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-currency-dollar text-gray-5 me-2" />
-                                            25, 000 - 28, 000 / month
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center">
-                                            <i className="ti ti-briefcase text-gray-5 me-2" />3 years of
-                                            experience
-                                        </p>
-                                    </div>
-                                    <div className="mb-3">
-                                        <span className="badge badge-pink-transparent me-1">
-                                            Full Time
-                                        </span>
-                                        <span className="badge bg-secondary-transparent">Expert</span>
-                                    </div>
-                                    <div className="progress progress-xs mb-2">
-                                        <div
-                                            className="progress-bar bg-warning"
-                                            role="progressbar"
-                                            style={{ width: "30%" }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <p className="fs-12 text-gray fw-normal">10 of 25 filled</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xl-3 col-lg-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="card bg-light">
-                                        <div className="card-body p-3">
-                                            <div className="d-flex align-items-center">
-                                                <Link to="#" className="me-2">
-                                                    <span className="avatar avatar-lg bg-gray">
-                                                        <ImageWithBasePath
-                                                            src="assets/img/icons/ui.svg"
-                                                            className="w-auto h-auto"
-                                                            alt="icon"
-                                                        />
-                                                    </span>
-                                                </Link>
-                                                <div>
-                                                    <h6 className="fw-medium mb-1 text-truncate">
-                                                        <Link to="#">UI/UX Designer</Link>
-                                                    </h6>
-                                                    <p className="fs-12 text-gray fw-normal">25 Applicants</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="d-flex flex-column mb-3">
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-map-pin-check text-gray-5 me-2" />
-                                            UI/UX Designer
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-currency-dollar text-gray-5 me-2" />
-                                            20, 000 - 25, 000 / month
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center">
-                                            <i className="ti ti-briefcase text-gray-5 me-2" />4 years of
-                                            experience
-                                        </p>
-                                    </div>
-                                    <div className="mb-3">
-                                        <span className="badge badge-pink-transparent me-1">
-                                            Full Time
-                                        </span>
-                                        <span className="badge bg-secondary-transparent">Expert</span>
-                                    </div>
-                                    <div className="progress progress-xs mb-2">
-                                        <div
-                                            className="progress-bar bg-warning"
-                                            role="progressbar"
-                                            style={{ width: "30%" }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <p className="fs-12 text-gray fw-normal">10 of 25 filled</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xl-3 col-lg-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="card bg-light">
-                                        <div className="card-body p-3">
-                                            <div className="d-flex align-items-center">
-                                                <Link to="#" className="me-2">
-                                                    <span className="avatar avatar-lg bg-gray">
-                                                        <ImageWithBasePath
-                                                            src="assets/img/icons/grafic.svg"
-                                                            className="w-auto h-auto"
-                                                            alt="icon"
-                                                        />
-                                                    </span>
-                                                </Link>
-                                                <div>
-                                                    <h6 className="fw-medium mb-1 text-truncate">
-                                                        <Link to="#">Senior IOS Developer</Link>
-                                                    </h6>
-                                                    <p className="fs-12 text-gray fw-normal">25 Applicants</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="d-flex flex-column mb-3">
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-map-pin-check text-gray-5 me-2" />
-                                            San Diego, USA
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-currency-dollar text-gray-5 me-2" />
-                                            22, 000 - 28, 000 / month
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center">
-                                            <i className="ti ti-briefcase text-gray-5 me-2" />3 years of
-                                            experience
-                                        </p>
-                                    </div>
-                                    <div className="mb-3">
-                                        <span className="badge badge-pink-transparent me-1">
-                                            Full Time
-                                        </span>
-                                        <span className="badge bg-secondary-transparent">Expert</span>
-                                    </div>
-                                    <div className="progress progress-xs mb-2">
-                                        <div
-                                            className="progress-bar bg-warning"
-                                            role="progressbar"
-                                            style={{ width: "30%" }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <p className="fs-12 text-gray fw-normal">10 of 25 filled</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xl-3 col-lg-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="card bg-light">
-                                        <div className="card-body p-3">
-                                            <div className="d-flex align-items-center">
-                                                <Link to="#" className="me-2">
-                                                    <span className="avatar avatar-lg bg-gray">
-                                                        <ImageWithBasePath
-                                                            src="assets/img/icons/angular.svg"
-                                                            className="w-auto h-auto"
-                                                            alt="icon"
-                                                        />
-                                                    </span>
-                                                </Link>
-                                                <div>
-                                                    <h6 className="fw-medium mb-1 text-truncate">
-                                                        <Link to="#">Angular Developer</Link>
-                                                    </h6>
-                                                    <p className="fs-12 text-gray fw-normal">25 Applicants</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="d-flex flex-column mb-3">
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-map-pin-check text-gray-5 me-2" />
-                                            Sheffield, UK
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-currency-dollar text-gray-5 me-2" />
-                                            28, 000 - 30, 000 / month
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center">
-                                            <i className="ti ti-briefcase text-gray-5 me-2" />2 years of
-                                            experience
-                                        </p>
-                                    </div>
-                                    <div className="mb-3">
-                                        <span className="badge badge-pink-transparent me-1">
-                                            Full Time
-                                        </span>
-                                        <span className="badge bg-secondary-transparent">Expert</span>
-                                    </div>
-                                    <div className="progress progress-xs mb-2">
-                                        <div
-                                            className="progress-bar bg-warning"
-                                            role="progressbar"
-                                            style={{ width: "30%" }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <p className="fs-12 text-gray fw-normal">10 of 25 filled</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="col-xl-3 col-lg-4 col-md-6">
-                            <div className="card">
-                                <div className="card-body">
-                                    <div className="card bg-light">
-                                        <div className="card-body p-3">
-                                            <div className="d-flex align-items-center">
-                                                <Link to="#" className="me-2">
-                                                    <span className="avatar avatar-lg bg-gray-100">
-                                                        <ImageWithBasePath
-                                                            src="assets/img/icons/nodejs.svg"
-                                                            className="w-auto h-auto"
-                                                            alt="icon"
-                                                        />
-                                                    </span>
-                                                </Link>
-                                                <div>
-                                                    <h6 className="fw-medium mb-1 text-truncate">
-                                                        <Link to="#">Node js Developer</Link>
-                                                    </h6>
-                                                    <p className="fs-12 text-gray fw-normal">25 Applicants</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="d-flex flex-column mb-3">
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-map-pin-check text-gray-5 me-2" />
-                                            Boston, USA
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center mb-2">
-                                            <i className="ti ti-currency-dollar text-gray-5 me-2" />
-                                            25, 000 - 28, 000 / month
-                                        </p>
-                                        <p className="text-dark d-inline-flex align-items-center">
-                                            <i className="ti ti-briefcase text-gray-5 me-2" />3 years of
-                                            experience
-                                        </p>
-                                    </div>
-                                    <div className="mb-3">
-                                        <span className="badge badge-pink-transparent me-1">
-                                            Full Time
-                                        </span>
-                                        <span className="badge bg-secondary-transparent">Expert</span>
-                                    </div>
-                                    <div className="progress progress-xs mb-2">
-                                        <div
-                                            className="progress-bar bg-warning"
-                                            role="progressbar"
-                                            style={{ width: "30%" }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <p className="fs-12 text-gray fw-normal">10 of 25 filled</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div className="footer d-sm-flex align-items-center justify-content-between border-top bg-white p-3">
-                    <p className="mb-0">2014 - 2025 © SmartHR.</p>
-                    <p>
-                        Designed &amp; Developed By{" "}
-                        <Link to="#" className="text-primary">
-                            Dreams
-                        </Link>
-                    </p>
-                </div>
-            </div>
-            {/* /Page Wrapper */}
-            {/* Add Post */}
-            <div className="modal fade" id="add_post">
-                <div className="modal-dialog modal-dialog-centered modal-lg">
-                    <div className="modal-content">
-                        <div className="modal-header">
-                            <h4 className="modal-title">Post Job</h4>
-                            <button
-                                type="button"
-                                className="btn-close custom-btn-close"
-                                data-bs-dismiss="modal"
-                                aria-label="Close"
-                            >
-                                <i className="ti ti-x" />
-                            </button>
-                        </div>
-                        <form>
-                            <div className="modal-body pb-0">
-                                <div className="row">
-                                    <div className="contact-grids-tab pt-0">
-                                        <ul className="nav nav-underline" id="myTab" role="tablist">
-                                            <li className="nav-item" role="presentation">
-                                                <button
-                                                    className="nav-link active"
-                                                    id="info-tab"
-                                                    data-bs-toggle="tab"
-                                                    data-bs-target="#basic-info"
-                                                    type="button"
-                                                    role="tab"
-                                                    aria-selected="true"
-                                                >
-                                                    Basic Information
-                                                </button>
-                                            </li>
-                                            <li className="nav-item" role="presentation">
-                                                <button
-                                                    className="nav-link"
-                                                    id="address-tab"
-                                                    data-bs-toggle="tab"
-                                                    data-bs-target="#address"
-                                                    type="button"
-                                                    role="tab"
-                                                    aria-selected="false"
-                                                >
-                                                    Location
-                                                </button>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    <div className="tab-content" id="myTabContent">
-                                        <div
-                                            className="tab-pane fade show active"
-                                            id="basic-info"
-                                            role="tabpanel"
-                                            aria-labelledby="info-tab"
-                                            tabIndex={0}
+                                        <button 
+                                            className="btn btn-primary mt-3" 
+                                            onClick={() => {
+                                                setStatusFilter('all');
+                                                fetchApplications();
+                                            }}
                                         >
-                                            <div className="row">
-                                                <div className="col-md-12">
-                                                    <div className="d-flex align-items-center flex-wrap row-gap-3 bg-light w-100 rounded p-3 mb-4">
-                                                        <div className="d-flex align-items-center justify-content-center avatar avatar-xxl rounded-circle border border-dashed me-2 flex-shrink-0 text-dark frames">
-                                                            <ImageWithBasePath
-                                                                src="assets/img/profiles/avatar-30.jpg"
-                                                                alt="img"
-                                                                className="rounded-circle"
-                                                            />
-                                                        </div>
-                                                        <div className="profile-upload">
-                                                            <div className="mb-2">
-                                                                <h6 className="mb-1">Upload Profile Image</h6>
-                                                                <p className="fs-12">Image should be below 4 mb</p>
-                                                            </div>
-                                                            <div className="profile-uploader d-flex align-items-center">
-                                                                <div className="drag-upload-btn btn btn-sm btn-primary me-2">
-                                                                    Upload
-                                                                    <input
-                                                                        type="file"
-                                                                        className="form-control image-sign"
-                                                                        multiple
-                                                                    />
-                                                                </div>
-                                                                <Link
-                                                                    to="#"
-                                                                    className="btn btn-light btn-sm"
-                                                                >
-                                                                    Cancel
-                                                                </Link>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="col-md-12">
-                                                    <div className="mb-3">
-                                                        <label className="form-label">
-                                                            Job Title <span className="text-danger"> *</span>
-                                                        </label>
-                                                        <input type="text" className="form-control" />
-                                                    </div>
-                                                </div>
-                                                <div className="col-md-12">
-                                                    <div className="mb-3">
-                                                        <label className="form-label">
-                                                            Job Description{" "}
-                                                            <span className="text-danger"> *</span>
-                                                        </label>
-                                                        <textarea
-                                                            rows={3}
-                                                            className="form-control"
-                                                            defaultValue={""}
+                                            <i className="ti ti-refresh me-1" />
+                                            Refresh
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            getFilteredApplications().map((application) => (
+                                <div key={application._id} className="col-xl-3 col-lg-4 col-md-6 mb-3">
+                                    <div className="card h-100">
+                                        <div className="card-body">
+                                            <div className="d-flex justify-content-between align-items-center mb-3">
+                                                <span className={`badge ${getStatusBadgeClass(application.status)}`}>
+                                                    {application.status}
+                                                </span>
+                                                <small className="text-muted">
+                                                    {new Date(application.createdAt).toLocaleDateString()}
+                                                </small>
+                                            </div>
+                                            
+                                            <div className="d-flex align-items-center mb-3">
+                                                <div className="me-3">
+                                                    <span className="avatar avatar-md">
+                                                        <ImageWithBasePath
+                                                            src={(application.userId && application.userId.profilePicture) || "assets/img/profiles/avatar-01.jpg"}
+                                                            alt={(application.userId && application.userId.firstName) || "User"}
+                                                            className="rounded-circle"
                                                         />
-                                                    </div>
+                                                    </span>
                                                 </div>
-                                                <div className="col-md-6">
-                                                    <div className="mb-3">
-                                                        <label className="form-label">
-                                                            Job Category <span className="text-danger"> *</span>
-                                                        </label>
-                                                        <CommonSelect
-                                                            className='select'
-                                                            options={jobCategory}
-                                                            defaultValue={jobCategory[0]}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="col-md-6">
-                                                    <div className="mb-3">
-                                                        <label className="form-label">
-                                                            Job Type <span className="text-danger"> *</span>
-                                                        </label>
-                                                        <CommonSelect
-                                                            className='select'
-                                                            options={jobtype}
-                                                            defaultValue={jobtype[0]}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="col-md-6">
-                                                    <div className="mb-3">
-                                                        <label className="form-label">
-                                                            Job Level <span className="text-danger"> *</span>
-                                                        </label>
-                                                        <CommonSelect
-                                                            className='select'
-                                                            options={joblevel}
-                                                            defaultValue={joblevel[0]}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="col-md-6">
-                                                    <div className="mb-3">
-                                                        <label className="form-label">
-                                                            Experience <span className="text-danger"> *</span>
-                                                        </label>
-                                                        <CommonSelect
-                                                            className='select'
-                                                            options={experience}
-                                                            defaultValue={experience[0]}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="col-md-6">
-                                                    <div className="mb-3">
-                                                        <label className="form-label">
-                                                            Qualification <span className="text-danger"> *</span>
-                                                        </label>
-                                                        <CommonSelect
-                                                            className='select'
-                                                            options={qualification}
-                                                            defaultValue={qualification[0]}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="col-md-6">
-                                                    <div className="mb-3">
-                                                        <label className="form-label">
-                                                            Gender <span className="text-danger"> *</span>
-                                                        </label>
-                                                        <CommonSelect
-                                                            className='select'
-                                                            options={genderChoose}
-                                                            defaultValue={genderChoose[0]}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="col-md-6">
-                                                    <div className="mb-3">
-                                                        <label className="form-label">
-                                                            Min. Sallary <span className="text-danger"> *</span>
-                                                        </label>
-                                                        <CommonSelect
-                                                            className='select'
-                                                            options={sallary}
-                                                            defaultValue={sallary[0]}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="col-md-6">
-                                                    <div className="mb-3">
-                                                        <label className="form-label">
-                                                            Max. Sallary <span className="text-danger"> *</span>
-                                                        </label>
-                                                        <CommonSelect
-                                                            className='select'
-                                                            options={maxsallary}
-                                                            defaultValue={maxsallary[0]}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="col-md-6">
-                                                    <div className="mb-3 ">
-                                                        <label className="form-label">
-                                                            Job Expired Date{" "}
-                                                            <span className="text-danger"> *</span>
-                                                        </label>
-                                                        <div className="input-icon-end position-relative">
-                                                            <DatePicker
-                                                                className="form-control datetimepicker"
-                                                                format={{
-                                                                    format: "DD-MM-YYYY",
-                                                                    type: "mask",
-                                                                }}
-                                                                getPopupContainer={getModalContainer}
-                                                                placeholder="DD-MM-YYYY"
-                                                            />
-                                                            <span className="input-icon-addon">
-                                                                <i className="ti ti-calendar text-gray-7" />
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="col-md-6">
-                                                    <div className="mb-3">
-                                                        <label className="form-label">Required Skills</label>
-                                                        <input type="text" className="form-control" />
-                                                    </div>
+                                                <div>
+                                                    <h6 className="mb-0 text-primary">
+                                                        {application.userId 
+                                                            ? `${application.userId.firstName || ""} ${application.userId.lastName || ""}` 
+                                                            : "Anonymous User"
+                                                        }
+                                                    </h6>
+                                                    <p className="text-muted mb-0 fs-13">
+                                                        {application.userId ? application.userId.email : "No email available"}
+                                                    </p>
                                                 </div>
                                             </div>
-                                            <div className="modal-footer">
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-light me-2"
-                                                    data-bs-dismiss="modal"
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-primary"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#success_modal"
-                                                >
-                                                    Save &amp; Next
-                                                </button>
+                                            
+                                            <div className="job-info mb-3">
+                                                <h6 className="mb-2 text-truncate" title={application.jobId.title}>
+                                                    <i className="ti ti-briefcase text-muted me-1"></i> 
+                                                    {application.jobId.title}
+                                                </h6>
+                                                <p className="mb-1 fs-13">
+                                                    <i className="ti ti-building text-muted me-1"></i>
+                                                    {application.jobId.companyId ? application.jobId.companyId.name : "Company not specified"}
+                                                </p>
+                                                <p className="mb-0 fs-13">
+                                                    <i className="ti ti-map-pin text-muted me-1"></i>
+                                                    {application.jobId.location || "Location not specified"}
+                                                </p>
+                                                {application.jobId.salaryRange && (
+                                                    <p className="mb-0 fs-13">
+                                                        <i className="ti ti-coin text-muted me-1"></i>
+                                                        {application.jobId.salaryRange}
+                                                    </p>
+                                                )}
                                             </div>
-                                        </div>
-                                        <div
-                                            className="tab-pane fade"
-                                            id="address"
-                                            role="tabpanel"
-                                            aria-labelledby="address-tab"
-                                            tabIndex={0}
-                                        >
-                                            <div className="row">
-                                                <div className="col-md-12">
-                                                    <div className="mb-3">
-                                                        <label className="form-label">
-                                                            Address <span className="text-danger"> *</span>
-                                                        </label>
-                                                        <input type="text" className="form-control" />
-                                                    </div>
-                                                </div>
-                                                <div className="col-md-6">
-                                                    <div className="mb-3">
-                                                        <label className="form-label">
-                                                            Country <span className="text-danger"> *</span>
-                                                        </label>
-                                                        <CommonSelect
-                                                            className='select'
-                                                            options={country}
-                                                            defaultValue={country[0]}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="col-md-6">
-                                                    <div className="mb-3">
-                                                        <label className="form-label">
-                                                            State <span className="text-danger"> *</span>
-                                                        </label>
-                                                        <CommonSelect
-                                                            className='select'
-                                                            options={state}
-                                                            defaultValue={state[0]}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="col-md-6">
-                                                    <div className="mb-3">
-                                                        <label className="form-label">
-                                                            City <span className="text-danger"> *</span>
-                                                        </label>
-                                                        <CommonSelect
-                                                            className='select'
-                                                            options={city}
-                                                            defaultValue={city[0]}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                <div className="col-md-6">
-                                                    <div className="mb-3">
-                                                        <label className="form-label">
-                                                            Zip Code <span className="text-danger"> *</span>
-                                                        </label>
-                                                        <input type="text" className="form-control" />
-                                                    </div>
-                                                </div>
-                                                <div className="col-md-12">
-                                                    <div className="map-grid mb-3">
-                                                        <iframe
-                                                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d6509170.989457427!2d-123.80081967108484!3d37.192957227641294!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x808fb9fe5f285e3d%3A0x8b5109a227086f55!2sCalifornia%2C%20USA!5e0!3m2!1sen!2sin!4v1669181581381!5m2!1sen!2sin"
-                                                            style={{ border: 0 }}
-                                                            allowFullScreen
-                                                            loading="lazy"
-                                                            referrerPolicy="no-referrer-when-downgrade"
-                                                            className="w-100"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="modal-footer">
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-light me-2"
-                                                    data-bs-dismiss="modal"
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-primary"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#success_modal"
-                                                >
-                                                    Post
-                                                </button>
+                                            
+                                            <div className="d-flex flex-wrap gap-2">
+                                                <Link to={`/applications/${application._id}`} className="btn btn-sm btn-outline-primary flex-grow-1">
+                                                    <i className="ti ti-eye me-1" />
+                                                    View
+                                                </Link>
+                                                
+                                                {application.resume?.url && (
+                                                    <a 
+                                                        href={application.resume.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer" 
+                                                        className="btn btn-sm btn-outline-info"
+                                                        title="Download Resume"
+                                                    >
+                                                        <i className="ti ti-download" />
+                                                    </a>
+                                                )}
+                                                
+                                                {application.status === 'Pending' && (
+                                                    <>
+                                                        <button 
+                                                            className="btn btn-sm btn-success"
+                                                            onClick={() => handleStatusChange(application._id, 'Accepted')}
+                                                            title="Accept Application"
+                                                        >
+                                                            <i className="ti ti-check" />
+                                                        </button>
+                                                        <button 
+                                                            className="btn btn-sm btn-danger"
+                                                            onClick={() => handleStatusChange(application._id, 'Rejected')}
+                                                            title="Reject Application"
+                                                        >
+                                                            <i className="ti ti-x" />
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </form>
+                            ))
+                        )}
                     </div>
                 </div>
             </div>
-            {/* /Post Job */}
-            {/* Add Job Success */}
-            <div className="modal fade" id="success_modal" role="dialog">
-                <div className="modal-dialog modal-dialog-centered modal-xm">
-                    <div className="modal-content">
-                        <div className="modal-body">
-                            <div className="text-center p-3">
-                                <span className="avatar avatar-lg avatar-rounded bg-success mb-3">
-                                    <i className="ti ti-check fs-24" />
-                                </span>
-                                <h5 className="mb-2">Job Posted Successfully</h5>
-                                <div>
-                                    <div className="row g-2">
-                                        <div className="col-12">
-                                            <Link to={all_routes.jobgrid} data-bs-dismiss="modal" className="btn btn-dark w-100">
-                                                Back to List
-                                            </Link>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {/* /Add Client Success */}
         </>
+    );
+};
 
-    )
-}
-
-export default JobGrid
+export default JobGrid;

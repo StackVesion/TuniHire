@@ -177,7 +177,7 @@ export default function Sidebar() {
                         {user && user.role && user.role.toString().toUpperCase() === 'CANDIDATE' && (
                             <>
                                 <li><Link className={router.pathname === "/" ? "dashboard2 active" : "dashboard2"} href="/"><img src="/assets/imgs/page/dashboard/dashboard.svg" alt="jobBox" /><span className="name">Dashboard</span></Link></li>
-                                <li><Link className={router.pathname === "/courses" ? "dashboard2 active" : "dashboard2"} href="/Course"><img src="/assets/imgs/page/dashboard/education.svg" alt="jobBox" /><span className="name">Courses</span></Link></li>
+                                <li><Link className={router.pathname === "/courses" ? "dashboard2 active" : "dashboard2"} href="/Course"><img src="/assets/imgs/page/dashboard/tasks.svg" alt="jobBox" /><span className="name">Courses</span></Link></li>
                                 <li><Link className={router.pathname === "/my-resume" ? "dashboard2 active" : "dashboard2"} href="/my-resume"><img src="/assets/imgs/page/dashboard/cv-manage.svg" alt="jobBox" /><span className="name">My Resume</span></Link></li>
                                 <li><Link className={router.pathname === "/my-applications" ? "dashboard2 active" : "dashboard2"} href="/my-applications"><img src="/assets/imgs/page/dashboard/candidates.svg" alt="jobBox" /><span className="name">My Applications</span></Link></li>
                                 <li><Link className={router.pathname === "/apply-for-jobs" ? "dashboard2 active" : "dashboard2"} href="/apply-for-jobs"><img src="/assets/imgs/page/dashboard/recruiters.svg" alt="jobBox" /><span className="name">Apply for Job</span></Link></li>
@@ -192,6 +192,7 @@ export default function Sidebar() {
                                 <li><Link className={router.pathname === "/" ? "dashboard2 active" : "dashboard2"} href="/"><img src="/assets/imgs/page/dashboard/dashboard.svg" alt="jobBox" /><span className="name">Company Dashboard</span></Link></li>
                                 <li><Link className={router.pathname === "/my-job-grid" ? "dashboard2 active" : "dashboard2"} href="/my-job-grid"><img src="/assets/imgs/page/dashboard/jobs.svg" alt="jobBox" /><span className="name">Manage Jobs</span></Link></li>
                                 <li><Link className={router.pathname === "/CampanyApplications" ? "dashboard2 active" : "dashboard2"} href="/CampanyApplications"><img src="/assets/imgs/page/dashboard/candidates.svg" alt="jobBox" /><span className="name">Applications</span></Link></li>
+                                <li><Link className={router.pathname === "/blogs" ? "dashboard2 active" : "dashboard2"} href="/blogs"><img src="/assets/imgs/page/dashboard/tasks.svg" alt="jobBox" /><span className="name">Company Blog</span></Link></li>
                                 <li><Link className={router.pathname === "/company-settings" ? "dashboard2 active" : "dashboard2"} href="/settings"><img src="/assets/imgs/page/dashboard/profiles.svg" alt="jobBox" /><span className="name">Company Profile</span></Link></li>
                                 <li><Link className={router.pathname === "/profile" ? "dashboard2 active" : "dashboard2"} href="/profile"><img src="/assets/imgs/page/dashboard/profiles.svg" alt="jobBox" /><span className="name">My Profile</span></Link></li>
                             </>
@@ -205,11 +206,7 @@ export default function Sidebar() {
                             </>
                         )}
                         {user && (
-                            <li onClick={() => {
-                                localStorage.removeItem('token');
-                                localStorage.removeItem('user');
-                                window.location.href = '/login';
-                            }} className="cursor-pointer">
+                            <li onClick={handleLogout} className="cursor-pointer">
                                 <a className="dashboard2">
                                     <img src="/assets/imgs/page/dashboard/logout.svg" alt="jobBox" />
                                     <span className="name">Logout</span>

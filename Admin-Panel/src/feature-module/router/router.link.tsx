@@ -279,6 +279,8 @@ import Promotion from "../hrm/promotion";
 import Trainers from "../training/trainers";
 import TrainingList from "../training/trainingList";
 import Invoices from "../finance-accounts/sales/invoices";
+import ApplicationsList from "../recruitment/jobs/ApplicationsList";
+import ApplicationDetail from "../recruitment/jobs/ApplicationDetail";
 const routes = all_routes;
 
 export const publicRoutes = [
@@ -1565,6 +1567,14 @@ export const publicRoutes = [
     path: routes.superAdminPurchaseTransaction,
     element: <PurchaseTransaction />,
     route: Route,
+  },
+  {
+    path: routes.applicationsList,
+    element: <ApplicationsList />,
+  },
+  {
+    path: routes.applicationDetail,
+    element: <ApplicationDetail />,
   },
 ];
 

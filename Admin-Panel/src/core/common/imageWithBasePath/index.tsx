@@ -11,8 +11,13 @@ interface Image {
 }
 
 const ImageWithBasePath = (props: Image) => {
+  // Check if src is already a full URL (starts with http or https)
+  const isFullUrl = props.src && (props.src.startsWith('http://') || props.src.startsWith('https://'));
+  
   // Combine the base path and the provided src to create the full image source URL
-  const fullSrc = `${img_path}${props.src}`;
+  // only if it's not already a full URL
+  const fullSrc = isFullUrl ? props.src : `${img_path}${props.src}`;
+  
   return (
     <img
       className={props.className}

@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const User = require("../models/User");
 const { generateOTP, sendOTPEmail } = require("../utils/emailUtils");
-const { sendVerificationEmail } = require('../config/emailService');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../config/emailService');
 const fs = require("fs");
 const path = require("path");
 
@@ -1273,7 +1273,204 @@ const verifyUserProfile = async (req, res) => {
     }
 };
 
-// Keep the main module.exports with all functions
+
+// Generate reset password token
+const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        
+        console.log(`Demande de réinitialisation de mot de passe pour: ${email}`);
+        
+        if (!email) {
+            console.log('Erreur: Email manquant dans la requête');
+            return res.status(400).json({
+                success: false,
+                message: "L'adresse email est requise"
+            });
+        }
+        
+        // Find user by email
+        const user = await User.findOne({ email: email.toLowerCase() });
+        if (!user) {
+            console.log(`Aucun utilisateur trouvé avec l'email: ${email}`);
+            // Pour des raisons de sécurité, on renvoie quand même un message de succès
+            // pour ne pas révéler quels emails sont enregistrés dans le système
+            return res.status(200).json({
+                success: true,
+                message: "Si cette adresse email est associée à un compte, un lien de réinitialisation a été envoyé"
+            });
+        }
+        
+        // Generate reset token
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        console.log(`Nouveau token généré pour ${user.email}: ${resetToken}`);
+        
+        // Set token and expiration (augmenté à 2 heures pour donner plus de temps)
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordExpires = Date.now() + 7200000; // 2 heures
+        
+        await user.save();
+        console.log(`Token enregistré pour ${user.email}, expire le: ${new Date(user.resetPasswordExpires).toISOString()}`);
+        
+        // Construire l'URL de réinitialisation pour le logging
+        const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+        console.log(`URL de réinitialisation: ${resetUrl}`);
+        
+        // Send password reset email
+        const emailResult = await sendPasswordResetEmail(
+            user.email,
+            resetToken,
+            user.firstName || user.email.split('@')[0]
+        );
+        
+        if (!emailResult.success) {
+            console.error(`Échec de l'envoi de l'email de réinitialisation à ${email}:`, emailResult.error);
+            return res.status(500).json({
+                success: false,
+                message: "Une erreur est survenue lors de l'envoi de l'email de réinitialisation"
+            });
+        }
+
+        console.log(`Email de réinitialisation envoyé avec succès à ${email}`);
+        res.status(200).json({
+            success: true,
+            message: "Un lien de réinitialisation de mot de passe a été envoyé à votre adresse email"
+        });
+    } catch (error) {
+        console.error("Erreur de réinitialisation de mot de passe:", error);
+        res.status(500).json({
+            success: false,
+            message: "Une erreur est survenue lors de la réinitialisation du mot de passe",
+            error: error.message
+        });
+    }
+};
+
+// Verify reset token validity without resetting password
+const verifyResetToken = async (req, res) => {
+    try {
+        const { token } = req.query;
+        
+        console.log(`Vérification du token de réinitialisation: ${token}`);
+        
+        if (!token) {
+            console.log('Erreur: Token manquant dans la requête');
+            return res.status(400).json({
+                success: false,
+                valid: false,
+                message: "Token is required"
+            });
+        }
+        
+        // Recherche de l'utilisateur avec ce token qui n'a pas expiré
+        const user = await User.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpires: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            console.log(`Token invalide ou expiré: ${token}`);
+            // Si on trouve un utilisateur avec ce token mais expiré, on peut le logger
+            const expiredUser = await User.findOne({ resetPasswordToken: token });
+            if (expiredUser) {
+                console.log(`Token trouvé mais expiré pour l'utilisateur: ${expiredUser.email}`);
+                console.log(`Date d'expiration: ${new Date(expiredUser.resetPasswordExpires).toISOString()}, Maintenant: ${new Date().toISOString()}`);
+            } else {
+                console.log(`Aucun utilisateur trouvé avec ce token: ${token}`);
+            }
+            
+            return res.status(400).json({
+                success: false,
+                valid: false,
+                message: "Le token de réinitialisation est invalide ou a expiré"
+            });
+        }
+
+        console.log(`Token valide pour l'utilisateur: ${user.email}`);
+        console.log(`Date d'expiration: ${new Date(user.resetPasswordExpires).toISOString()}, Maintenant: ${new Date().toISOString()}`);
+        
+        return res.status(200).json({
+            success: true,
+            valid: true,
+            message: "Token valide"
+        });
+    } catch (error) {
+        console.error("Token verification error:", error);
+        return res.status(500).json({
+            success: false,
+            valid: false,
+            message: "Erreur lors de la vérification du token",
+            error: error.message
+        });
+    }
+};
+
+// Reset password with token
+const resetPassword = async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        
+        console.log(`Tentative de réinitialisation de mot de passe avec token: ${token}`);
+        
+        if (!token || !newPassword) {
+            console.log('Erreur: Token ou nouveau mot de passe manquant');
+            return res.status(400).json({
+                success: false,
+                message: "Le token et le nouveau mot de passe sont requis"
+            });
+        }
+        
+        // Find user with valid reset token
+        const user = await User.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpires: { $gt: Date.now() }
+        });
+
+        if (!user) {
+            console.log(`Token invalide ou expiré lors de la réinitialisation: ${token}`);
+            // Si on trouve un utilisateur avec ce token mais expiré, on peut le logger
+            const expiredUser = await User.findOne({ resetPasswordToken: token });
+            if (expiredUser) {
+                console.log(`Token trouvé mais expiré pour l'utilisateur: ${expiredUser.email}`);
+                console.log(`Date d'expiration: ${new Date(expiredUser.resetPasswordExpires).toISOString()}, Maintenant: ${new Date().toISOString()}`);
+            } else {
+                console.log(`Aucun utilisateur trouvé avec ce token: ${token}`);
+            }
+            
+            return res.status(400).json({
+                success: false,
+                message: "Le token de réinitialisation est invalide ou a expiré"
+            });
+        }
+
+        console.log(`Réinitialisation du mot de passe pour l'utilisateur: ${user.email}`);
+        
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        
+        // Clear reset token fields
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        
+        await user.save();
+        console.log(`Mot de passe réinitialisé avec succès pour: ${user.email}`);
+
+        res.status(200).json({
+            success: true,
+            message: "Votre mot de passe a été réinitialisé avec succès"
+        });
+    } catch (error) {
+        console.error("Reset password error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Erreur lors de la réinitialisation du mot de passe",
+            error: error.message
+        });
+    }
+};
+
+
 module.exports = {
     getUsers,
     createUser,
@@ -1293,5 +1490,10 @@ module.exports = {
     updateUserRole,
     getAllUsers,
     getPublicUserProfile,
-    verifyUserProfile
+    verifyUserProfile,
+
+    forgotPassword,
+    resetPassword,
+    verifyResetToken
+
 };
