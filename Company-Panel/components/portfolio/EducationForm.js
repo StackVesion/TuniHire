@@ -5,6 +5,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import suggestions from '../../data/suggestions.json';
 import { createAuthAxios } from '@/utils/authUtils';
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 const EducationForm = ({ portfolioId, education = null, onSuccess, onCancel }) => {
     const [formData, setFormData] = useState({
         school: '',
@@ -105,10 +107,10 @@ const EducationForm = ({ portfolioId, education = null, onSuccess, onCancel }) =
             
             if (education) {
                 // Edit existing education
-                response = await authAxios.put(`http://localhost:5000/api/portfolios/${portfolioId}/education/${education.index}`, payload);
+                response = await authAxios.put(`${apiUrl}/api/portfolios/${portfolioId}/education/${education.index}`, payload);
             } else {
                 // Add new education
-                response = await authAxios.post(`http://localhost:5000/api/portfolios/${portfolioId}/education`, payload);
+                response = await authAxios.post(`${apiUrl}/api/portfolios/${portfolioId}/education`, payload);
             }
             
             if (response.data.success) {

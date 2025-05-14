@@ -4,6 +4,8 @@ import { useRouter } from "next/router"
 import axios from "axios"
 import Swal from "sweetalert2"
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 export default function EditJob() {
     const [loading, setLoading] = useState(false)
     const [fetchLoading, setFetchLoading] = useState(true)
@@ -33,8 +35,8 @@ export default function EditJob() {
                 router.push('/page-signin')
                 return
             }
-
-            const response = await axios.get(`http://localhost:5000/api/jobs/${id}`, {
+       
+            const response = await axios.get(`${apiUrl}/api/jobs/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
 
@@ -92,7 +94,7 @@ export default function EditJob() {
             let companyId;
             try {
                 // Get the company directly
-                const companyResponse = await axios.get('http://localhost:5000/api/companies/user/my-company', {
+                const companyResponse = await axios.get(`${apiUrl}/api/companies/user/my-company`, {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 
@@ -123,7 +125,7 @@ export default function EditJob() {
             }
 
             // Send update request
-            await axios.put(`http://localhost:5000/api/jobs/${id}`, jobData, {
+            await axios.put(`${apiUrl}/api/jobs/${id}`, jobData, {
                 headers: { Authorization: `Bearer ${token}` }
             })
 

@@ -27,6 +27,8 @@ import PortfolioGuide from '../components/portfolio/PortfolioGuide';
 // Import data
 import suggestions from '../data/suggestions.json';
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 function Portfolio({ user }) {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
@@ -162,10 +164,9 @@ function Portfolio({ user }) {
         if (!portfolio || !portfolio._id) {
             throw new Error('No portfolio ID available for update');
         }
-        
-        // Use the proper endpoint based on our new routes
+          // Use the proper endpoint based on our new routes
         try {
-            const endpoint = `http://localhost:5000/api/portfolios/${portfolio._id}`;
+            const endpoint = `${apiUrl}/api/portfolios/${portfolio._id}`;
             console.log(`Updating portfolio with endpoint: ${endpoint}`);
             
             const authAxios = createAuthAxios();
@@ -199,7 +200,7 @@ function Portfolio({ user }) {
                 const authAxios = createAuthAxios();
                 try {
                     // Try to get the portfolio
-                    const response = await authAxios.get(`http://localhost:5000/api/portfolios/user/${user._id}`);
+                    const response = await authAxios.get(`${apiUrl}/api/portfolios/user/${user._id}`);
                     
                     // If we got a valid portfolio
                     if (response.data && response.data.success) {
@@ -272,7 +273,7 @@ function Portfolio({ user }) {
 
         try {
             const authAxios = createAuthAxios();
-            const response = await authAxios.post(`http://localhost:5000/api/portfolios/${portfolio._id}/skills`, {
+            const response = await authAxios.post(`${apiUrl}/api/portfolios/${portfolio._id}/skills`, {
                 skill: newSkill.trim()
             });
 
@@ -694,7 +695,7 @@ function Portfolio({ user }) {
                 return;
             }
             
-            const response = await authAxios.post(`http://localhost:5000/api/portfolios/${portfolio._id}/skills`, {
+            const response = await authAxios.post(`${apiUrl}/api/portfolios/${portfolio._id}/skills`, {
                 skill: newSkill.trim()
             });
 
@@ -732,7 +733,7 @@ function Portfolio({ user }) {
                 return;
             }
             
-            const response = await authAxios.delete(`http://localhost:5000/api/portfolios/${portfolio._id}/skills/${encodeURIComponent(skill)}`);
+            const response = await authAxios.delete(`${apiUrl}/api/portfolios/${portfolio._id}/skills/${encodeURIComponent(skill)}`);
             
             if (response.data.success) {
                 // Update the portfolio state with the returned portfolio object
@@ -761,7 +762,7 @@ function Portfolio({ user }) {
         e.preventDefault();
         try {
             const authAxios = createAuthAxios();
-            const response = await authAxios.put(`http://localhost:5000/api/portfolios/${portfolio._id}/social-links`, {
+            const response = await authAxios.put(`${apiUrl}/api/portfolios/${portfolio._id}/social-links`, {
                 socialLinks: socialLinks
             });
 
@@ -790,7 +791,7 @@ function Portfolio({ user }) {
         e.preventDefault();
         try {
             const authAxios = createAuthAxios();
-            const response = await authAxios.put(`http://localhost:5000/api/portfolios/${portfolio._id}/about`, {
+            const response = await authAxios.put(`${apiUrl}/api/portfolios/${portfolio._id}/about`, {
                 about: about
             });
 
@@ -831,7 +832,7 @@ function Portfolio({ user }) {
             const authAxios = createAuthAxios();
             
             // Use the proper endpoint based on our new routes
-            const response = await authAxios.patch(`http://localhost:5000/api/portfolios/about`, {
+            const response = await authAxios.patch(`${apiUrl}/api/portfolios/about`, {
                 userId: user._id,
                 about: aboutInput
             });
@@ -882,7 +883,7 @@ function Portfolio({ user }) {
             const techArray = projectForm.technologies.split(',').map(t => t.trim()).filter(Boolean);
             const projectData = { ...projectForm, technologies: techArray };
             
-            const response = await authAxios.post(`http://localhost:5000/api/portfolios/projects`, {
+            const response = await authAxios.post(`${apiUrl}/api/portfolios/projects`, {
                 userId: user._id,
                 project: projectData
             });
@@ -951,7 +952,7 @@ function Portfolio({ user }) {
             const techArray = projectForm.technologies.split(',').map(t => t.trim()).filter(Boolean);
             const projectData = { ...projectForm, technologies: techArray };
             
-            const response = await authAxios.put(`http://localhost:5000/api/portfolios/projects/${editingProjectIndex}`, {
+            const response = await authAxios.put(`${apiUrl}/api/portfolios/projects/${editingProjectIndex}`, {
                 userId: user._id,
                 project: projectData
             });
@@ -1007,7 +1008,7 @@ function Portfolio({ user }) {
                 setLoading(true);
                 const authAxios = createAuthAxios();
                 
-                const response = await authAxios.delete(`http://localhost:5000/api/portfolios/projects/${index}`, {
+                const response = await authAxios.delete(`${apiUrl}/api/portfolios/projects/${index}`, {
                     data: { userId: user._id }
                 });
                 
@@ -1061,7 +1062,7 @@ function Portfolio({ user }) {
             const skillsArray = certificateForm.skills.split(',').map(s => s.trim()).filter(Boolean);
             const certificateData = { ...certificateForm, skills: skillsArray };
             
-            const response = await authAxios.post(`http://localhost:5000/api/portfolios/certificates`, {
+            const response = await authAxios.post(`${apiUrl}/api/portfolios/certificates`, {
                 userId: user._id,
                 certificate: certificateData
             });
@@ -1129,7 +1130,7 @@ function Portfolio({ user }) {
             const skillsArray = certificateForm.skills.split(',').map(s => s.trim()).filter(Boolean);
             const certificateData = { ...certificateForm, skills: skillsArray };
             
-            const response = await authAxios.put(`http://localhost:5000/api/portfolios/certificates/${editingCertificateIndex}`, {
+            const response = await authAxios.put(`${apiUrl}/api/portfolios/certificates/${editingCertificateIndex}`, {
                 userId: user._id,
                 certificate: certificateData
             });
@@ -1185,7 +1186,7 @@ function Portfolio({ user }) {
                 setLoading(true);
                 const authAxios = createAuthAxios();
                 
-                const response = await authAxios.delete(`http://localhost:5000/api/portfolios/certificates/${index}`, {
+                const response = await authAxios.delete(`${apiUrl}/api/portfolios/certificates/${index}`, {
                     data: { userId: user._id }
                 });
                 
@@ -1229,7 +1230,7 @@ function Portfolio({ user }) {
             
             const skillToRemove = portfolio.skills[index];
             const authAxios = createAuthAxios();
-            const response = await authAxios.delete(`http://localhost:5000/api/portfolios/${portfolio._id}/skills/${encodeURIComponent(skillToRemove)}`);
+            const response = await authAxios.delete(`${apiUrl}/api/portfolios/${portfolio._id}/skills/${encodeURIComponent(skillToRemove)}`);
             
             if (response.data.success) {
                 // Update local portfolio state
@@ -1293,7 +1294,7 @@ function Portfolio({ user }) {
             
             // Send the data to the backend
             const authAxios = createAuthAxios();
-            const response = await authAxios.post('http://localhost:5000/api/portfolios', newPortfolioData);
+            const response = await authAxios.post(`${apiUrl}/api/portfolios`, newPortfolioData);
             
             if (response.data.success) {
                 // Portfolio successfully created, update the local state
@@ -1343,7 +1344,7 @@ function Portfolio({ user }) {
                             const authAxios = createAuthAxios();
                             try {
                                 // Try to get the portfolio
-                                const response = await authAxios.get(`http://localhost:5000/api/portfolios/user/${user._id}`);
+                                const response = await authAxios.get(`${apiUrl}/api/portfolios/user/${user._id}`);
                                 
                                 // If we got a valid portfolio
                                 if (response.data && response.data.success) {
@@ -1448,7 +1449,7 @@ function Portfolio({ user }) {
             };
             
             setCvGenerationStep('uploading');
-            const response = await authAxios.post('http://localhost:5000/api/portfolios/generate-cv', payload);
+            const response = await authAxios.post(`${apiUrl}/api/portfolios/generate-cv`, payload);
             
             if (response.data.success) {
                 console.log('CV generation successful:', response.data);
@@ -1622,7 +1623,7 @@ function Portfolio({ user }) {
         try {
             setLoading(true);
             const authAxios = createAuthAxios();
-            const response = await authAxios.get(`http://localhost:5000/api/portfolios/user/${user._id}`);
+            const response = await authAxios.get(`${apiUrl}/api/portfolios/user/${user._id}`);
             
             if (response.data.success && response.data.portfolio) {
                 setPortfolio(response.data.portfolio);
@@ -1735,7 +1736,7 @@ function Portfolio({ user }) {
                 certificates: portfolio.certificates || []
             };
             
-            const response = await authAxios.post('http://localhost:5000/api/portfolios/generate-cv', payload);
+            const response = await authAxios.post(`${apiUrl}/api/portfolios/generate-cv`, payload);
             
             if (response.data.success) {
                 // Trigger download

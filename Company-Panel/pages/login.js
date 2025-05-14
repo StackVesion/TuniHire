@@ -5,6 +5,9 @@ import { useRouter } from "next/router"
 import axios from "axios"
 import { saveUserData, getCurrentUser } from "../utils/authUtils"
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const apiUrll = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
+
 export default function Login() {
     const [loginData, setLoginData] = useState({
         email: '',
@@ -25,7 +28,7 @@ export default function Login() {
                 router.replace('/');
             } else {
                 // For other roles, redirect to main site
-                window.location.href = 'http://localhost:3000';
+                window.location.href = `${apiUrll}`;
             }
         }
     }, [router]);
@@ -46,7 +49,7 @@ export default function Login() {
         setError('');
         
         try {
-            const response = await axios.post('http://localhost:5000/api/users/signin', loginData);
+            const response = await axios.post(`${apiUrl}/api/users/signin`, loginData);
             
             if (response.data.token && response.data.user) {
                 console.log('Login successful:', response.data.user.firstName);
@@ -63,7 +66,7 @@ export default function Login() {
                     router.replace('/');
                 } else {
                     // For other roles, redirect to main site
-                    window.location.href = 'http://localhost:3000';
+                    window.location.href = `${apiUrll}`;
                 }
             }
         } catch (error) {
@@ -148,9 +151,9 @@ export default function Login() {
                                                 <span className="text-small">Remember me</span>
                                                 <span className="checkmark" />
                                                 </label>
-                                                <Link className="text-muted" href="http://localhost:3000/reset-password">
-                                                Forgot Password
-                                                </Link>
+                                                <Link className="text-muted" href={`${apiUrll}/reset-password`}>
+                                                    Forgot Password
+                                                    </Link>
                                             </div>
                                             <div className="form-group">
                                                 <button

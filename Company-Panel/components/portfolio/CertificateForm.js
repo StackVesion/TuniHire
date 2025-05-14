@@ -4,6 +4,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import suggestions from '../../data/suggestions.json';
 import { createAuthAxios } from '@/utils/authUtils';
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const CertificateForm = ({ portfolioId, certificate = null, onSuccess, onCancel }) => {
     const [formData, setFormData] = useState({
         title: '',
@@ -96,10 +97,10 @@ const CertificateForm = ({ portfolioId, certificate = null, onSuccess, onCancel 
             
             if (certificate) {
                 // Edit existing certificate
-                response = await authAxios.put(`http://localhost:5000/api/portfolios/${portfolioId}/certificates/${certificate.index}`, payload);
+                response = await authAxios.put(`${apiUrl}/api/portfolios/${portfolioId}/certificates/${certificate.index}`, payload);
             } else {
                 // Add new certificate
-                response = await authAxios.post(`http://localhost:5000/api/portfolios/${portfolioId}/certificates`, payload);
+                response = await authAxios.post(`${apiUrl}/api/portfolios/${portfolioId}/certificates`, payload);
             }
 
             if (response.data.success) {

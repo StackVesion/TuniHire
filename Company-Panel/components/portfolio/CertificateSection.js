@@ -4,6 +4,8 @@ import CertificateForm from './CertificateForm';
 import ItemPagination from './ItemPagination';
 import { createAuthAxios } from '@/utils/authUtils';
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 const CertificateSection = ({ portfolio, userId, onUpdate, onRemove }) => {
     const [showForm, setShowForm] = useState(false);
     const [editingCertificate, setEditingCertificate] = useState(null);
@@ -39,7 +41,7 @@ const CertificateSection = ({ portfolio, userId, onUpdate, onRemove }) => {
                 if (result.isConfirmed) {
                     try {
                         const response = await authAxios.delete(
-                            `http://localhost:5000/api/portfolios/${portfolio._id}/certificates/${index}`
+                            `${apiUrl}/api/portfolios/${portfolio._id}/certificates/${index}`
                         );
 
                         if (response.data.success) {

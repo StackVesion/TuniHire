@@ -91,16 +91,16 @@ export const clearUserData = () => {
     
     // Clear all cookies by setting expired date
     // This is crucial for shared authentication across different ports
-    const cookies = document.cookie.split(";");
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i];
-      const eqPos = cookie.indexOf("=");
-      const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-      // Set multiple paths to cover all bases
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=localhost`;
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.localhost`;
-    }
+const cookies = document.cookie.split(";");
+for (let i = 0; i < cookies.length; i++) {
+  const cookie = cookies[i];
+  const eqPos = cookie.indexOf("=");
+  const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+  // Clear cookie for current domain
+  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 GMT;path=/`;
+  // Also attempt to clear it with domain set
+  document.cookie = `${name}=;expires=Thu, 01 Jan 1970 GMT;path=/;domain=${window.location.hostname}`;
+}
     
     return true;
   } catch (error) {
@@ -217,7 +217,7 @@ export const redirectToLogin = () => {
   // Check if we're in a browser environment
   if (typeof window === 'undefined') return;
   
-  const mainAppUrl = process.env.NEXT_PUBLIC_MAIN_APP_URL || 'http://localhost:3000';
+  const mainAppUrl = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
   const returnUrl = encodeURIComponent(window.location.href);
   
   // Redirect to the main application's login page with return URL
@@ -277,6 +277,6 @@ export const checkAndRefreshToken = async () => {
 // Function to handle logout and redirect to main application
 export const logout = () => {
   clearUserData();
-  const mainAppUrl = process.env.NEXT_PUBLIC_MAIN_APP_URL || 'http://localhost:3000';
+  const mainAppUrl = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
   window.location.href = `${mainAppUrl}/login?logout=true`;
 };

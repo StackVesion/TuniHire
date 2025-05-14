@@ -6,6 +6,8 @@ import { getToken } from '../utils/authUtils';
 import withAuth from '../utils/withAuth';
 import axios from 'axios';
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 function ApplyCompany({ user }) {
     const router = useRouter();
     const [companyData, setCompanyData] = useState({
@@ -37,8 +39,8 @@ function ApplyCompany({ user }) {
                 console.log('Checking company status with token:', token.substring(0, 15) + '...');
                 
                 // Make API request with proper authorization header
-                const response = await axios.get('http://localhost:5000/api/companies/user/my-company', {
-                    headers: {
+                const response = await axios.get(`${apiUrl}/api/companies/user/my-company`, {
+                    headers: {   
                         'Authorization': `Bearer ${token}`
                     }
                 });
@@ -150,7 +152,7 @@ function ApplyCompany({ user }) {
             
             console.log('Submitting company data with logo:', !!logoFile);
 
-            const response = await axios.post('http://localhost:5000/api/companies', formData, {
+            const response = await axios.post(`${apiUrl}/api/companies`, formData, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'multipart/form-data'

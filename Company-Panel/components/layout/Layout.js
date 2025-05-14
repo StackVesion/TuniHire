@@ -9,6 +9,10 @@ import PageHead from "./PageHead";
 import Sidebar from "./Sidebar";
 import { getCurrentUser, clearUserData, checkAndRefreshToken, redirectToLogin } from "../../utils/authUtils";
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const apiUrll = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
+const apiUrlll = process.env.NEXT_ADMIN_API_URL || 'http://localhost:3002';
+
 export default function Layout({ headTitle, breadcrumbTitle, breadcrumbActive, children }) {
   const [isToggled, setToggled] = useState(false);
   const [user, setUser] = useState(null);
@@ -98,7 +102,7 @@ export default function Layout({ headTitle, breadcrumbTitle, breadcrumbActive, c
             token = urlToken;
             
             // Try to fetch user data with this token
-            fetch('http://localhost:5000/api/users/validate-token', {
+            fetch(`${apiUrl}/api/users/validate-token`, {
               method: 'GET',
               headers: {
                 'Authorization': `Bearer ${token}`
@@ -131,7 +135,7 @@ export default function Layout({ headTitle, breadcrumbTitle, breadcrumbActive, c
           console.log('No valid user data found. Trying to fetch from backend...');
           
           // Try to repair session by validating token with backend (async)
-          fetch('http://localhost:5000/api/users/validate-token', {
+          fetch(`${apiUrl}/api/users/validate-token`, {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${token}`
@@ -178,7 +182,7 @@ export default function Layout({ headTitle, breadcrumbTitle, breadcrumbActive, c
             // Force localStorage update for cross-domain consistency
             localStorage.setItem('token', token);
             localStorage.setItem('user', JSON.stringify(currentUser));
-            window.location.href = "http://localhost:3002/";
+            window.location.href = `${apiUrlll}/`;
           }
         } else if (currentUser.role === "HR" || currentUser.role === "candidate") {
           // HR and candidate can access company panel
@@ -190,13 +194,13 @@ export default function Layout({ headTitle, breadcrumbTitle, breadcrumbActive, c
         } else {
           // Unrecognized role, redirect to front-end
           console.log('Unrecognized role. Redirecting to front-end...');
-          window.location.href = "http://localhost:3000";
+          window.location.href = `${apiUrll}/`;
         }
       } catch (error) {
         console.error("Error in checkUserSession:", error);
         clearUserData(); // Clear any corrupted data
         setTimeout(() => {
-          window.location.href = "http://localhost:3000/page-signin";
+          window.location.href = `${apiUrll}/page-signin`;
         }, 1000);
       }
     };

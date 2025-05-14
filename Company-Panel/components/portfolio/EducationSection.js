@@ -3,6 +3,8 @@ import Swal from 'sweetalert2';
 import EducationForm from './EducationForm';
 import { createAuthAxios } from '@/utils/authUtils';
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 const EducationSection = ({ portfolio, userId, onUpdate, onRemove }) => {
     const [showForm, setShowForm] = useState(false);
     const [editingEducation, setEditingEducation] = useState(null);
@@ -37,7 +39,7 @@ const EducationSection = ({ portfolio, userId, onUpdate, onRemove }) => {
                 try {
                     const authAxios = createAuthAxios();
                     const response = await authAxios.delete(
-                        `http://localhost:5000/api/portfolios/${portfolio._id}/education/${index}`
+                        `${apiUrl}/api/portfolios/${portfolio._id}/education/${index}`
                     );
                     
                     if (response.data.success) {

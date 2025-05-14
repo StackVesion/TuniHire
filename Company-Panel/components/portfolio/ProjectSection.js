@@ -4,6 +4,8 @@ import ProjectForm from './ProjectForm';
 import ItemPagination from './ItemPagination';
 import { createAuthAxios } from '@/utils/authUtils';
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 const ProjectSection = ({ portfolio, userId, onUpdate, onRemove }) => {
     const [showForm, setShowForm] = useState(false);
     const [editingProject, setEditingProject] = useState(null);
@@ -43,7 +45,7 @@ const ProjectSection = ({ portfolio, userId, onUpdate, onRemove }) => {
             if (result.isConfirmed) {
                 try {
                     const authAxios = createAuthAxios();
-                    const response = await authAxios.delete(`http://localhost:5000/api/portfolios/${portfolio._id}/projects/${index}`);
+                    const response = await authAxios.delete(`${apiUrl}/api/portfolios/${portfolio._id}/projects/${index}`);
                     
                     if (response.data.success) {
                         onRemove(index);

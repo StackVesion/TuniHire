@@ -2,6 +2,9 @@ import axios from 'axios';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const apiUrll = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
+
 // Get auth token from localStorage
 export const getToken = () => {
     if (typeof window !== 'undefined') {
@@ -49,7 +52,7 @@ export const clearAuthData = () => {
 export const createAuthenticatedAxiosInstance = () => {
     const token = getToken();
     const instance = axios.create({
-        baseURL: 'http://localhost:5000',
+        baseURL: `${apiUrl}`,
         headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
 
@@ -73,8 +76,8 @@ export const createAuthenticatedAxiosInstance = () => {
                     }
 
                     // Call refresh token endpoint
-                    const response = await axios.post('http://localhost:5000/api/users/refresh-token', {
-                        refreshToken
+                    const response = await axios.post(`${apiUrl}/api/users/refresh-token`, {
+                        refreshToken   
                     });
 
                     // Get new access token
@@ -109,7 +112,8 @@ export const redirectToLogin = () => {
     
     // Use window.location for a full page reload to ensure clean state
     if (typeof window !== 'undefined') {
-        window.location.href = 'http://localhost:3000/page-signin';
+        window.location.href = `${apiUrll}/page-signin`;
+        
     }
 };
 

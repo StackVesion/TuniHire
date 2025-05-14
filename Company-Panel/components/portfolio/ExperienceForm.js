@@ -5,6 +5,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import suggestions from '../../data/suggestions.json';
 import { createAuthAxios } from '@/utils/authUtils';
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 const ExperienceForm = ({ portfolioId, experience = null, onSuccess, onCancel }) => {
     const [formData, setFormData] = useState({
         position: '',
@@ -103,10 +105,10 @@ const ExperienceForm = ({ portfolioId, experience = null, onSuccess, onCancel })
             
             if (experience) {
                 // Edit existing experience
-                response = await authAxios.put(`http://localhost:5000/api/portfolios/${portfolioId}/experience/${experience.index}`, payload);
+                response = await authAxios.put(`${apiUrl}/api/portfolios/${portfolioId}/experience/${experience.index}`, payload);
             } else {
                 // Add new experience
-                response = await authAxios.post(`http://localhost:5000/api/portfolios/${portfolioId}/experience`, payload);
+                response = await authAxios.post(`${apiUrl}/api/portfolios/${portfolioId}/experience`, payload);
             }
             
             if (response.data.success) {

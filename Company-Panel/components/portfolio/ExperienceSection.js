@@ -3,6 +3,8 @@ import Swal from 'sweetalert2';
 import ExperienceForm from './ExperienceForm';
 import { createAuthAxios } from '@/utils/authUtils';
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 const ExperienceSection = ({ portfolio, userId, onUpdate, onRemove }) => {
     const [showForm, setShowForm] = useState(false);
     const [editingExperience, setEditingExperience] = useState(null);
@@ -37,7 +39,7 @@ const ExperienceSection = ({ portfolio, userId, onUpdate, onRemove }) => {
                 try {
                     const authAxios = createAuthAxios();
                     const response = await authAxios.delete(
-                        `http://localhost:5000/api/portfolios/${portfolio._id}/experience/${index}`
+                        `${apiUrl}/api/portfolios/${portfolio._id}/experience/${index}`
                     );
                     
                     if (response.data.success) {

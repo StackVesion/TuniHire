@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { getCurrentUser, saveUserData } from './authUtils';
 import axios from 'axios';
-
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const apiUrll = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
 /**
  * Higher-order component that handles authentication and role-based access
  * @param {Component} WrappedComponent - The component to wrap with authentication
@@ -23,7 +24,7 @@ export default function withAuth(WrappedComponent, allowedRoles = null) {
           try {
             console.log('Token found in URL, validating with API...');
             // Validate token with the backend API
-            const response = await axios.get('http://localhost:5000/api/users/me', {
+            const response = await axios.get(`${apiUrl}/api/users/me`, { 
               headers: { Authorization: `Bearer ${token}` }
             });
             
@@ -63,7 +64,8 @@ export default function withAuth(WrappedComponent, allowedRoles = null) {
         // No need to redirect them, only redirect other roles to main site
         if (userRole !== 'CANDIDATE' && userRole !== 'HR') {
           console.log(`User with role ${userRole} not allowed in Company-Panel, redirecting to main site`);
-          window.location.href = 'http://localhost:3000';
+          window.location.href = `${apiUrll}`;
+          
           return;
         }
         

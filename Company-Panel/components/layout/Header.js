@@ -5,6 +5,8 @@ import { useRouter } from 'next/router'
 import axios from 'axios'
 import { getCurrentUser, clearUserData, getToken, createAuthAxios } from '../../utils/authUtils'
 
+const apiUrl = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
+
 // Logo style for responsive design with adaptive sizing
 const getLogoStyle = (windowWidth) => {
     // Base style for all screen sizes
@@ -230,14 +232,14 @@ export default function Header() {
 
                 // Redirect to Front-End's logout page which will handle the API call
                 // This ensures both applications are in sync
-                window.location.href = 'http://localhost:3000/logout-redirect';
+                window.location.href = `${apiUrl}/logout-redirect`;
                 
             } catch (error) {
                 console.error("Logout error:", error);
                 
                 // Fallback: clear data and redirect to signin
                 clearUserData();
-                window.location.href = 'http://localhost:3000/page-signin';
+                window.location.href = `${apiUrl}/page-signin`;
             }
         }
     };

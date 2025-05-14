@@ -5,7 +5,7 @@ import { buildStyles, CircularProgressbar } from 'react-circular-progressbar'
 import 'react-circular-progressbar/dist/styles.css'
 import { getCurrentUser, clearUserData } from "../../utils/authUtils"
 import axios from 'axios';
-
+const apiUrl = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
 const percentage = 67;
 export default function Sidebar() {
     const [isToggled, setToggled] = useState(false);
@@ -79,14 +79,14 @@ export default function Sidebar() {
 
                 // Redirect to Front-End's logout page which will handle the API call
                 // This ensures both applications are in sync
-                window.location.href = 'http://localhost:3000/logout-redirect';
+                window.location.href = `${apiUrl}/logout-redirect`;
                 
             } catch (error) {
                 console.error("Logout error:", error);
                 
                 // Fallback: clear data and redirect to signin
                 clearUserData();
-                window.location.href = 'http://localhost:3000/page-signin';
+                window.location.href = `${apiUrl}/page-signin`;
             }
         }
     };

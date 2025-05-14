@@ -7,6 +7,8 @@ import { Doughnut, Bar, Radar } from 'react-chartjs-2';
 import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 // Register ChartJS components
 ChartJS.register(
   ArcElement, 
@@ -119,8 +121,8 @@ const AIJobAnalysis = () => {
         
         // Fetch AI recommendation directly from the recommendation service
         console.log(`Fetching AI recommendation for user ${user._id} and job ${jobId}`);
-        const aiResponse = await fetch(`http://localhost:5001/api/recommendation?user_id=${user._id}&job_id=${jobId}`, {
-          method: 'GET',
+        const aiResponse = await fetch(`${apiUrl}/api/recommendation?user_id=${user._id}&job_id=${jobId}`, {
+          method: 'GET',   
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
