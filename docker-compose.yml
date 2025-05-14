@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   backend:
-    image: ${DOCKER_REGISTRY}/nodemongoapp:6.0
+    image: ${DOCKER_REGISTRY}/backend:latest
     build:
       context: .
       dockerfile: Dockerfile.backend
