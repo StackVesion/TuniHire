@@ -108,35 +108,37 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
-            steps {
-                // docker-compose.yml est à la racine du projet
-                sh 'docker-compose build backend'
-            }
-        }
+stage('Build Docker Image') {
+  steps {
+    sh 'docker-compose build backend'
+  }
+}
 
-        stage('Push to Nexus') {
-            steps {
-                script {
-                    docker.withRegistry("http://${registry}", registryCredentials) {
-                        sh 'docker push ${DOCKER_REGISTRY}/nodemongoapp:6.0'
-                    }
-                }
-            }
-        }
+stage('Push to Nexus') {
+  steps {
+    script {
+      // tag matches what docker-compose build created
+      def img = docker.image("${DOCKER_REGISTRY}/nodemongoapp:${APP_VERSION}")
+      docker.withRegistry("http://${registry}", registryCredentials) {
+        img.push()
+      }
+    }
+  }
+}
 
-        stage('Run App with Docker') {
-            steps {
-                script {
-                    docker.withRegistry("http://${registry}", registryCredentials) {
-                        sh '''
-                            docker pull ${DOCKER_REGISTRY}/nodemongoapp:6.0
-                            docker-compose up -d backend
-                        '''
-                    }
-                }
-            }
-        }
+stage('Run App with Docker') {
+  steps {
+    script {
+      docker.withRegistry("http://${registry}", registryCredentials) {
+        sh """
+          docker pull ${DOCKER_REGISTRY}/nodemongoapp:${APP_VERSION}
+          docker-compose up -d backend
+        """
+      }
+    }
+  }
+}
+
     }
 
     post {
