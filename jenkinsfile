@@ -93,7 +93,7 @@ pipeline {
                         // Assurez-vous que 'scanner' est le nom de votre SonarQube Scanner configuré dans Jenkins Global Tool Configuration
                         // et 'SonarQubeServer' (ou le nom que vous avez donné) est configuré dans Jenkins > Configure System.
                         def scannerHome = tool 'scanner'
-                        withSonarQubeEnv('SonarQubeServer') { // Remplacer 'SonarQubeServer' par le nom réel de la conf serveur SonarQube dans Jenkins
+                        withSonarQubeEnv('scanner') { // Remplacer 'SonarQubeServer' par le nom réel de la conf serveur SonarQube dans Jenkins
                             sh """
                                 ${scannerHome}/bin/sonar-scanner \
                                   -Dsonar.projectKey=tunihire-backend \
