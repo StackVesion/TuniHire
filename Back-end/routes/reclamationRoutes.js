@@ -3,6 +3,7 @@ const router = express.Router();
 const reclamationController = require('../controllers/reclamationController');
 const auth = require('../middleware/auth');
 const { body } = require('express-validator');
+const Reclamation = require('../models/Reclamation');
 
 // Test route
 router.get('/test', function(req, res) {
@@ -11,15 +12,6 @@ router.get('/test', function(req, res) {
 
 // GET all reclamations (admin only)
 router.get('/', auth.verifyToken, reclamationController.getAllReclamations);
-
-// GET reclamation by ID
-router.get('/:id', auth.verifyToken, reclamationController.getReclamationById);
-
-// GET reclamations by user
-router.get('/user/:userId', auth.verifyToken, reclamationController.getReclamationsByUser);
-
-// GET reclamations by target
-router.get('/target/:targetType/:targetId', auth.verifyToken, reclamationController.getReclamationsByTarget);
 
 // GET reclamations for current logged in user
 router.get('/user', auth.verifyToken, async (req, res) => {
@@ -31,6 +23,15 @@ router.get('/user', auth.verifyToken, async (req, res) => {
   }
 });
 
+// GET reclamations by user (specific user ID)
+router.get('/user/:userId', auth.verifyToken, reclamationController.getReclamationsByUser);
+
+// GET reclamations by target
+router.get('/target/:targetType/:targetId', auth.verifyToken, reclamationController.getReclamationsByTarget);
+
+// GET reclamation by ID (must be after other specific routes)
+router.get('/:id', auth.verifyToken, reclamationController.getReclamationById);
+
 // CREATE new reclamation
 router.post('/', 
   auth.verifyToken,
@@ -38,7 +39,10 @@ router.post('/',
     body('subject').notEmpty().withMessage('Subject is required'),
     body('description').notEmpty().withMessage('Description is required'),
     body('category').isIn(['technical', 'billing', 'account', 'job', 'other']).withMessage('Invalid category'),
-    body('priority').isIn(['low', 'medium', 'high', 'urgent']).withMessage('Invalid priority')
+    body('priority').optional().isIn(['low', 'medium', 'high', 'urgent']).withMessage('Invalid priority'),
+    // Make targetType and targetId optional
+    body('targetType').optional().isIn(['Post', 'Company', 'User', 'General']).withMessage('Invalid target type'),
+    body('targetId').optional()
   ],
   reclamationController.createReclamation
 );

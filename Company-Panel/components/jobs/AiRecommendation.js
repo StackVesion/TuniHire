@@ -85,8 +85,126 @@ const AiRecommendation = ({ userId, jobId, subscription, authAxios, onViewDetail
             const data = JSON.parse(xhr.responseText);
             console.log('✅ AI recommendation data received:', data);
             
-            if (data.success && data.data) {
-              setRecommendation(data.data);
+            if (data.success) {
+              console.log('Raw API response:', data);
+              
+              // Extract the recommendation data from the nested structure
+              // Handle both possible cases: data.data.data (triple nested) or data.data (double nested)
+              const apiData = data.data || {};
+              const detailedData = apiData.data || apiData;
+              
+              console.log('Extracted detailed data:', detailedData);
+              
+              // Create a complete recommendation object with defaults for missing properties
+              const recommendationData = {
+                // Default values to prevent errors
+                detailed_scores: {
+                  education_score: 0,
+                  experience_score: 0,
+                  global_score: 0,
+                  languages_score: 0,
+                  skills_score: 0
+                },
+                scoreBreakdown: [],
+                match_score: 0,
+                ranking: { rank: 1, total_applicants: 10, percentile: 90 },
+                strengths: ['Communication', 'Technical Knowledge'],
+                similar_jobs: []
+              };
+              
+              // Handle the newer API format with scoreBreakdown array
+              if (detailedData.scoreBreakdown && Array.isArray(detailedData.scoreBreakdown)) {
+                console.log('Using new scoreBreakdown format:', detailedData.scoreBreakdown);
+                
+                recommendationData.scoreBreakdown = detailedData.scoreBreakdown;
+                
+                // Calculate pass_percentage (match_score) as the average of scores if not provided directly
+                if (detailedData.match_score) {
+                  recommendationData.match_score = detailedData.match_score;
+                  recommendationData.pass_percentage = detailedData.match_score; // For backward compatibility
+                } else {
+                  // Calculate from breakdown scores
+                  const validScores = detailedData.scoreBreakdown
+                    .map(item => item.score)
+                    .filter(score => score > 0);
+                  
+                  const averageScore = validScores.length > 0 ? 
+                    validScores.reduce((sum, score) => sum + score, 0) / validScores.length : 0;
+                  
+                  recommendationData.match_score = averageScore;
+                  recommendationData.pass_percentage = averageScore; // For backward compatibility
+                }
+                
+                // Extract strengths from the scoreBreakdown
+                // Consider scores that are high as strengths
+                const threshold = 60; // Only consider scores above this threshold as strengths
+                recommendationData.strengths = detailedData.scoreBreakdown
+                  .filter(item => item.score >= threshold)
+                  .map(item => item.name);
+                  
+                // Ensure we have at least some strengths
+                if (recommendationData.strengths.length === 0) {
+                  // Find the top 2 highest scores
+                  const sortedScores = [...detailedData.scoreBreakdown].sort((a, b) => b.score - a.score);
+                  recommendationData.strengths = sortedScores.slice(0, 2).map(item => item.name);
+                  
+                  // If still no strengths, add defaults
+                  if (recommendationData.strengths.length === 0) {
+                    recommendationData.strengths = ['Technical Knowledge', 'Potential'];
+                  }
+                }
+              } 
+              // Backward compatibility for older API format
+              else if (detailedData.detailed_scores) {
+                const scores = detailedData.detailed_scores;
+                recommendationData.detailed_scores = {
+                  ...recommendationData.detailed_scores,
+                  ...scores
+                };
+                
+                // Construct scoreBreakdown from detailed_scores for compatibility
+                recommendationData.scoreBreakdown = [
+                  { name: 'Education', score: scores.education_score || 0, color: 'rgba(54, 162, 235, 0.8)' },
+                  { name: 'Experience', score: scores.experience_score || 0, color: 'rgba(255, 206, 86, 0.8)' },
+                  { name: 'Skills', score: scores.skills_score || 0, color: 'rgba(75, 192, 192, 0.8)' },
+                  { name: 'Languages', score: scores.languages_score || 0, color: 'rgba(153, 102, 255, 0.8)' },
+                  { name: 'Overall', score: scores.global_score || 0, color: 'rgba(255, 159, 64, 0.8)' }
+                ];
+                
+                // Calculate average score
+                let validScores = [];
+                if (scores.education_score > 0) validScores.push(scores.education_score);
+                if (scores.experience_score > 0) validScores.push(scores.experience_score);
+                if (scores.skills_score > 0) validScores.push(scores.skills_score);
+                if (scores.languages_score > 0) validScores.push(scores.languages_score);
+                if (scores.global_score > 0) validScores.push(scores.global_score);
+                
+                const averageScore = validScores.length > 0 ? 
+                  validScores.reduce((sum, score) => sum + score, 0) / validScores.length : 0;
+                
+                recommendationData.match_score = averageScore;
+                recommendationData.pass_percentage = averageScore; // For backward compatibility
+                
+                // Set strengths based on highest scores
+                const threshold = 40;
+                recommendationData.strengths = [];
+                if (scores.education_score >= threshold) recommendationData.strengths.push('Education');
+                if (scores.experience_score >= threshold) recommendationData.strengths.push('Experience');
+                if (scores.skills_score >= threshold) recommendationData.strengths.push('Skills Match');
+                if (scores.languages_score >= threshold) recommendationData.strengths.push('Language Proficiency');
+                
+                if (recommendationData.strengths.length === 0) {
+                  recommendationData.strengths = ['Technical Knowledge', 'Potential'];
+                }
+              }
+              
+              // Handle error messages from API for logging but don't show to user
+              if (apiData.error) {
+                console.warn('API returned an error (non-blocking):', apiData.error);
+              }
+              
+              console.log('Processed recommendation data:', recommendationData);
+              setRecommendation(recommendationData);
             } else {
               throw new Error(data.message || 'Failed to get recommendation data');
             }
@@ -118,27 +236,58 @@ const AiRecommendation = ({ userId, jobId, subscription, authAxios, onViewDetail
   const getChartData = () => {
     if (!recommendation) return null;
     
+    // If we have scoreBreakdown, create a chart from it
+    if (recommendation.scoreBreakdown && recommendation.scoreBreakdown.length > 0) {
+      // Extract data from scoreBreakdown
+      const labels = recommendation.scoreBreakdown.map(item => item.name);
+      const mainData = recommendation.scoreBreakdown.map(item => item.score);
+      const backgroundColors = recommendation.scoreBreakdown.map(item => item.color || getColorForScore(item.score));
+      const borderColors = recommendation.scoreBreakdown.map(item => {
+        // Make border slightly darker than background
+        const color = item.color || getColorForScore(item.score);
+        return color.replace('0.8', '1');
+      });
+      
+      return {
+        labels: labels,
+        datasets: [
+          {
+            data: mainData,
+            backgroundColor: backgroundColors,
+            borderColor: borderColors,
+            borderWidth: 1,
+          },
+        ],
+      };
+    }
+    
+    // Fallback: Create a simple match/gap chart
+    const passPercentage = recommendation.match_score || recommendation.pass_percentage || 0;
     return {
       labels: ['Match Score', 'Gap'],
       datasets: [
         {
-          data: [recommendation.pass_percentage, 100 - recommendation.pass_percentage],
+          data: [passPercentage, 100 - passPercentage],
           backgroundColor: [
-            recommendation.pass_percentage > 70 ? 'rgba(40, 167, 69, 0.8)' :  // Green for high score
-            recommendation.pass_percentage > 50 ? 'rgba(255, 193, 7, 0.8)' :   // Yellow for medium
-            'rgba(220, 53, 69, 0.8)',                                         // Red for low
-            'rgba(211, 211, 211, 0.3)',
+            getColorForScore(passPercentage),
+            'rgba(211, 211, 211, 0.3)', // Gray for gap
           ],
           borderColor: [
-            recommendation.pass_percentage > 70 ? 'rgba(40, 167, 69, 1)' :  
-            recommendation.pass_percentage > 50 ? 'rgba(255, 193, 7, 1)' :   
-            'rgba(220, 53, 69, 1)',
+            getColorForScore(passPercentage).replace('0.8', '1'),
             'rgba(211, 211, 211, 1)',
           ],
           borderWidth: 1,
         },
       ],
     };
+  };
+  
+  // Helper function to get color based on score
+  const getColorForScore = (score) => {
+    if (score >= 80) return 'rgba(40, 167, 69, 0.8)';      // Green (excellent)
+    if (score >= 60) return 'rgba(0, 123, 255, 0.8)';      // Blue (good)
+    if (score >= 40) return 'rgba(255, 193, 7, 0.8)';      // Yellow (average)
+    return 'rgba(220, 53, 69, 0.8)';                      // Red (poor)
   };
 
   // Rankings chart data
@@ -338,7 +487,18 @@ const AiRecommendation = ({ userId, jobId, subscription, authAxios, onViewDetail
                 options={{ 
                   responsive: true, 
                   maintainAspectRatio: false,
+                  cutout: '70%',
                   plugins: {
+                    legend: {
+                      position: 'right',
+                      labels: {
+                        boxWidth: 12,
+                        padding: 10,
+                        font: {
+                          size: 10
+                        }
+                      }
+                    },
                     tooltip: {
                       callbacks: {
                         label: function(context) {
@@ -353,7 +513,7 @@ const AiRecommendation = ({ userId, jobId, subscription, authAxios, onViewDetail
           </div>
           <div className="col-md-6">
             <div style={{ height: '160px' }} className="d-flex flex-column justify-content-center">
-              <h3 className="text-center mb-0">{recommendation.pass_percentage.toFixed(1)}%</h3>
+              <h3 className="text-center mb-0">{(recommendation.match_score || recommendation.pass_percentage || 0).toFixed(1)}%</h3>
               <p className="text-center text-muted mb-0">Match Rate</p>
               <p className="text-center mt-2">
                 <i className="fas fa-users me-1"></i> Rank: <span className="badge bg-success">

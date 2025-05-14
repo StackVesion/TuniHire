@@ -103,11 +103,11 @@ ${whiteTest.content}
 
 Start by welcoming the candidate and making them comfortable. Then proceed with the questions from the white test in a conversational manner. Evaluate their responses and provide feedback.`;
 
-    console.log('Connecting to bot service at: http://127.0.0.1:8080/start-bot');
+    console.log('Connecting to bot service at: http://127.0.0.1:8010/start-bot');
     
     // Call the bot service
     try {
-      const botResponse = await fetch('http://127.0.0.1:8080/start-bot', {
+      const botResponse = await fetch('http://127.0.0.1:8010/start-bot', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -254,11 +254,11 @@ Cover the following aspects:
 
 Ask the candidate what specific areas they'd like to focus on in their preparation and provide tailored advice.`;
 
-    console.log('Connecting to bot service at: http://127.0.0.1:8080/start-bot');
+    console.log('Connecting to bot service at: http://127.0.0.1:8010/start-bot');
     
     // Call the bot service
     try {
-      const botResponse = await fetch('http://127.0.0.1:8080/start-bot', {
+      const botResponse = await fetch('http://127.0.0.1:8010/start-bot', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

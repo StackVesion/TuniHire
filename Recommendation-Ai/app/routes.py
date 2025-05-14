@@ -11,7 +11,7 @@ from app.services.recommendation_service import RecommendationService
 from app.utils.db_connection import get_db_connection
 
 # Create a Blueprint for recommendation routes
-recommendation_bp = Blueprint('recommendation', __name__)
+recommendation_bp = Blueprint('recommendation', __name__, url_prefix='')
 
 # Get database connection
 db = get_db_connection()
@@ -209,4 +209,20 @@ def get_training_stats():
 
 def register_routes(app):
     """Register all blueprints with the Flask app"""
+    # Register the blueprint with no additional prefix since routes already include full paths
     app.register_blueprint(recommendation_bp)
+    print("Routes registered successfully!")
+    
+    # Add a root route for easy health check
+    @app.route('/')
+    def root():
+        return jsonify({
+            'success': True,
+            'message': 'TuniHire AI Recommendation API is running',
+            'endpoints': [
+                '/api/recommendation?user_id=<user_id>&job_id=<job_id>',
+                '/api/better-matches/<user_id>',
+                '/api/health',
+                '/api/training/stats'
+            ]
+        })

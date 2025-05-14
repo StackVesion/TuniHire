@@ -206,7 +206,7 @@ router.post('/verify-profile', verifyToken, verificationUpload.single('verificat
       user.isVerified = true;
       user.verifiedAt = new Date();
       user.verificationPhoto = verificationPhotoUrl;
-      user.verificationScore = verificationResult.score || 56.11; // Save the verification score
+      user.verificationScore = verificationResult.score ; // Save the verification score
       await user.save();
 
       res.status(200).json({
@@ -214,7 +214,7 @@ router.post('/verify-profile', verifyToken, verificationUpload.single('verificat
         message: 'Profile verified successfully',
         isVerified: true,
         verifiedAt: user.verifiedAt,
-        score: verificationResult.score || 56.11
+        score: verificationResult.score 
       });
     } catch (aiError) {
       console.error('Error calling AI service for face verification:', aiError);
@@ -566,7 +566,7 @@ router.get("/profile", verifyToken, async (req, res) => {
             languagePreferences: user.languagePreferences || [],
             isVerified: user.isVerified || false,
             verifiedAt: user.verifiedAt,
-            verificationScore: user.verificationScore || 56.11,
+            verificationScore: user.verificationScore ,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt
         };
