@@ -53,6 +53,9 @@ pipeline {
         }
 
         stage('Run Backend Tests') {
+            when {
+                expression { params.SKIP_TESTS == false }
+            }
             steps {
                 dir('Back-end') {
                     sh '''
@@ -76,6 +79,14 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
+            // Optionnel: rendre cette étape skipable aussi si les tests sont skippés et que l'analyse dépend des résultats des tests
+            // when {
+            //    expression { params.SKIP_TESTS == false && params.SKIP_SONAR == false }
+            // }
+            // Ou simplement utiliser le paramètre SKIP_SONAR existant
+            when {
+                expression { params.SKIP_SONAR == false }
+            }
             steps {
                 dir('Back-end') {
                     script {
@@ -98,6 +109,10 @@ pipeline {
         }
 
         stage('Quality Gate') {
+            // Optionnel: rendre cette étape skipable aussi si Sonar est skippé
+            when {
+                expression { params.SKIP_SONAR == false }
+            }
             steps {
                 timeout(time: 10, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true

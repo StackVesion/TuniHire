@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'jenkins'
+    metrics_path: /prometheus
+    static_configs:
+      # Remplacez 172.17.0.1:8080 par l'adresse IP et le port réels de votre instance Jenkins
+      # L'adresse 172.17.0.1 est souvent l'IP du host Docker depuis un conteneur sur le même réseau bridge par défaut.
+      # Si Jenkins est dans un conteneur sur un réseau Docker personnalisé, utilisez le nom du service Jenkins et son port.
+      # Si Jenkins est sur une autre machine, utilisez l'IP de cette machine.
+      - targets: ['172.23.202.74:8080']
