@@ -53,20 +53,47 @@ export default function ScheduleMeetingPage() {
       try {
         setLoading(true);
         
-        // Fetch job details using authAxios
-        const jobResponse = await authAxios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/${id}`
-        );
-        
-        // Fetch candidates who applied to this job
-        const applicantsResponse = await authAxios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/${id}/applicants`
-        );
-        
-        setJob(jobResponse.data.data);
-        setCandidates(applicantsResponse.data.data || []);
+        try {
+          // Fetch job details with detailed information
+          const jobResponse = await authAxios.get(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/${id}`
+          );
+          
+          if (!jobResponse.data) {
+            setError('Job information not found.');
+            setLoading(false);
+            return;
+          }
+          
+          setJob(jobResponse.data);
+          console.log('Job details loaded:', jobResponse.data.title);
+          
+          // Fetch candidates who applied to this job
+          const applicantsResponse = await authAxios.get(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/${id}/applicants`
+          );
+          
+          // Check if we have valid candidates data
+          if (applicantsResponse.data && applicantsResponse.data.data) {
+            setCandidates(applicantsResponse.data.data);
+            console.log(`Found ${applicantsResponse.data.data.length} candidates for this job`);
+          } else {
+            console.log('No candidates found or unexpected response format');
+            console.log('Response:', applicantsResponse.data);
+            setCandidates([]);
+          }
+        } catch (err) {
+          console.error('Error fetching job or candidates:', err);
+          if (err.response && err.response.status === 404) {
+            setError('Job post or candidate information not found.');
+          } else if (err.response && err.response.status === 403) {
+            setError('You do not have permission to access this job information.');
+          } else {
+            setError('Failed to load job information: ' + (err.response?.data?.message || err.message));
+          }
+        }
       } catch (error) {
-        console.error('Error fetching job and candidates:', error);
+        console.error('Error in fetchJobAndCandidates:', error);
         setError('Failed to load job information. Please try again later.');
       } finally {
         setLoading(false);

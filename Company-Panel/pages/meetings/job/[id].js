@@ -39,26 +39,63 @@ export default function JobMeetingsPage() {
     // Only proceed if we have the job ID
     if (!id) return;
 
-    // Fetch job and its meetings
+    // Fetch job and meetings
     const fetchJobAndMeetings = async () => {
       try {
         setLoading(true);
         
-        // Fetch job details using authAxios
-        const jobResponse = await authAxios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/${id}`
-        );
-        
-        // Fetch meetings for this job
-        const meetingsResponse = await authAxios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/meetings/job/${id}`
-        );
-        
-        setJob(jobResponse.data.data);
-        setMeetings(meetingsResponse.data.data);
+        try {
+          // Fetch job details using authAxios - this may return data directly or inside data.data
+          const jobResponse = await authAxios.get(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/${id}`
+          );
+          
+          // Handle different response formats from API
+          let jobData;
+          if (jobResponse.data && jobResponse.data.data) {
+            jobData = jobResponse.data.data;
+          } else if (jobResponse.data) {
+            jobData = jobResponse.data;
+          } else {
+            throw new Error('Invalid job response format');
+          }
+          
+          setJob(jobData);
+          console.log('Job details loaded:', jobData.title);
+          
+          // Fetch meetings for this job
+          const meetingsResponse = await authAxios.get(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/meetings/job/${id}`
+          );
+          
+          // Process meetings data
+          if (meetingsResponse.data && meetingsResponse.data.data) {
+            setMeetings(meetingsResponse.data.data);
+            console.log(`Found ${meetingsResponse.data.count} meetings for this job`);
+          } else {
+            console.warn('No meetings found or unexpected response format');
+            console.log('Meetings Response:', meetingsResponse.data);
+            setMeetings([]);
+          }
+          
+          // If the job data includes company information, store it for reference
+          if (jobData.companyId) {
+            console.log('Company data found:', jobData.companyId.name || jobData.companyId);
+          }
+          
+        } catch (err) {
+          console.error('Error fetching job or meetings:', err);
+          if (err.response && err.response.status === 404) {
+            setError('Job post not found.');
+          } else if (err.response && err.response.status === 403) {
+            setError('You do not have permission to access this job information.');
+          } else {
+            setError('Failed to load job information: ' + (err.response?.data?.message || err.message));
+          }
+        }
       } catch (error) {
-        console.error('Error fetching job and meetings:', error);
-        setError('Failed to load meetings. Please try again later.');
+        console.error('Error in main fetchJobAndMeetings:', error);
+        setError('Failed to load job information. Please try again later.');
       } finally {
         setLoading(false);
       }
