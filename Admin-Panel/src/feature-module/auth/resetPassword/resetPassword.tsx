@@ -25,8 +25,7 @@ const ResetPassword = () => {
     confirmPassword: false,
   });
 
-  const [password, setPassword] = useState("");
-  const [passwordResponce, setPasswordResponce] = useState({
+  const [password, setPassword] = useState("");  const [passwordResponce, setPasswordResponce] = useState({
     passwordResponceText: "Utilisez 8 caractères ou plus avec des lettres, des chiffres et des symboles.",
     passwordResponceKey: "",
   });
@@ -89,31 +88,13 @@ const ResetPassword = () => {
     }));
   };
 
-  // Fonction pour réinitialiser le mot de passe
-  const resetPassword = async (token: string, password: string) => {
-    try {
-      const response = await axios.post('http://localhost:5000/api/users/reset-password', {
-        token,
-        password
-      });
-      return response.data;
-    } catch (error: any) {
-      console.error('Erreur lors de la réinitialisation du mot de passe:', error);
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Une erreur est survenue lors de la réinitialisation du mot de passe'
-      };
-    }
-  };
 
   const onChangePassword = (password: string) => {
     setPassword(password);
     if (password.match(/^$|\s+/)) {
-
       setPasswordResponce({
         passwordResponceText: "Utilisez 8 caractères ou plus avec des lettres, des chiffres et des symboles",
         passwordResponceKey: "",
-
       });
     } else if (password.length === 0) {
       setPasswordResponce({
@@ -121,18 +102,15 @@ const ResetPassword = () => {
         passwordResponceKey: "",
       });
     } else if (password.length < 8) {
-
       setPasswordResponce({
         passwordResponceText: "Faible. Doit contenir au moins 8 caractères",
         passwordResponceKey: "0",
-
       });
     } else if (
       password.search(/[a-z]/) < 0 ||
       password.search(/[A-Z]/) < 0 ||
       password.search(/[0-9]/) < 0
     ) {
-
       setPasswordResponce({
         passwordResponceText: "Moyen. Doit contenir au moins 1 majuscule et 1 chiffre",
         passwordResponceKey: "1",
@@ -146,7 +124,6 @@ const ResetPassword = () => {
       setPasswordResponce({
         passwordResponceText: "Excellent! Votre mot de passe est sécurisé.",
         passwordResponceKey: "3",
-
       });
     }
   };

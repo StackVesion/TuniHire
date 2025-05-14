@@ -97,35 +97,96 @@ export default function CoursePage() {
                             const progressMap = {};
                             const certificateMap = {};
                             
+                            // Try to get user's certificates, but continue if it fails
+                            try {
+                                const certificatesResponse = await authAxios.get(`${API_BASE_URL}/api/certificates/user`);
+                                const userCertificates = certificatesResponse.data?.data || [];
+                                
+                                // Create certificate mapping
+                                console.log('Processing certificate data:', userCertificates);
+                                userCertificates.forEach(cert => {
+                                    // Handle different certificate data formats
+                                    let courseId;
+                                    let certificateId = cert._id;
+                                    
+                                    // If course is a populated object
+                                    if (cert.course && typeof cert.course === 'object') {
+                                        courseId = cert.course._id;
+                                    }
+                                    // If course is a string ID
+                                    else if (cert.course) {
+                                        courseId = cert.course.toString();
+                                    }
+                                    // Fall back to courseId property if it exists
+                                    else if (cert.courseId) {
+                                        courseId = cert.courseId.toString();
+                                    }
+                                    
+                                    // Only map if we have a valid course ID and certificate ID
+                                    if (courseId && certificateId) {
+                                        console.log(`Mapping certificate ${certificateId} to course ${courseId}`);
+                                        
+                                        // Make sure we're storing the actual certificate ID, not the course ID
+                                        certificateMap[courseId] = certificateId.toString();
+                                    }
+                                });
+                            } catch (certError) {
+                                console.error('Error fetching certificates, continuing without them:', certError);
+                                // Continue without certificates
+                            }
+                            
                             // Process progress data to extract certificates too
                             userProgress.forEach(progress => {
-                                progressMap[progress.course._id] = progress;
-                                if (progress.certificateIssued && progress.certificateId) {
-                                    certificateMap[progress.course._id] = progress.certificateId;
+                                if (progress && progress.course && progress.course._id) {
+                                    progressMap[progress.course._id] = progress;
                                 }
                             });
                             
-                            // Add progress and certificate info to each course
+                            // Update course data with progress information and certificate status
                             coursesWithStatus = coursesWithStatus.map(course => {
-                                const courseObj = typeof course.toObject === 'function' ? course.toObject() : course;
-                                const userProgressForCourse = progressMap[course._id];
+                                // Get progress for this course
+                                const progress = progressMap[course._id];
                                 
-                                if (userProgressForCourse) {
-                                    courseObj.isEnrolled = true;
-                                    courseObj.progress = userProgressForCourse.progressPercentage || 0;
-                                    courseObj.completed = userProgressForCourse.completed || false;
-                                    courseObj.certificateId = certificateMap[course._id] || null;
-                                } else {
-                                    courseObj.isEnrolled = false;
-                                    courseObj.progress = 0;
-                                    courseObj.completed = false;
-                                    courseObj.certificateId = null;
+                                // Calculate progress percentage if available
+                                let progressPercentage = 0;
+                                if (progress && progress.completedSteps && course.steps) {
+                                    progressPercentage = (progress.completedSteps.length / course.steps.length) * 100;
                                 }
                                 
-                                return courseObj;
+                                // Check if course has a certificate - try multiple ID formats
+                                // This ensures we catch certificates regardless of ID format issues
+                                let certificateId = null;
+                                
+                                // Try direct lookup first
+                                if (certificateMap[course._id]) {
+                                    certificateId = certificateMap[course._id];
+                                } 
+                                // Then try with toString() to handle ObjectID vs string comparisons
+                                else if (course._id && certificateMap[course._id.toString()]) {
+                                    certificateId = certificateMap[course._id.toString()];
+                                }
+                                
+                                // Verify that certificateId is actually a certificate ID, not a course ID
+                                if (certificateId) {
+                                    // Make sure certificateId doesn't match the course._id (common mistake)
+                                    if (certificateId === course._id.toString()) {
+                                        console.warn(`Warning: Certificate ID (${certificateId}) matches course ID. This is likely incorrect.`);
+                                        // Try to find the correct certificate by doing an additional fetch
+                                        // We'll leave certificateId as is for now, but log a warning
+                                    }
+                                    
+                                    console.log(`Course ${course.title} (${course._id}) has certificate: ${certificateId}`);
+                                }
+                                
+                                return {
+                                    ...course,
+                                    progress: progressPercentage,
+                                    enrolled: progress ? true : false,
+                                    completed: progressPercentage === 100,
+                                    certificateId: certificateId,
+                                    isCertified: !!certificateId
+                                };
                             });
-                            
-                            console.log('Enhanced courses with user progress and certificates');
                         } catch (progressError) {
                             console.error('Error fetching user progress:', progressError);
                         }
@@ -525,15 +586,15 @@ export default function CoursePage() {
                             courses.map((course) => (
                                 <div key={course._id} className="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-30">
                                     <div 
-                                        className={`card-grid-2 card-course ${!course.isEnrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] ? 'course-locked' : ''}`} 
-                                        onClick={() => handleCourseClick(course)}
+                                        className={`card-grid-2 card-course ${!course.enrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] ? 'course-locked' : ''}`} 
+                                        onClick={() => course.enrolled ? handleCourseClick(course) : null}
                                     >
                                         <div className="card-grid-2-image-wrap course-card-image position-relative">
                                             {course.thumbnail ? (
                                                 <img 
                                                     src={course.thumbnail} 
                                                     alt={course.title} 
-                                                    className={`${!course.isEnrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] ? 'locked-image' : ''}`}
+                                                    className={`${!course.enrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] ? 'locked-image' : ''}`}
                                                     onError={(e) => {
                                                         e.target.src = "/assets/imgs/page/dashboard/course-placeholder.jpg";
                                                     }}
@@ -542,12 +603,12 @@ export default function CoursePage() {
                                                 <img 
                                                     src="/assets/imgs/page/dashboard/course-placeholder.jpg" 
                                                     alt={course.title} 
-                                                    className={`${!course.isEnrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] ? 'locked-image' : ''}`}
+                                                    className={`${!course.enrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] ? 'locked-image' : ''}`}
                                                 />
                                             )}
                                             
                                             {/* Show subscription lock overlay if needed */}
-                                            {!course.isEnrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] && (
+                                            {!course.enrolled && subscriptionLevels[userSubscription] < subscriptionLevels[course.subscriptionRequired] && (
                                                 <div className="course-lock-overlay">
                                                     <div className="lock-icon">
                                                         <i className="fi-rr-lock" style={{ fontSize: '24px' }}></i>
@@ -558,7 +619,7 @@ export default function CoursePage() {
                                             
                                             {/* Enrollment Status and Completion Badges */}
                                             <div className="course-badge-container">
-                                                {course.isEnrolled && (
+                                                {course.enrolled && (
                                                     <div className="course-badge enrolled">
                                                         <i className="fi-rr-check-circle mr-5"></i> Enrolled
                                                     </div>
@@ -566,6 +627,16 @@ export default function CoursePage() {
                                                 {course.completed && (
                                                     <div className="course-badge completed">
                                                         <i className="fi-rr-diploma mr-5"></i> Completed
+                                                    </div>
+                                                )}
+                                                {course.isCertified && (
+                                                    <div className="course-certified-badge">
+                                                        <img 
+                                                            src="/images/certified-badge.png" 
+                                                            alt="Certified" 
+                                                            width="50" 
+                                                            height="50"
+                                                        />
                                                     </div>
                                                 )}
                                             </div>
@@ -596,7 +667,7 @@ export default function CoursePage() {
                                             </div>
                                             
                                             {/* Progress Bar for Enrolled Courses */}
-                                            {course.isEnrolled && (
+                                            {course.enrolled && (
                                                 <div className="mt-15">
                                                     <div className="progress">
                                                         <div 
@@ -611,7 +682,70 @@ export default function CoursePage() {
                                                     <div className="d-flex justify-content-between">
                                                         <small className="text-muted">{Math.round(course.progress)}% Complete</small>
                                                         {course.certificateId && (
-                                                            <Link href={`/certificate/${course.certificateId}`} onClick={(e) => e.stopPropagation()} className="btn-view-certificate">
+                                                            <Link 
+                                                                href={`/certificate/${course.certificateId}`} 
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    console.log('View Certificate clicked for:', course.title);
+                                                                    console.log('Certificate ID from course listing:', course.certificateId);
+                                                                    
+                                                                    // Check if certificateId might actually be a course ID (error case)
+                                                                    if (course.certificateId === course._id.toString()) {
+                                                                        console.warn('ERROR: Certificate ID matches course ID - attempting to fix');
+                                                                        e.preventDefault(); // Prevent the default navigation
+                                                                        
+                                                                        // Try to get the real certificate ID from the server
+                                                                        try {
+                                                                            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+                                                                            const authAxios = createAuthAxios();
+                                                                            
+                                                                            // Try verification endpoint first
+                                                                            const verifyCertResponse = await authAxios.get(
+                                                                                `${API_BASE_URL}/api/certificates/verify/${course._id}`
+                                                                            );
+                                                                            
+                                                                            if (verifyCertResponse.data?.success && verifyCertResponse.data?.exists) {
+                                                                                const correctCertId = 
+                                                                                    verifyCertResponse.data.certificateId || 
+                                                                                    verifyCertResponse.data._id || 
+                                                                                    verifyCertResponse.data.certificate?._id;
+                                                                                
+                                                                                if (correctCertId) {
+                                                                                    console.log('Found correct certificate ID:', correctCertId);
+                                                                                    window.location.href = `/certificate/${correctCertId}`;
+                                                                                    return;
+                                                                                }
+                                                                            }
+                                                                            
+                                                                            // Fallback to fetching all certificates
+                                                                            const userCertsResponse = await authAxios.get(`${API_BASE_URL}/api/certificates/user`);
+                                                                            
+                                                                            if (userCertsResponse.data?.success && userCertsResponse.data?.data) {
+                                                                                const certs = userCertsResponse.data.data;
+                                                                                const matchingCert = certs.find(cert => {
+                                                                                    const certCourseId = cert.course?._id || cert.course;
+                                                                                    return certCourseId && certCourseId.toString() === course._id.toString();
+                                                                                });
+                                                                                
+                                                                                if (matchingCert && matchingCert._id) {
+                                                                                    console.log('Found matching certificate:', matchingCert._id);
+                                                                                    window.location.href = `/certificate/${matchingCert._id}`;
+                                                                                    return;
+                                                                                }
+                                                                            }
+                                                                            
+                                                                            // If all fails, try direct navigation to course detail page
+                                                                            window.location.href = `/course/${course._id}`;
+                                                                            
+                                                                        } catch (err) {
+                                                                            console.error('Error finding certificate:', err);
+                                                                            // Fallback to course page
+                                                                            window.location.href = `/course/${course._id}`;
+                                                                        }
+                                                                    }
+                                                                }} 
+                                                                className="btn-view-certificate"
+                                                            >
                                                                 View Certificate
                                                             </Link>
                                                         )}
@@ -928,6 +1062,21 @@ export default function CoursePage() {
                 
                 .btn-view-certificate:hover {
                     background-color: #3e8e41;
+                }
+                
+                .course-certified-badge {
+                    position: absolute;
+                    top: 10px;
+                    right: 10px;
+                    z-index: 10;
+                    transform: rotate(15deg);
+                    animation: pulse-badge 2s infinite;
+                }
+                
+                @keyframes pulse-badge {
+                    0% { transform: rotate(15deg) scale(1); }
+                    50% { transform: rotate(15deg) scale(1.1); }
+                    100% { transform: rotate(15deg) scale(1); }
                 }
             `}</style>
         </Layout>

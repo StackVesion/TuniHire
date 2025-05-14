@@ -40,23 +40,96 @@ export default function CertificatePage() {
   const fetchCertificateData = async () => {
     setLoading(true);
     try {
-      // Try to get certificate from API
+      console.log(`Fetching certificate with ID: ${id} from ${API_BASE_URL}/api/certificates/${id}`);
+      
+      // Try multiple approaches to get the certificate
       try {
-        console.log(`Fetching certificate from ${API_BASE_URL}/api/certificates/${id}`);
+        // First attempt - direct ID lookup
         const response = await authAxios.get(`${API_BASE_URL}/api/certificates/${id}`);
-        setCertificate(response.data);
+        console.log('Certificate API response:', response.data);
         
-        // Also fetch the course data
-        if (response.data.courseId) {
-          const courseResponse = await authAxios.get(`${API_BASE_URL}/api/courses/${response.data.courseId}`);
-          setCourse(courseResponse.data);
+        if (response.data) {
+          let certData = null;
+          
+          // Handle different response formats
+          if (response.data.success === true && response.data.data) {
+            // New format with success/data structure
+            certData = response.data.data;
+          } else if (response.data._id) {
+            // Direct object response
+            certData = response.data;
+          }
+          
+          if (certData) {
+            console.log('Certificate data extracted:', certData);
+            setCertificate(certData);
+            
+            // Handle course data
+            if (certData.course && typeof certData.course === 'object') {
+              console.log('Course data found in certificate response');
+              setCourse(certData.course);
+            } else {
+              // Try to get course ID from various possible properties
+              const courseId = certData.courseId || certData.course;
+              
+              if (courseId) {
+                console.log('Fetching course with ID:', courseId);
+                try {
+                  const courseResponse = await authAxios.get(`${API_BASE_URL}/api/courses/${courseId}`);
+                  
+                  if (courseResponse.data.success && courseResponse.data.data) {
+                    setCourse(courseResponse.data.data);
+                  } else if (courseResponse.data) {
+                    setCourse(courseResponse.data);
+                  }
+                } catch (courseErr) {
+                  console.error('Error fetching course data:', courseErr);
+                }
+              }
+            }
+          } else {
+            throw new Error('Invalid certificate data format');
+          }
+        } else {
+          throw new Error('No data returned from certificate API');
         }
       } catch (apiError) {
-        console.warn('API not available for certificates, using mock data', apiError);
-        // Use mock data as fallback
-        const mockData = generateMockCertificate(id);
-        setCertificate(mockData.certificate);
-        setCourse(mockData.course);
+        console.warn('Error in primary certificate fetch method:', apiError);
+        
+        // Fallback - try course ID lookup to find certificate
+        try {
+          console.log('Attempting alternative certificate lookup methods...');
+          
+          // If the ID is a course ID, try to get certificate by course
+          const verifyCertResponse = await authAxios.get(`${API_BASE_URL}/api/certificates/verify/${id}`);
+          
+          if (verifyCertResponse.data && verifyCertResponse.data.exists) {
+            console.log('Found certificate through verify endpoint:', verifyCertResponse.data);
+            
+            // Get the actual certificate ID
+            const actualCertId = verifyCertResponse.data.certificateId || verifyCertResponse.data._id;
+            
+            if (actualCertId) {
+              // Re-fetch with correct ID
+              const correctResponse = await authAxios.get(`${API_BASE_URL}/api/certificates/${actualCertId}`);
+              
+              if (correctResponse.data.success && correctResponse.data.data) {
+                setCertificate(correctResponse.data.data);
+                if (correctResponse.data.data.course) {
+                  setCourse(correctResponse.data.data.course);
+                }
+              }
+            }
+          } else {
+            throw new Error('Certificate not found via verification endpoint');
+          }
+        } catch (fallbackError) {
+          console.warn('All certificate lookup methods failed, using mock data', fallbackError);
+          // Use mock data as final fallback
+          const mockData = generateMockCertificate(id);
+          setCertificate(mockData.certificate);
+          setCourse(mockData.course);
+        }
       }
     } catch (error) {
       console.error('Error fetching certificate:', error);
@@ -234,7 +307,7 @@ export default function CertificatePage() {
                 <div className="certificate-header text-center mb-5">
                   <div className="d-flex justify-content-between align-items-center mb-4">
                     <div className="logo">
-                      <img src="/images/logo/logo.svg" alt="TuniHire Logo" height="60" />
+                      <img src="/assets/logoBanner.png" alt="TuniHire Logo" height="60" />
                     </div>
                     <div className="certificate-number">
                       <span className="text-muted">Certificate #: </span>
@@ -311,9 +384,9 @@ export default function CertificatePage() {
                   <div className="row align-items-center">
                     <div className="col-md-6 text-center">
                       <div className="signature mb-2">
-                        <img src="/images/signature.png" alt="Signature" height="60" />
+                        <img src="/assets/signature.png" alt="Signature" height="60" />
                       </div>
-                      <div className="signature-name fw-bold">Ahmed Ben Ali</div>
+                      <div className="signature-name fw-bold">Nihed BenAbdennour</div>
                       <div className="signature-title text-muted">CEO, TuniHire</div>
                     </div>
                     <div className="col-md-6 text-center">
@@ -358,15 +431,95 @@ export default function CertificatePage() {
                     </div>
                     <div className="mt-3">
                       <h6>Share Your Achievement</h6>
-                      <div className="d-flex mt-2">
-                        <button className="btn btn-outline-primary me-2">
+                      <div className="d-flex flex-wrap mt-2">
+                        <a 
+                          href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}&title=${encodeURIComponent(`I just earned a certificate in ${course?.title || 'this course'} from TuniHire!`)}&summary=${encodeURIComponent(`I successfully completed the ${course?.title || 'course'} on TuniHire and earned a certificate. Check it out!`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-outline-primary me-2 mb-2"
+                          onClick={() => {
+                            console.log('Sharing to LinkedIn');
+                            // Track sharing (optional)
+                            if (typeof window !== 'undefined' && window.gtag) {
+                              window.gtag('event', 'share', {
+                                method: 'linkedin',
+                                content_type: 'certificate',
+                                item_id: certificate?._id
+                              });
+                            }
+                          }}
+                        >
                           <i className="fab fa-linkedin"></i> LinkedIn
-                        </button>
-                        <button className="btn btn-outline-primary me-2">
+                        </a>
+                        
+                        <a 
+                          href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}&quote=${encodeURIComponent(`I just earned a certificate in ${course?.title || 'this course'} from TuniHire!`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-outline-primary me-2 mb-2"
+                          onClick={() => {
+                            console.log('Sharing to Facebook');
+                            // Track sharing (optional)
+                            if (typeof window !== 'undefined' && window.gtag) {
+                              window.gtag('event', 'share', {
+                                method: 'facebook',
+                                content_type: 'certificate',
+                                item_id: certificate?._id
+                              });
+                            }
+                          }}
+                        >
                           <i className="fab fa-facebook"></i> Facebook
-                        </button>
-                        <button className="btn btn-outline-primary">
+                        </a>
+                        
+                        <a 
+                          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just earned a certificate in ${course?.title || 'this course'} from TuniHire! Check it out: ${typeof window !== 'undefined' ? window.location.href : ''}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-outline-primary me-2 mb-2"
+                          onClick={() => {
+                            console.log('Sharing to Twitter');
+                            // Track sharing (optional)
+                            if (typeof window !== 'undefined' && window.gtag) {
+                              window.gtag('event', 'share', {
+                                method: 'twitter',
+                                content_type: 'certificate',
+                                item_id: certificate?._id
+                              });
+                            }
+                          }}
+                        >
                           <i className="fab fa-twitter"></i> Twitter
+                        </a>
+                        
+                        <button
+                          className="btn btn-outline-success me-2 mb-2"
+                          onClick={() => {
+                            if (navigator.clipboard) {
+                              navigator.clipboard.writeText(typeof window !== 'undefined' ? window.location.href : '')
+                                .then(() => {
+                                  Swal.fire({
+                                    title: 'Success!',
+                                    text: 'Certificate link copied to clipboard',
+                                    icon: 'success',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                  });
+                                })
+                                .catch(err => {
+                                  console.error('Failed to copy:', err);
+                                  Swal.fire({
+                                    title: 'Error',
+                                    text: 'Failed to copy link',
+                                    icon: 'error',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                  });
+                                });
+                            }
+                          }}
+                        >
+                          <i className="fas fa-link"></i> Copy Link
                         </button>
                       </div>
                     </div>

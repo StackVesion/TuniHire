@@ -108,12 +108,22 @@ const AIJobAnalysis = () => {
         
         // Fetch company details if available
         if (jobResponse.data && jobResponse.data.companyId) {
-          const companyResponse = await authAxios.get(`/api/companies/${jobResponse.data.companyId}`);
-          if (companyResponse.data) {
-            setJob(prev => ({
-              ...prev,
-              company: companyResponse.data
-            }));
+          // Ensure we're using a string ID - extract the ID string if it's an object
+          const companyId = typeof jobResponse.data.companyId === 'object' && jobResponse.data.companyId._id
+            ? jobResponse.data.companyId._id
+            : jobResponse.data.companyId.toString();
+            
+          try {
+            const companyResponse = await authAxios.get(`/api/companies/${companyId}`);
+            if (companyResponse.data) {
+              setJob(prev => ({
+                ...prev,
+                company: companyResponse.data
+              }));
+            }
+          } catch (companyError) {
+            console.error('Error fetching company details:', companyError);
+            // Continue without company details if there's an error
           }
         }
         

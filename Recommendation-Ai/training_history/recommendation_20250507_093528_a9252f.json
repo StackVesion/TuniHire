@@ -1,0 +1,17 @@
+{
+  "user_id": "681b0d8fd0e29e3bb1a9252f",
+  "job_id": "681b0d06b7a1b3416c5f698f",
+  "recommendation": {
+    "pass_percentage": 73.4,
+    "ranking": {
+      "score": 50.0,
+      "rank": 4,
+      "total_applicants": 4,
+      "percentile": 0.0
+    },
+    "portfolio_score": 50.0,
+    "subscription_tier": "Platinum"
+  },
+  "application_result": null,
+  "timestamp": "2025-05-07T09:35:28.328597"
+}
