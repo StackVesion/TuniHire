@@ -578,28 +578,58 @@ export default function JobMeetingsPage() {
   const handleSaveWhiteTest = async () => {
     try {
       if (!whiteTestContent.trim()) {
-        alert('White test content cannot be empty');
+        const Swal = (await import('sweetalert2')).default;
+        await Swal.fire({
+          title: 'Error',
+          text: 'White test content cannot be empty',
+          icon: 'error'
+        });
         return;
       }
       
+      // Show loading indicator
+      const Swal = (await import('sweetalert2')).default;
+      Swal.fire({
+        title: 'Saving...',
+        text: 'Please wait while we save your white test',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+      
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
+      
       if (whiteTest && whiteTest._id) {
         // Update existing white test
+        console.log(`Updating white test ${whiteTest._id} for job ${id}`);
         const response = await authAxios.put(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/whitetests/${whiteTest._id}`,
+          `${baseUrl}/api/whitetests/${whiteTest._id}`,
           { content: whiteTestContent }
         );
         
         if (response.data && response.data.success) {
           setWhiteTest(response.data.data);
           setShowWhiteTestDialog(false);
-          alert('White test updated successfully');
+          Swal.fire({
+            title: 'Success!',
+            text: 'White test updated successfully',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+          });
         } else {
-          alert('Failed to update white test');
+          Swal.fire({
+            title: 'Update Failed',
+            text: response.data?.message || 'Failed to update white test',
+            icon: 'error'
+          });
         }
       } else {
         // Create new white test
+        console.log(`Creating new white test for job ${id}`);
         const response = await authAxios.post(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/whitetests`,
+          `${baseUrl}/api/whitetests`,
           {
             job_id: id,
             content: whiteTestContent
@@ -609,14 +639,32 @@ export default function JobMeetingsPage() {
         if (response.data && response.data.success) {
           setWhiteTest(response.data.data);
           setShowWhiteTestDialog(false);
-          alert('White test created successfully');
+          Swal.fire({
+            title: 'Success!',
+            text: 'White test created successfully',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+          });
         } else {
-          alert('Failed to create white test');
+          Swal.fire({
+            title: 'Creation Failed',
+            text: response.data?.message || 'Failed to create white test',
+            icon: 'error'
+          });
         }
       }
     } catch (error) {
       console.error('Error saving white test:', error);
-      alert('Error saving white test: ' + (error.response?.data?.message || error.message));
+      const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
+      console.log('Full error details:', error);
+      
+      const Swal = (await import('sweetalert2')).default;
+      await Swal.fire({
+        title: 'Error',
+        html: `Failed to save white test.<br>Error: ${errorMsg}`,
+        icon: 'error'
+      });
     }
   };
   

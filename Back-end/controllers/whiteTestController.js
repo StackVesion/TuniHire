@@ -1,5 +1,5 @@
 const WhiteTest = require('../models/WhiteTest');
-const Job = require('../models/Job');
+const Job = require('../models/JobPost'); // Fixed model path
 const config = require('../config/config');
 const fetch = require('node-fetch');
 
@@ -36,7 +36,11 @@ exports.getWhiteTestByJobId = async (req, res) => {
 exports.createWhiteTest = async (req, res) => {
   try {
     const { job_id, content } = req.body;
-    const userId = req.user._id; // Get user ID from authenticated user
+    
+    // Get user ID from authenticated user - handle different JWT token formats
+    const userId = req.user._id || req.user.userId || req.user.id;
+    
+    console.log('Creating white test with user ID:', userId, 'for job:', job_id);
     
     // Check if job exists
     const job = await Job.findById(job_id);
@@ -201,7 +205,7 @@ Format the response with proper headings and numbering.`;
       console.log('Making request to Gemini API...');
       // Call Gemini API directly
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: {

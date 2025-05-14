@@ -6,6 +6,7 @@ const portfolioRoutes = require("./routes/portfolioRoutes");
 const companyRoutes = require("./routes/company");
 const jobRoutes = require("./routes/jobRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
+const whiteTestRoutes = require("./routes/whiteTestRoutes");
 const cors = require('cors'); // Import cors
 const path = require('path');
 
@@ -30,6 +31,7 @@ app.use("/api/companies", companyRoutes);
 app.use("/api/portfolios", portfolioRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/applications", applicationRoutes);
+app.use("/api/whitetests", whiteTestRoutes);
 
 // Explicit route for PDF files to ensure proper content-type
 app.get('/uploads/resumes/:filename', (req, res) => {
