@@ -1,3 +1,4 @@
+// Jenkinsfile
 pipeline {
     agent any
 
@@ -103,7 +104,8 @@ pipeline {
             steps {
                 script {
                     def imageName = "${DOCKER_REGISTRY}/docker-repo/backend:latest"
-                    sh "docker tag backend ${imageName}"
+                    // Tag the registry-named image, not "backend:latest"
+                    sh "docker tag ${DOCKER_REGISTRY}/backend:latest ${imageName}"
 
                     docker.withRegistry("http://${registry}", registryCredentials) {
                         sh "docker push ${imageName}"
