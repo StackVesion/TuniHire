@@ -27,7 +27,7 @@ const config = {
   services: {
     // AI service configuration
     ai: {
-      url: process.env.AI_SERVICE_URL || 'http://localhost:5050',
+      url: process.env.AI_SERVICE_URL || 'http://localhost:5000',
       enabled: process.env.USE_AI_SERVICE === 'true' || false,
     },
   }
