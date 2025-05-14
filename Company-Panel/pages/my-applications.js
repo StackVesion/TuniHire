@@ -279,19 +279,14 @@ function MyApplications({ user }) {
           setLoadingAction(null);
           return;
         }
-      } else {
-        // Check if the meeting already has a room URL (only in normal mode)
-        if (meeting.roomUrl) {
-          // Open the room URL in a new tab
-          window.open(meeting.roomUrl, '_blank');
-          return;
-        }
       }
       
-      // Call the bot API to start the HR bot
+      // Always call the bot API to start the HR bot and create a new room URL
+      // even if the meeting already has a room URL
       const response = await authAxios.post('/api/bots/start-hr-bot', {
         meeting_id: meeting._id,
-        dev_test_mode: devTestMode // Pass this flag to the backend if needed
+        dev_test_mode: devTestMode,
+        force_new_room: true // Force creation of a new room URL
       });
       
       console.log('Bot response:', response.data);
@@ -548,11 +543,34 @@ function MyApplications({ user }) {
                               </div>
                               
                               <div style={{ marginBottom: '15px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', background: '#f0f9ff', padding: '8px 12px', borderRadius: '8px' }}>
-                                  <i className="fas fa-calendar-alt" style={{ color: '#2196f3', marginRight: '10px', width: '16px' }}></i>
-                                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#1976d2' }}>
-                                    {formatDate(meeting.meetingDate)}
-                                  </span>
+                                <div style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  marginBottom: '10px', 
+                                  background: 'linear-gradient(135deg, #f0f9ff 0%, #e1f5fe 100%)', 
+                                  padding: '10px 15px', 
+                                  borderRadius: '10px',
+                                  boxShadow: '0 2px 6px rgba(33, 150, 243, 0.1)',
+                                  border: '1px solid rgba(33, 150, 243, 0.2)'
+                                }}>
+                                  <div style={{
+                                    borderRadius: '50%',
+                                    width: '32px',
+                                    height: '32px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    backgroundColor: '#2196f3',
+                                    marginRight: '12px'
+                                  }}>
+                                    <i className="fas fa-calendar-alt" style={{ color: 'white', fontSize: '14px' }}></i>
+                                  </div>
+                                  <div>
+                                    <div style={{ fontSize: '11px', color: '#0277bd', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Interview Date</div>
+                                    <span style={{ fontSize: '14px', fontWeight: '500', color: '#0d47a1' }}>
+                                      {formatDate(meeting.meetingDate)}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                               
@@ -560,26 +578,54 @@ function MyApplications({ user }) {
                                 <div 
                                   style={{ 
                                     textAlign: 'center', 
-                                    padding: '15px', 
-                                    backgroundColor: countdown.expired ? '#f5f5f5' : '#f0f8ff',
-                                    borderRadius: '12px',
-                                    marginBottom: '15px',
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                                    border: '1px solid ' + (countdown.expired ? '#e0e0e0' : countdown.color)
+                                    padding: '20px', 
+                                    backgroundColor: countdown.expired ? '#fafafa' : 'white',
+                                    borderRadius: '16px',
+                                    marginBottom: '20px',
+                                    boxShadow: '0 8px 20px rgba(0,0,0,0.06)',
+                                    border: '1px solid ' + (countdown.expired ? '#e0e0e0' : countdown.color),
+                                    overflow: 'hidden',
+                                    position: 'relative'
                                   }}
                                 >
-                                  <div style={{ fontSize: '13px', marginBottom: '5px', color: '#555', fontWeight: '500' }}>
-                                    {countdown.expired ? 'Meeting time has passed' : 'Time remaining'}
+                                  <div 
+                                    style={{
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      width: '5px',
+                                      height: '100%',
+                                      backgroundColor: countdown.color,
+                                      opacity: countdown.expired ? 0.3 : 1
+                                    }}
+                                  />
+                                  <i 
+                                    className={countdown.expired ? "fas fa-hourglass-end" : "fas fa-hourglass-half"} 
+                                    style={{ 
+                                      fontSize: '20px', 
+                                      color: countdown.color, 
+                                      marginBottom: '10px',
+                                      opacity: countdown.expired ? 0.5 : 1
+                                    }}
+                                  />
+                                  <div style={{ fontSize: '14px', marginBottom: '8px', color: '#555', fontWeight: '500' }}>
+                                    {countdown.expired ? 'Meeting Time Has Passed' : 'Time Until Interview'}
                                   </div>
                                   <div style={{ 
-                                    fontSize: '24px', 
+                                    fontSize: '30px', 
                                     fontWeight: '700', 
                                     color: countdown.color,
                                     fontFamily: 'sans-serif',
-                                    letterSpacing: '1px'
+                                    letterSpacing: '1px',
+                                    lineHeight: '1.2'
                                   }}>
                                     {countdown.text}
                                   </div>
+                                  {!countdown.expired && (
+                                    <div style={{ fontSize: '13px', color: '#888', marginTop: '8px' }}>
+                                      Prepare yourself for the best results
+                                    </div>
+                                  )}
                                 </div>
                               )}
                               
@@ -603,113 +649,84 @@ function MyApplications({ user }) {
                                     <>
                                       <div className="col-md-6 mb-2">
                                         <button
-                                          className="btn btn-sm btn-outline-primary w-100"
+                                          className="btn btn-sm w-100"
                                           style={{
-                                            borderRadius: '8px',
-                                            padding: '10px',
-                                            fontWeight: '500',
-                                            boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
-                                            transition: 'all 0.2s ease'
+                                            borderRadius: '30px',
+                                            padding: '12px 15px',
+                                            fontWeight: '600',
+                                            backgroundColor: '#ebf5ff',
+                                            border: '1px solid #c2e0ff',
+                                            color: '#0078d4',
+                                            boxShadow: '0 3px 10px rgba(0,120,212,0.08)',
+                                            transition: 'all 0.3s ease',
+                                            height: '46px'
                                           }}
                                           onClick={() => handlePrepareForMeeting(meeting)}
                                           disabled={loadingAction === `prep-${meeting._id}` || loadingAction === `prep-test-${meeting._id}`}
                                         >
                                           {loadingAction === `prep-${meeting._id}` || loadingAction === `prep-test-${meeting._id}` ? (
                                             <>
-                                              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                              Loading...
+                                              <div className="d-flex align-items-center justify-content-center">
+                                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                                <span>Preparing...</span>
+                                              </div>
                                             </>
                                           ) : (
                                             <>
-                                              <i className="fas fa-book-reader me-1"></i> Prepare
+                                              <div className="d-flex align-items-center justify-content-center">
+                                                <i className="fas fa-book-reader me-2" style={{fontSize: '14px'}}></i>
+                                                <span>Preparation Session</span>
+                                              </div>
                                             </>
                                           )}
                                         </button>
                                       </div>
                                       <div className="col-md-6 mb-2">
                                         <button
-                                          className="btn btn-sm btn-brand-1 w-100"
+                                          className="btn btn-sm w-100"
                                           style={{
-                                            borderRadius: '8px',
-                                            padding: '10px',
-                                            fontWeight: '500',
-                                            boxShadow: '0 2px 8px rgba(33, 150, 243, 0.2)',
-                                            transition: 'all 0.2s ease'
+                                            borderRadius: '30px',
+                                            padding: '12px 15px',
+                                            fontWeight: '600',
+                                            backgroundColor: '#4a6cf7',
+                                            border: 'none',
+                                            color: 'white',
+                                            boxShadow: '0 5px 15px rgba(74, 108, 247, 0.3)',
+                                            transition: 'all 0.3s ease',
+                                            height: '46px'
                                           }}
                                           onClick={() => handleJoinMeeting(meeting)}
-                                          disabled={loadingAction === meeting._id || !isToday}
+                                          disabled={loadingAction === meeting._id}
                                         >
                                           {loadingAction === meeting._id ? (
                                             <>
-                                              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                              Loading...
-                                            </>
-                                          ) : isToday ? (
-                                            <>
-                                              <i className="fas fa-video me-1"></i> Join
+                                              <div className="d-flex align-items-center justify-content-center">
+                                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                                <span>Connecting...</span>
+                                              </div>
                                             </>
                                           ) : (
                                             <>
-                                              <i className="fas fa-clock me-1"></i> Not Today
+                                              <div className="d-flex align-items-center justify-content-center">
+                                                <i className="fas fa-video me-2" style={{fontSize: '14px'}}></i>
+                                                <span>Join Interview</span>
+                                              </div>
                                             </>
                                           )}
                                         </button>
                                       </div>
-                                      {/* Developer Test Mode Buttons */}
-                                      <div className="col-12 mt-2 d-flex gap-2">
-                                        <button
-                                          className="btn btn-sm flex-fill"
-                                          style={{
-                                            backgroundColor: '#e0f7fa',
-                                            borderColor: '#80deea',
-                                            color: '#0097a7',
-                                            borderRadius: '8px',
-                                            padding: '10px',
-                                            fontWeight: '500',
-                                            fontSize: '12px',
-                                            boxShadow: '0 2px 6px rgba(0,151,167,0.1)',
-                                          }}
-                                          onClick={() => handleJoinMeeting(meeting, true)}
-                                          disabled={loadingAction === `test-${meeting._id}`}
-                                        >
-                                          {loadingAction === `test-${meeting._id}` ? (
-                                            <>
-                                              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                              Loading...
-                                            </>
-                                          ) : (
-                                            <>
-                                              <i className="fas fa-tools me-1"></i> Dev Test: Join Interview
-                                            </>
-                                          )}
-                                        </button>
-                                        
-                                        <button
-                                          className="btn btn-sm flex-fill"
-                                          style={{
-                                            backgroundColor: '#e8f5e9',
-                                            borderColor: '#a5d6a7',
-                                            color: '#388e3c',
-                                            borderRadius: '8px',
-                                            padding: '10px',
-                                            fontWeight: '500',
-                                            fontSize: '12px',
-                                            boxShadow: '0 2px 6px rgba(56,142,60,0.1)',
-                                          }}
-                                          onClick={() => handlePrepareForMeeting(meeting, true)}
-                                          disabled={loadingAction === `prep-test-${meeting._id}`}
-                                        >
-                                          {loadingAction === `prep-test-${meeting._id}` ? (
-                                            <>
-                                              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                              Loading...
-                                            </>
-                                          ) : (
-                                            <>
-                                              <i className="fas fa-flask me-1"></i> Dev Test: Prepare
-                                            </>
-                                          )}
-                                        </button>
+                                      {/* Additional meeting info */}
+                                      <div className="col-12 mt-2">
+                                        <div className="card p-2 bg-light-hover border-0" style={{ 
+                                          borderRadius: '8px',
+                                          backgroundColor: '#f8f9fa',
+                                          borderLeft: '3px solid #4a6cf7'
+                                        }}>
+                                          <div className="d-flex align-items-center">
+                                            <i className="fas fa-info-circle text-primary me-2"></i>
+                                            <small className="text-muted">Meeting ID: {meeting._id.toString().substring(0, 8)}...</small>
+                                          </div>
+                                        </div>
                                       </div>
                                     </>
                                   )}
