@@ -3,24 +3,12 @@ pipeline {
 
     environment {
         NODE_VERSION = 'node:18'
-        // MONGODB_CONNECTION est maintenant géré via docker-compose.yml pour le service backend
-        // Il pourrait toujours être nécessaire ici si d'autres étapes Jenkins en ont besoin directement,
-        // mais pour l'application elle-même, c'est dans docker-compose.yml.
-        // Pour l'instant, je le laisse commenté car le docker-compose.yml a été adapté.
-        // MONGODB_CONNECTION = credentials('mongodb://127.0.0.1:27017/TuniHireDB') 
-
         DOCKER_REGISTRY = '172.23.202.74:8083'
         registry = '172.23.202.74:8083'
         registryCredentials = 'docker'
-
-        // SONAR_HOST_URL et SONAR_TOKEN ne sont plus nécessaires ici si withSonarQubeEnv est utilisé
-        // et que le serveur SonarQube est configuré dans Jenkins.
-        // SONAR_HOST_URL = 'http://172.23.202.74:9000'
-        // SONAR_TOKEN = credentials('scanner')
-
         APP_VERSION = "1.0.${BUILD_NUMBER}"
 
-        // Secrets pour le backend, chargés depuis les credentials Jenkins
+        // Secrets from Jenkins Credentials
         SESSION_SECRET = credentials('SESSION_SECRET')
         JWT_SECRET = credentials('JWT_SECRET')
         OPENAI_API_KEY = credentials('OPENAI_API_KEY')
@@ -32,8 +20,13 @@ pipeline {
         EMAIL_PASSWORD = credentials('EMAIL_PASSWORD')
         EMAIL_APP_USER = credentials('EMAIL_APP_USER')
         EMAIL_APP_PASSWORD = credentials('EMAIL_APP_PASSWORD')
-        STRIPE_SECRET_KEY = credentials('STRIPE_SECRET_KEY') // Ajouté car présent dans le docker-compose.yml
-        STRIPE_PUBLISHABLE_KEY = credentials('STRIPE_PUBLISHABLE_KEY') // Ajouté car présent dans le docker-compose.yml
+        STRIPE_SECRET_KEY = credentials('STRIPE_SECRET_KEY')
+        STRIPE_PUBLISHABLE_KEY = credentials('STRIPE_PUBLISHABLE_KEY')
+    }
+
+    parameters {
+        booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Skip running tests')
+        booleanParam(name: 'SKIP_SONAR', defaultValue: false, description: 'Skip SonarQube analysis')
     }
 
     stages {
@@ -78,28 +71,21 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
-            // Optionnel: rendre cette étape skipable aussi si les tests sont skippés et que l'analyse dépend des résultats des tests
-            // when {
-            //    expression { params.SKIP_TESTS == false && params.SKIP_SONAR == false }
-            // }
-            // Ou simplement utiliser le paramètre SKIP_SONAR existant
             when {
                 expression { params.SKIP_SONAR == false }
             }
             steps {
                 dir('Back-end') {
                     script {
-                        // Assurez-vous que 'scanner' est le nom de votre SonarQube Scanner configuré dans Jenkins Global Tool Configuration
-                        // et 'SonarQubeServer' (ou le nom que vous avez donné) est configuré dans Jenkins > Configure System.
                         def scannerHome = tool 'scanner'
-                        withSonarQubeEnv('scanner') { // Remplacer 'SonarQubeServer' par le nom réel de la conf serveur SonarQube dans Jenkins
+                        withSonarQubeEnv('scanner') {
                             sh """
                                 ${scannerHome}/bin/sonar-scanner \
-                                  -Dsonar.projectKey=tunihire-backend \
-                                  -Dsonar.projectName='TuniHire Backend' \
-                                  -Dsonar.sources=. \
-                                  -Dsonar.exclusions=node_modules/**,test/**,coverage/** \
-                                  -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+                                -Dsonar.projectKey=tunihire-backend \
+                                -Dsonar.projectName='TuniHire Backend' \
+                                -Dsonar.sources=. \
+                                -Dsonar.exclusions=node_modules/**,test/**,coverage/** \
+                                -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
                             """
                         }
                     }
@@ -107,42 +93,41 @@ pipeline {
             }
         }
 
-
         stage('Build Docker Image') {
             steps {
-                // docker-compose.yml est à la racine du projet
                 sh 'docker-compose build backend'
             }
         }
 
-stage('Push to Nexus') {
-    steps {
-        script {
-            def imageName = "${DOCKER_REGISTRY}/docker-repo/nodemongoapp:6.0"
-            sh "docker tag backend ${imageName}"
+        stage('Push to Nexus') {
+            steps {
+                script {
+                    def imageName = "${DOCKER_REGISTRY}/docker-repo/nodemongoapp:6.0"
+                    sh "docker tag backend ${imageName}"
 
-            docker.withRegistry("http://${registry}", registryCredentials) {
-                sh "docker push ${imageName}"
+                    docker.withRegistry("http://${registry}", registryCredentials) {
+                        sh "docker push ${imageName}"
+                    }
+                }
+            }
+        }
+
+        stage('Run App with Docker') {
+            steps {
+                script {
+                    def imageName = "${DOCKER_REGISTRY}/docker-repo/nodemongoapp:6.0"
+
+                    docker.withRegistry("http://${registry}", registryCredentials) {
+                        sh """
+                            docker pull ${imageName}
+                            docker tag ${imageName} backend
+                            docker-compose up -d backend
+                        """
+                    }
+                }
             }
         }
     }
-}
-
-
-stage('Run App with Docker') {
-    steps {
-        script {
-            def imageName = "${DOCKER_REGISTRY}/docker-repo/nodemongoapp:6.0"
-            docker.withRegistry("http://${registry}", registryCredentials) {
-                sh """
-                    docker pull ${imageName}
-                    docker tag ${imageName} backend
-                    docker-compose up -d backend
-                """
-            }
-        }
-    }
-}
 
     post {
         success {
@@ -155,10 +140,4 @@ stage('Run App with Docker') {
             cleanWs()
         }
     }
-
-    parameters {
-        booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Skip running tests')
-        booleanParam(name: 'SKIP_SONAR', defaultValue: false, description: 'Skip SonarQube analysis')
-    }
-}
 }
