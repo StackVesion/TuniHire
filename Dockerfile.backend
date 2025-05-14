@@ -21,4 +21,4 @@ EXPOSE 5000
 
 # Commande pour démarrer l'application en utilisant le script npm start défini dans Back-end/package.json
 # Le script start dans package.json est "node index.js"
-CMD [ "npm", "start" ]
+CMD [ "node", "server.js" ]
