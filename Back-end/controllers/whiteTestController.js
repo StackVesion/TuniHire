@@ -1,5 +1,5 @@
 const WhiteTest = require('../models/WhiteTest');
-const Job = require('../models/JobPost'); // Fixed model path
+const JobPost = require('../models/JobPost'); // Using the correct model name
 const config = require('../config/config');
 const fetch = require('node-fetch');
 
@@ -7,9 +7,41 @@ const fetch = require('node-fetch');
 exports.getWhiteTestByJobId = async (req, res) => {
   try {
     const { jobId } = req.params;
+    console.log(`Getting white test for job ID: ${jobId}`);
     
-    // Find white test by job_id
-    const whiteTest = await WhiteTest.findOne({ job_id: jobId }).populate('job_id');
+    if (!jobId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Job ID is required'
+      });
+    }
+    
+    // First validate if the job exists
+    try {
+      const job = await JobPost.findById(jobId);
+      if (!job) {
+        return res.status(404).json({
+          success: false,
+          message: 'Job not found with the given ID'
+        });
+      }
+      console.log(`Job found: ${job.title}`);
+    } catch (jobError) {
+      console.error('Error validating job:', jobError);
+      if (jobError.name === 'CastError') {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid job ID format'
+        });
+      }
+      throw jobError; // Re-throw other errors to be caught by the outer catch
+    }
+    
+    // Find white test by job_id using explicit population
+    const whiteTest = await WhiteTest.findOne({ job_id: jobId }).populate({
+      path: 'job_id',
+      model: 'JobPost' // Explicitly specify the model name
+    });
     
     if (!whiteTest) {
       return res.status(404).json({
@@ -17,6 +49,8 @@ exports.getWhiteTestByJobId = async (req, res) => {
         message: 'White test not found for this job'
       });
     }
+    
+    console.log(`White test found for job ID: ${jobId}`);
     
     res.status(200).json({
       success: true,
@@ -43,7 +77,7 @@ exports.createWhiteTest = async (req, res) => {
     console.log('Creating white test with user ID:', userId, 'for job:', job_id);
     
     // Check if job exists
-    const job = await Job.findById(job_id);
+    const job = await JobPost.findById(job_id);
     if (!job) {
       return res.status(404).json({
         success: false,
@@ -159,7 +193,7 @@ exports.generateWhiteTest = async (req, res) => {
     console.log('Generating white test for job ID:', jobId);
     
     // Find job to get its details
-    const job = await Job.findById(jobId).populate('companyId', 'name industry'); 
+    const job = await JobPost.findById(jobId).populate('companyId', 'name industry'); 
     
     if (!job) {
       return res.status(404).json({

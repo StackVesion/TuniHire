@@ -7,7 +7,10 @@ const { verifyToken } = require('../middleware/authMiddleware'); // Fixed path
 router.use(verifyToken);
 
 // Get white test for a specific job
-router.get('/job/:jobId', whiteTestController.getWhiteTestByJobId);
+router.get('/job/:jobId', (req, res, next) => {
+  console.log(`Route hit: GET /api/whitetests/job/${req.params.jobId}`);
+  next();
+}, whiteTestController.getWhiteTestByJobId);
 
 // Create a new white test
 router.post('/', whiteTestController.createWhiteTest);

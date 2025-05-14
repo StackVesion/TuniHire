@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/layout/Layout';
 import withAuth from '../utils/withAuth';
 import { createAuthAxios } from '../utils/authUtils';
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 
 // Function to format dates instead of using moment.js
 const formatDate = (dateString) => {
@@ -99,8 +100,11 @@ const ApplicationStatus = ({ status }) => {
 };
 
 function MyApplications({ user }) {
+  const router = useRouter();
   const [applications, setApplications] = useState([]);
+  const [meetings, setMeetings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMeetingsLoading, setIsMeetingsLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [authAxios] = useState(() => createAuthAxios());
   const [selectedApplication, setSelectedApplication] = useState(null);
@@ -108,10 +112,22 @@ function MyApplications({ user }) {
   const [showConfirmWithdraw, setShowConfirmWithdraw] = useState(false);
   const [withdrawApplicationId, setWithdrawApplicationId] = useState(null);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [countdowns, setCountdowns] = useState({});
+  const [loadingAction, setLoadingAction] = useState(null);
 
   useEffect(() => {
     fetchApplications();
+    fetchMeetings();
   }, []);
+  
+  // Set up a timer to update countdowns every second
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      updateCountdowns();
+    }, 1000);
+    
+    return () => clearInterval(intervalId);
+  }, [meetings]);
 
   const fetchApplications = async () => {
     setIsLoading(true);
@@ -125,6 +141,103 @@ function MyApplications({ user }) {
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  // Fetch meetings for the current user
+  const fetchMeetings = async () => {
+    setIsMeetingsLoading(true);
+    try {
+      if (!user || !user._id) {
+        console.error('User ID not available');
+        return;
+      }
+      
+      const response = await authAxios.get(`/api/meetings/user/${user._id}`);
+      console.log('Meetings data:', response.data);
+      
+      if (response.data.success) {
+        setMeetings(response.data.data);
+        initializeCountdowns(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching meetings:', error);
+      toast.error('Could not load your scheduled meetings. Please try again later.');
+    } finally {
+      setIsMeetingsLoading(false);
+    }
+  };
+  
+  // Initialize countdowns for all meetings
+  const initializeCountdowns = (meetingsData) => {
+    const newCountdowns = {};
+    
+    meetingsData.forEach(meeting => {
+      const meetingTime = new Date(meeting.meetingDate).getTime();
+      const now = new Date().getTime();
+      const distance = meetingTime - now;
+      
+      newCountdowns[meeting._id] = formatCountdown(distance);
+    });
+    
+    setCountdowns(newCountdowns);
+  };
+  
+  // Update all countdowns every second
+  const updateCountdowns = () => {
+    if (!meetings.length) return;
+    
+    const newCountdowns = { ...countdowns };
+    let updated = false;
+    
+    meetings.forEach(meeting => {
+      const meetingTime = new Date(meeting.meetingDate).getTime();
+      const now = new Date().getTime();
+      const distance = meetingTime - now;
+      
+      const formattedCountdown = formatCountdown(distance);
+      if (formattedCountdown !== countdowns[meeting._id]) {
+        newCountdowns[meeting._id] = formattedCountdown;
+        updated = true;
+      }
+    });
+    
+    if (updated) {
+      setCountdowns(newCountdowns);
+    }
+  };
+  
+  // Format the countdown time
+  const formatCountdown = (distance) => {
+    if (distance < 0) {
+      return { expired: true, text: 'Expired' };
+    }
+    
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    
+    let text = '';
+    if (days > 0) {
+      text += `${days}d `;
+    }
+    
+    text += `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
+    let color = '#2e7d32'; // Green for meetings more than a day away
+    
+    // Change color based on how close the meeting is
+    if (days === 0) {
+      if (hours < 2) {
+        color = '#c62828'; // Red for less than 2 hours
+      } else if (hours < 6) {
+        color = '#f57c00'; // Orange for less than 6 hours
+      } else {
+        color = '#0288d1'; // Blue for less than 24 hours
+      }
+    }
+    
+    return { expired: false, text, color };
   };
 
   const getFilteredApplications = () => {
@@ -141,7 +254,119 @@ function MyApplications({ user }) {
     setWithdrawApplicationId(applicationId);
     setShowConfirmWithdraw(true);
   };
+
+  // Handle joining a meeting
+  const handleJoinMeeting = async (meeting, devTestMode = false) => {
+    try {
+      // Set appropriate loading state based on mode
+      const loadingId = devTestMode ? `test-${meeting._id}` : meeting._id;
+      setLoadingAction(loadingId);
+      
+      // Check if it's test mode and show a confirmation
+      if (devTestMode) {
+        const Swal = (await import('sweetalert2')).default;
+        const result = await Swal.fire({
+          title: 'Developer Test Mode',
+          text: 'You are using the developer test mode to join this meeting outside of the scheduled time. Continue?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#0097a7',
+          cancelButtonColor: '#d33',
+          confirmButtonText: 'Yes, join meeting'
+        });
+        
+        if (!result.isConfirmed) {
+          setLoadingAction(null);
+          return;
+        }
+      } else {
+        // Check if the meeting already has a room URL (only in normal mode)
+        if (meeting.roomUrl) {
+          // Open the room URL in a new tab
+          window.open(meeting.roomUrl, '_blank');
+          return;
+        }
+      }
+      
+      // Call the bot API to start the HR bot
+      const response = await authAxios.post('/api/bots/start-hr-bot', {
+        meeting_id: meeting._id,
+        dev_test_mode: devTestMode // Pass this flag to the backend if needed
+      });
+      
+      console.log('Bot response:', response.data);
+      
+      if (response.data.success) {
+        // Show success message
+        toast.success(devTestMode ? 'Dev Test: Meeting joined successfully!' : 'Meeting joined successfully!');
+        
+        // Open the room URL in a new tab
+        window.open(response.data.data.room_url, '_blank');
+        
+        // Refresh the meetings to get the updated room URL
+        fetchMeetings();
+      } else {
+        toast.error('Failed to start meeting. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error joining meeting:', error);
+      toast.error(error.response?.data?.message || 'Failed to join meeting. Please try again.');
+    } finally {
+      setLoadingAction(null);
+    }
+  };
   
+  // Handle preparing for a meeting
+  const handlePrepareForMeeting = async (meeting, devTestMode = false) => {
+    try {
+      // Set appropriate loading state based on mode
+      const loadingId = devTestMode ? `prep-test-${meeting._id}` : `prep-${meeting._id}`;
+      setLoadingAction(loadingId);
+      
+      // Show confirmation dialog for test mode
+      if (devTestMode) {
+        const Swal = (await import('sweetalert2')).default;
+        const result = await Swal.fire({
+          title: 'Developer Test Mode',
+          text: 'You are using the developer test mode to start preparation outside of normal conditions. Continue?',
+          icon: 'info',
+          showCancelButton: true,
+          confirmButtonColor: '#0097a7',
+          cancelButtonColor: '#d33',
+          confirmButtonText: 'Yes, start preparation'
+        });
+        
+        if (!result.isConfirmed) {
+          setLoadingAction(null);
+          return;
+        }
+      }
+      
+      // Call the bot API to start the preparation bot
+      const response = await authAxios.post('/api/bots/start-prep-bot', {
+        meeting_id: meeting._id,
+        dev_test_mode: devTestMode // Pass this flag to the backend
+      });
+      
+      console.log('Prep bot response:', response.data);
+      
+      if (response.data.success) {
+        // Show success message
+        toast.success('Preparation session started successfully!');
+        
+        // Open the room URL in a new tab
+        window.open(response.data.data.room_url, '_blank');
+      } else {
+        toast.error('Failed to start preparation. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error starting preparation:', error);
+      toast.error(error.response?.data?.message || 'Failed to start preparation. Please try again.');
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
   const confirmWithdraw = async () => {
     if (!withdrawApplicationId) return;
     
@@ -224,6 +449,291 @@ function MyApplications({ user }) {
           <div className="row">
             <div className="col-lg-12">
               <div className="content-page">
+                {/* Upcoming Meetings Section */}
+                <div className="box-heading mb-4">
+                  <div className="heading-flex">
+                    <div className="heading-content">
+                      <h4 className="heading-title">Your Upcoming Meetings</h4>
+                      <div className="text-muted">Stay prepared for your scheduled interviews</div>
+                    </div>
+                    <button 
+                      className="btn btn-sm btn-outline-primary" 
+                      onClick={fetchMeetings}
+                      disabled={isMeetingsLoading}
+                    >
+                      {isMeetingsLoading ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-sync-alt me-2"></i> Refresh
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+                
+                {isMeetingsLoading ? (
+                  <div className="text-center py-4">
+                    <div className="spinner-border text-primary" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p className="mt-3">Loading your meetings...</p>
+                  </div>
+                ) : meetings.length > 0 ? (
+                  <motion.div 
+                    className="row mb-40"
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                  >
+                    {meetings.map((meeting) => {
+                      const countdown = countdowns[meeting._id] || { text: 'Loading...', color: '#757575' };
+                      const isPast = new Date(meeting.meetingDate) < new Date();
+                      const isToday = new Date(meeting.meetingDate).toDateString() === new Date().toDateString();
+                      
+                      return (
+                        <motion.div 
+                          key={meeting._id} 
+                          className="col-xl-4 col-lg-6 col-md-6 col-sm-12 col-12"
+                          variants={itemVariants}
+                        >
+                          <div className="card-grid-border hover-up" style={{ overflow: 'hidden', height: '100%' }}>
+                            <div className="card-block-info" style={{ padding: '20px' }}>
+                              <div className="row">
+                                <div className="col-12">
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
+                                    <h5 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>
+                                      {meeting.job_id?.title || 'Interview'}
+                                    </h5>
+                                    <div 
+                                      style={{ 
+                                        display: 'inline-block', 
+                                        padding: '4px 10px', 
+                                        borderRadius: '50px', 
+                                        backgroundColor: meeting.status === 'Completed' ? '#e8f5e9' : 
+                                                      meeting.status === 'Cancelled' ? '#ffebee' : 
+                                                      isPast ? '#e0f2f1' : '#fff8e1',
+                                        color: meeting.status === 'Completed' ? '#2e7d32' : 
+                                              meeting.status === 'Cancelled' ? '#c62828' : 
+                                              isPast ? '#00796b' : '#ff6d00',
+                                        fontSize: '12px',
+                                        fontWeight: '500',
+                                      }}
+                                    >
+                                      {meeting.status}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div style={{ marginBottom: '15px' }}>
+                                <div className="img-5" style={{ display: 'flex', marginBottom: '10px' }}>
+                                  <img 
+                                    src={meeting.hr_id?.profilePicture || "/assets/imgs/page/homepage1/user1.png"} 
+                                    alt="HR" 
+                                    style={{ width: '42px', height: '42px', borderRadius: '50%', marginRight: '15px' }}
+                                  />
+                                  <div>
+                                    <div style={{ fontWeight: '600', fontSize: '15px' }}>
+                                      {meeting.hr_id?.firstName} {meeting.hr_id?.lastName}
+                                    </div>
+                                    <div style={{ fontSize: '13px', color: '#666' }}>
+                                      HR Representative
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div style={{ marginBottom: '15px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', background: '#f0f9ff', padding: '8px 12px', borderRadius: '8px' }}>
+                                  <i className="fas fa-calendar-alt" style={{ color: '#2196f3', marginRight: '10px', width: '16px' }}></i>
+                                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#1976d2' }}>
+                                    {formatDate(meeting.meetingDate)}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              {!isPast && (
+                                <div 
+                                  style={{ 
+                                    textAlign: 'center', 
+                                    padding: '15px', 
+                                    backgroundColor: countdown.expired ? '#f5f5f5' : '#f0f8ff',
+                                    borderRadius: '12px',
+                                    marginBottom: '15px',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                                    border: '1px solid ' + (countdown.expired ? '#e0e0e0' : countdown.color)
+                                  }}
+                                >
+                                  <div style={{ fontSize: '13px', marginBottom: '5px', color: '#555', fontWeight: '500' }}>
+                                    {countdown.expired ? 'Meeting time has passed' : 'Time remaining'}
+                                  </div>
+                                  <div style={{ 
+                                    fontSize: '24px', 
+                                    fontWeight: '700', 
+                                    color: countdown.color,
+                                    fontFamily: 'sans-serif',
+                                    letterSpacing: '1px'
+                                  }}>
+                                    {countdown.text}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <div className="mt-30">
+                                <div className="row">
+                                  {isPast ? (
+                                    <div className="col-12">
+                                      <div 
+                                        style={{
+                                          textAlign: 'center',
+                                          padding: '10px',
+                                          backgroundColor: '#eeeeee',
+                                          borderRadius: '6px',
+                                          color: '#757575'
+                                        }}
+                                      >
+                                        This meeting has already taken place
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="col-md-6 mb-2">
+                                        <button
+                                          className="btn btn-sm btn-outline-primary w-100"
+                                          style={{
+                                            borderRadius: '8px',
+                                            padding: '10px',
+                                            fontWeight: '500',
+                                            boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                                            transition: 'all 0.2s ease'
+                                          }}
+                                          onClick={() => handlePrepareForMeeting(meeting)}
+                                          disabled={loadingAction === `prep-${meeting._id}` || loadingAction === `prep-test-${meeting._id}`}
+                                        >
+                                          {loadingAction === `prep-${meeting._id}` || loadingAction === `prep-test-${meeting._id}` ? (
+                                            <>
+                                              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                              Loading...
+                                            </>
+                                          ) : (
+                                            <>
+                                              <i className="fas fa-book-reader me-1"></i> Prepare
+                                            </>
+                                          )}
+                                        </button>
+                                      </div>
+                                      <div className="col-md-6 mb-2">
+                                        <button
+                                          className="btn btn-sm btn-brand-1 w-100"
+                                          style={{
+                                            borderRadius: '8px',
+                                            padding: '10px',
+                                            fontWeight: '500',
+                                            boxShadow: '0 2px 8px rgba(33, 150, 243, 0.2)',
+                                            transition: 'all 0.2s ease'
+                                          }}
+                                          onClick={() => handleJoinMeeting(meeting)}
+                                          disabled={loadingAction === meeting._id || !isToday}
+                                        >
+                                          {loadingAction === meeting._id ? (
+                                            <>
+                                              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                              Loading...
+                                            </>
+                                          ) : isToday ? (
+                                            <>
+                                              <i className="fas fa-video me-1"></i> Join
+                                            </>
+                                          ) : (
+                                            <>
+                                              <i className="fas fa-clock me-1"></i> Not Today
+                                            </>
+                                          )}
+                                        </button>
+                                      </div>
+                                      {/* Developer Test Mode Buttons */}
+                                      <div className="col-12 mt-2 d-flex gap-2">
+                                        <button
+                                          className="btn btn-sm flex-fill"
+                                          style={{
+                                            backgroundColor: '#e0f7fa',
+                                            borderColor: '#80deea',
+                                            color: '#0097a7',
+                                            borderRadius: '8px',
+                                            padding: '10px',
+                                            fontWeight: '500',
+                                            fontSize: '12px',
+                                            boxShadow: '0 2px 6px rgba(0,151,167,0.1)',
+                                          }}
+                                          onClick={() => handleJoinMeeting(meeting, true)}
+                                          disabled={loadingAction === `test-${meeting._id}`}
+                                        >
+                                          {loadingAction === `test-${meeting._id}` ? (
+                                            <>
+                                              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                              Loading...
+                                            </>
+                                          ) : (
+                                            <>
+                                              <i className="fas fa-tools me-1"></i> Dev Test: Join Interview
+                                            </>
+                                          )}
+                                        </button>
+                                        
+                                        <button
+                                          className="btn btn-sm flex-fill"
+                                          style={{
+                                            backgroundColor: '#e8f5e9',
+                                            borderColor: '#a5d6a7',
+                                            color: '#388e3c',
+                                            borderRadius: '8px',
+                                            padding: '10px',
+                                            fontWeight: '500',
+                                            fontSize: '12px',
+                                            boxShadow: '0 2px 6px rgba(56,142,60,0.1)',
+                                          }}
+                                          onClick={() => handlePrepareForMeeting(meeting, true)}
+                                          disabled={loadingAction === `prep-test-${meeting._id}`}
+                                        >
+                                          {loadingAction === `prep-test-${meeting._id}` ? (
+                                            <>
+                                              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                              Loading...
+                                            </>
+                                          ) : (
+                                            <>
+                                              <i className="fas fa-flask me-1"></i> Dev Test: Prepare
+                                            </>
+                                          )}
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </motion.div>
+                ) : (
+                  <div className="text-center py-5 mb-30" style={{ backgroundColor: '#f9f9f9', borderRadius: '10px' }}>
+                    <img 
+                      src="/assets/imgs/page/login/no-meetings.svg" 
+                      alt="No meetings" 
+                      style={{ width: '120px', marginBottom: '20px', opacity: '0.7' }}
+                    />
+                    <h5 style={{ fontWeight: '600', marginBottom: '10px' }}>No Scheduled Meetings</h5>
+                    <p className="text-muted">You don't have any upcoming interviews scheduled yet.</p>
+                  </div>
+                )}
+                
+                {/* Applications Section */}
                 <div className="box-filters-job mb-4">
                   <div className="row">
                     <div className="col-xl-6 col-lg-5">

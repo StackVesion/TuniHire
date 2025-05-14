@@ -113,20 +113,36 @@ export default function ScheduleMeetingPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!selectedCandidate) {
-      const Swal = (await import('sweetalert2')).default;
-      Swal.fire({
-        title: 'Error',
-        text: 'Please select a candidate',
-        icon: 'error',
-      });
-      return;
-    }
-    
     try {
       setSubmitting(true);
+      setError(null);
       
-      // Combine date and time for meeting date
+      // Additional validation before submission
+      if (!selectedCandidate) {
+        setError('Please select a candidate');
+        setSubmitting(false);
+        return;
+      }
+      
+      // Find the selected candidate to double-check their role
+      const candidate = candidates.find(c => c._id === selectedCandidate);
+      if (!candidate) {
+        setError('Selected candidate not found in the list. Please refresh and try again.');
+        setSubmitting(false);
+        return;
+      }
+
+      // Log for debugging
+      console.log('Creating meeting with:', {
+        job_id: id,
+        candidate: `${candidate.firstName} ${candidate.lastName}`,
+        candidate_id: selectedCandidate,
+        candidate_role: candidate.role,
+        hr_id: user._id,
+        hr_role: user.role
+      });
+      
+      // Parse time
       const [hours, minutes] = meetingTime.split(':').map(Number);
       const meetingDateTime = new Date(meetingDate);
       meetingDateTime.setHours(hours, minutes, 0, 0);
