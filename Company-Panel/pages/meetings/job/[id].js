@@ -25,6 +25,109 @@ export default function JobMeetingsPage() {
   const [applicantsWithMeetings, setApplicantsWithMeetings] = useState([]);
   const [filteredApplicants, setFilteredApplicants] = useState([]);
 
+  // Fetch job, applicants and meetings - defined outside useEffect to be accessible to other functions
+  const fetchJobAndMeetings = async () => {
+    try {
+      setLoading(true);
+      
+      try {
+        // Fetch job details using authAxios
+        const jobResponse = await authAxios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/${id}`
+        );
+        
+        // Handle different response formats from API
+        let jobData;
+        if (jobResponse.data && jobResponse.data.data) {
+          jobData = jobResponse.data.data;
+        } else if (jobResponse.data) {
+          jobData = jobResponse.data;
+        } else {
+          throw new Error('Invalid job response format');
+        }
+        
+        setJob(jobData);
+        console.log('Job details loaded:', jobData.title);
+        
+        // Fetch all applicants for this job
+        const applicantsResponse = await authAxios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/${id}/applicants`
+        );
+        
+        // Process applicants data
+        let applicantsData = [];
+        if (applicantsResponse.data && applicantsResponse.data.data) {
+          applicantsData = applicantsResponse.data.data;
+          setApplicants(applicantsData);
+          console.log(`Found ${applicantsData.length} applicants for this job`);
+        } else if (applicantsResponse.data) {
+          applicantsData = applicantsResponse.data;
+          setApplicants(applicantsData);
+          console.log(`Found ${applicantsData.length} applicants for this job`);
+        } else {
+          console.warn('No applicants found or unexpected response format');
+          console.log('Applicants Response:', applicantsResponse.data);
+          setApplicants([]);
+        }
+        
+        // Fetch meetings for this job
+        const meetingsResponse = await authAxios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/meetings/job/${id}`
+        );
+        
+        // Process meetings data
+        let meetingsData = [];
+        if (meetingsResponse.data && meetingsResponse.data.data) {
+          meetingsData = meetingsResponse.data.data;
+          setMeetings(meetingsData);
+          console.log(`Found ${meetingsResponse.data.count} meetings for this job`);
+        } else {
+          console.warn('No meetings found or unexpected response format');
+          console.log('Meetings Response:', meetingsResponse.data);
+          setMeetings([]);
+        }
+        
+        // Combine applicants with their meetings status
+        const combinedData = applicantsData.map(applicant => {
+          // Try to find if this applicant already has a meeting
+          const existingMeeting = meetingsData.find(
+            meeting => meeting.candidate_id._id === applicant._id || 
+                      meeting.candidate_id === applicant._id
+          );
+          
+          return {
+            applicant: applicant,
+            meeting: existingMeeting || null,
+            hasScheduledMeeting: Boolean(existingMeeting)
+          };
+        });
+        
+        setApplicantsWithMeetings(combinedData);
+        console.log('Combined applicants with meetings data:', combinedData.length);
+        
+        // If the job data includes company information, store it for reference
+        if (jobData.companyId) {
+          console.log('Company data found:', jobData.companyId.name || jobData.companyId);
+        }
+        
+      } catch (err) {
+        console.error('Error fetching job, applicants or meetings:', err);
+        if (err.response && err.response.status === 404) {
+          setError('Job post not found.');
+        } else if (err.response && err.response.status === 403) {
+          setError('You do not have permission to access this job information.');
+        } else {
+          setError('Failed to load job information: ' + (err.response?.data?.message || err.message));
+        }
+      }
+    } catch (error) {
+      console.error('Error in main fetchJobAndMeetings:', error);
+      setError('Failed to load job information. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     // This check ensures we're running on the client side
     if (typeof window === 'undefined') {
@@ -47,110 +150,8 @@ export default function JobMeetingsPage() {
 
     // Only proceed if we have the job ID
     if (!id) return;
-
-    // Fetch job, applicants and meetings
-    const fetchJobAndMeetings = async () => {
-      try {
-        setLoading(true);
-        
-        try {
-          // Fetch job details using authAxios
-          const jobResponse = await authAxios.get(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/${id}`
-          );
-          
-          // Handle different response formats from API
-          let jobData;
-          if (jobResponse.data && jobResponse.data.data) {
-            jobData = jobResponse.data.data;
-          } else if (jobResponse.data) {
-            jobData = jobResponse.data;
-          } else {
-            throw new Error('Invalid job response format');
-          }
-          
-          setJob(jobData);
-          console.log('Job details loaded:', jobData.title);
-          
-          // Fetch all applicants for this job
-          const applicantsResponse = await authAxios.get(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/${id}/applicants`
-          );
-          
-          // Process applicants data
-          let applicantsData = [];
-          if (applicantsResponse.data && applicantsResponse.data.data) {
-            applicantsData = applicantsResponse.data.data;
-            setApplicants(applicantsData);
-            console.log(`Found ${applicantsData.length} applicants for this job`);
-          } else if (applicantsResponse.data) {
-            applicantsData = applicantsResponse.data;
-            setApplicants(applicantsData);
-            console.log(`Found ${applicantsData.length} applicants for this job`);
-          } else {
-            console.warn('No applicants found or unexpected response format');
-            console.log('Applicants Response:', applicantsResponse.data);
-            setApplicants([]);
-          }
-          
-          // Fetch meetings for this job
-          const meetingsResponse = await authAxios.get(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/meetings/job/${id}`
-          );
-          
-          // Process meetings data
-          let meetingsData = [];
-          if (meetingsResponse.data && meetingsResponse.data.data) {
-            meetingsData = meetingsResponse.data.data;
-            setMeetings(meetingsData);
-            console.log(`Found ${meetingsResponse.data.count} meetings for this job`);
-          } else {
-            console.warn('No meetings found or unexpected response format');
-            console.log('Meetings Response:', meetingsResponse.data);
-            setMeetings([]);
-          }
-          
-          // Combine applicants with their meetings status
-          const combinedData = applicantsData.map(applicant => {
-            // Try to find if this applicant already has a meeting
-            const existingMeeting = meetingsData.find(
-              meeting => meeting.candidate_id._id === applicant._id || 
-                        meeting.candidate_id === applicant._id
-            );
-            
-            return {
-              applicant: applicant,
-              meeting: existingMeeting || null,
-              hasScheduledMeeting: Boolean(existingMeeting)
-            };
-          });
-          
-          setApplicantsWithMeetings(combinedData);
-          console.log('Combined applicants with meetings data:', combinedData.length);
-          
-          // If the job data includes company information, store it for reference
-          if (jobData.companyId) {
-            console.log('Company data found:', jobData.companyId.name || jobData.companyId);
-          }
-          
-        } catch (err) {
-          console.error('Error fetching job, applicants or meetings:', err);
-          if (err.response && err.response.status === 404) {
-            setError('Job post not found.');
-          } else if (err.response && err.response.status === 403) {
-            setError('You do not have permission to access this job information.');
-          } else {
-            setError('Failed to load job information: ' + (err.response?.data?.message || err.message));
-          }
-        }
-      } catch (error) {
-        console.error('Error in main fetchJobAndMeetings:', error);
-        setError('Failed to load job information. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
     
+    // Call the fetchJobAndMeetings function
     fetchJobAndMeetings();
   }, [id, router]);
 
@@ -297,6 +298,7 @@ export default function JobMeetingsPage() {
             {
               job_id: id,
               candidate_id: applicant._id,
+              hr_id: user._id, // Adding the HR user ID (current user)
               meetingDate: meetingDate,
               status: 'Scheduled'
             }
@@ -320,6 +322,9 @@ export default function JobMeetingsPage() {
       await fetchJobAndMeetings();
       
       // Show completion message
+      // Reload the current page to refresh data
+      router.reload();
+      
       await Swal.fire({
         title: 'Auto-Scheduling Complete',
         html: `Successfully scheduled <b>${scheduledCount}</b> meetings.<br>${failedCount > 0 ? `Failed to schedule <b>${failedCount}</b> meetings.` : ''}`,
@@ -329,7 +334,7 @@ export default function JobMeetingsPage() {
     } catch (error) {
       console.error('Error in auto-scheduling:', error);
       const Swal = (await import('sweetalert2')).default;
-      await Swal.fire('Error', 'Failed to auto-schedule meetings', 'error');
+      await Swal.fire('Error', 'Failed to auto-schedule meetings: ' + error.message, 'error');
     } finally {
       setAutoScheduleLoading(false);
     }
@@ -671,12 +676,13 @@ export default function JobMeetingsPage() {
                     
                     {!loading && filteredApplicants.length === 0 ? (
                       <div className="text-center py-5 animate__animated animate__fadeIn">
-                        <img
-                          src="/assets/imgs/page/dashboard/no-data.svg"
-                          alt="No applicants found"
-                          className="mb-3"
-                          style={{ maxWidth: '150px' }}
-                        />
+                        <div className="mb-3 text-center text-muted">
+                          <FontAwesomeIcon 
+                            icon={faSearch} 
+                            style={{ fontSize: '60px', opacity: 0.5 }} 
+                            className="mb-3" 
+                          />
+                        </div>
                         <h6 className="color-text-paragraph-2">
                           {searchTerm || selectedFilter !== 'all' ? 
                             'No applicants match your search criteria' : 
