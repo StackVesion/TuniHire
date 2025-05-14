@@ -1,23 +1,77 @@
-# Getting Started with Create React App
+# TuniHire Admin Panel
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Overview
 
-## Available Scripts
+The Admin Panel provides a comprehensive control center for platform administrators to manage and monitor all aspects of the TuniHire recruitment platform. It enables oversight of users, companies, jobs, and system configuration.
 
-In the project directory, you can run:
+## Technology Stack
 
-### `npm start`
+- **React**: Frontend library
+- **Redux**: State management
+- **Material UI**: Component library for consistent design
+- **Axios**: HTTP client for API communication
+- **Chart.js**: Data visualization
+- **React Router**: Navigation management
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## Key Features
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+- **User Management**: Manage candidate and company accounts
+- **Content Moderation**: Review and approve job listings and company profiles
+- **System Monitoring**: Track platform usage and performance
+- **Analytics Dashboard**: View key performance metrics
+- **Configuration**: Manage system settings and parameters
+- **AI Service Control**: Monitor and configure AI services
+- **Audit Logs**: View system and user activities
 
-### `npm test`
+## Integration Points
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- **Back-end API**: Core business logic (port 5000)
+- **AI-Service**: AI system monitoring (port 5001)
+- **Recommendation-AI**: Recommendation system management (port 5003)
+
+## Getting Started
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Run the development server:
+   ```bash
+   npm start
+   ```
+
+3. Access the application at [http://localhost:3002](http://localhost:3002)
+
+## Environment Configuration
+
+Create a `.env` file with the following variables:
+
+```
+REACT_APP_API_URL=http://localhost:5000/api
+REACT_APP_AI_SERVICE_URL=http://localhost:5001/api
+REACT_APP_RECOMMENDATION_SERVICE_URL=http://localhost:5003/api
+```
+
+## Architecture
+
+The Admin Panel follows a modular architecture:
+
+- **src/components/**: Reusable UI components
+- **src/pages/**: Main application pages
+- **src/redux/**: State management with actions and reducers
+- **src/services/**: API service connections
+- **src/utils/**: Helper functions and utilities
+- **src/hooks/**: Custom React hooks
+
+## Security
+
+The Admin Panel implements several security measures:
+
+- **Role-based Access Control**: Different admin roles with varying permissions
+- **Secure Authentication**: JWT-based authentication with refresh tokens
+- **Activity Logging**: All admin actions are logged for accountability
+- **Session Management**: Automatic session timeout after inactivity
 
 ### `npm run build`
 
