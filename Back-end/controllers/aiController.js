@@ -1,7 +1,12 @@
 const axios = require('axios');
 
-// Gemini API key
-const GEMINI_API_KEY = "AIzaSyB6s0HLteapxXvx29gQ0c761bfMbUnm9p0";
+// Get Gemini API key from environment variables
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+
+// Check if API key is available
+if (!GEMINI_API_KEY) {
+  console.warn('Warning: GEMINI_API_KEY is not set in environment variables');
+}
 
 /**
  * Analyze candidate resume and portfolio data using Gemini AI

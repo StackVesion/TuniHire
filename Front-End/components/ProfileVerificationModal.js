@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import Webcam from 'react-webcam';
-import { Modal } from 'react-bootstrap';
+import Modal from 'react-bootstrap/Modal';
 import axios from 'axios';
 
 const ProfileVerificationModal = ({ show, onHide, onVerificationSuccess }) => {
