@@ -5,33 +5,41 @@ import ImageWithBasePath from '../../../core/common/imageWithBasePath';
 import { Swiper, SwiperSlide } from 'swiper/react';
 
 // Import required modules
-import { Pagination } from 'swiper/modules';
-import { Navigation } from 'swiper/modules';
-import { Mousewheel } from 'swiper/modules';
-import { Keyboard } from 'swiper/modules';
-import { Scrollbar } from 'swiper/modules';
-import { EffectCube } from 'swiper/modules';
-import { EffectFade } from 'swiper/modules';
-import { EffectFlip } from 'swiper/modules';
-import { EffectCoverflow } from 'swiper/modules';
-import { FreeMode } from 'swiper/modules';
-import { Thumbs } from 'swiper/modules';
-import { Autoplay } from 'swiper/modules';
+import SwiperCore, { 
+  Pagination, 
+  Navigation, 
+  Mousewheel, 
+  Keyboard,
+  Scrollbar,
+  EffectCube,
+  EffectFade,
+  EffectFlip,
+  EffectCoverflow,
+  FreeMode,
+  Thumbs,
+  Autoplay
+} from 'swiper';
 
-// Import Swiper styles
-import 'swiper/css';
-import 'swiper/css/pagination';
-import 'swiper/css/navigation';
-import 'swiper/css/scrollbar';
-import 'swiper/css/effect-cube';
-import 'swiper/css/effect-fade';
-import 'swiper/css/effect-flip';
-import 'swiper/css/effect-coverflow';
-import 'swiper/css/free-mode';
-import 'swiper/css/thumbs';
+// Import Swiper bundle CSS qui contient tous les styles
+import 'swiper/swiper-bundle.min.css';
 
-// Dans Swiper v11, l'enregistrement des modules se fait automatiquement lors de l'importation
-// ou directement dans les props du composant Swiper
+// Install Swiper modules
+SwiperCore.use([
+  Pagination, 
+  Navigation, 
+  Mousewheel, 
+  Keyboard,
+  Scrollbar,
+  EffectCube,
+  EffectFade,
+  EffectFlip,
+  EffectCoverflow,
+  FreeMode,
+  Thumbs,
+  Autoplay
+]);
+
+// Dans Swiper 8, l'enregistrement des modules se fait avec SwiperCore.use() comme ci-dessus
 
 const Swiperjs = () => {
 
@@ -77,7 +85,6 @@ const Swiperjs = () => {
                                         clickable: true,
                                     }}
                                     navigation={false}
-                                    modules={[Autoplay, Pagination]}
                                     className="swiper swiper-basic"
                                 >
                                     <div className="swiper swiper-basic">
@@ -109,7 +116,6 @@ const Swiperjs = () => {
                                     pagination={false}
                                     mousewheel={true}
                                     keyboard={true}
-                                    modules={[Navigation, Pagination, Mousewheel, Keyboard]}
                                     className=" swiper-navigation "
                                 >
                                     <div className="swiper swiper-navigation">
@@ -139,7 +145,7 @@ const Swiperjs = () => {
                             </div>
                             <div className="card-body">
                                 <Swiper
-                                    pagination={true} modules={[Pagination,Autoplay]}
+                                    pagination={true}
                                     autoplay={{
                                         delay: 2500,
                                         disableOnInteraction: false,
@@ -180,7 +186,6 @@ const Swiperjs = () => {
                                         delay: 2500,
                                         disableOnInteraction: false,
                                     }}
-                                    modules={[Pagination,Autoplay]}
                                     className="pagination-dynamic"
 
                                 >
@@ -246,7 +251,6 @@ const Swiperjs = () => {
                                         disableOnInteraction: false,
                                     }}
                                     navigation={true}
-                                    modules={[Pagination, Navigation,Autoplay]}
                                     className="pagination-fraction"
                                 >
                                     <div className="swiper pagination-fraction">
@@ -282,7 +286,6 @@ const Swiperjs = () => {
                                         delay: 2500,
                                         disableOnInteraction: false,
                                     }}
-                                    modules={[Pagination,Autoplay]}
                                     className="custom-pagination"
                                 >
                                     <div className="swiper custom-pagination">
@@ -318,7 +321,6 @@ const Swiperjs = () => {
                                         delay: 2500,
                                         disableOnInteraction: false,
                                     }}
-                                    modules={[Scrollbar,Autoplay]}
                                     className="scrollbar-swiper"
                                 >
                                     <div className="swiper scrollbar-swiper">
@@ -354,7 +356,6 @@ const Swiperjs = () => {
                                         delay: 2500,
                                         disableOnInteraction: false,
                                     }}
-                                    modules={[Pagination,Autoplay]}
                                     className="vertical swiper-vertical"
                                 >
                                     <div className="swiper vertical swiper-vertical">
@@ -394,7 +395,6 @@ const Swiperjs = () => {
                                         delay: 2500,
                                         disableOnInteraction: false,
                                     }}
-                                    modules={[Mousewheel, Pagination,Autoplay]}
                                     className="vertical vertical-mouse-control"
                                 >
                                     <div className="swiper vertical vertical-mouse-control">
@@ -436,7 +436,6 @@ const Swiperjs = () => {
                                         disableOnInteraction: false,
                                     }}
                                     navigation={true}
-                                    modules={[Keyboard, Pagination, Navigation,Autoplay]}
                                     className="keyboard-control"
                                 >
                                     <div className="swiper keyboard-control">
@@ -476,7 +475,6 @@ const Swiperjs = () => {
                                         delay: 2500,
                                         disableOnInteraction: false,
                                     }}
-                                    modules={[Pagination,Autoplay]}
                                 >
                                     <div className="swiper swiper-horizontal1">
                                         <div className="swiper-wrapper">
@@ -533,7 +531,6 @@ const Swiperjs = () => {
                                         delay: 2500,
                                         disableOnInteraction: false,
                                     }}
-                                    modules={[EffectCube, Pagination,Autoplay]}
                                     className="swiper-effect-cube swiper"
                                 >
                                     <div className="swiper swiper-effect-cube">
@@ -572,7 +569,6 @@ const Swiperjs = () => {
                                         delay: 2500,
                                         disableOnInteraction: false,
                                     }}
-                                    modules={[EffectFade, Navigation, Pagination,Autoplay]}
                                     className="swiper-fade"
                                 >
                                     <div className="swiper swiper-fade">
@@ -614,7 +610,6 @@ const Swiperjs = () => {
                                         delay: 2500,
                                         disableOnInteraction: false,
                                     }}
-                                    modules={[EffectFlip, Pagination, Navigation,Autoplay]}
                                     className=" swiper-flip "
                                 >
                                     <div className="swiper swiper-flip">
@@ -665,7 +660,6 @@ const Swiperjs = () => {
                                         disableOnInteraction: false,
                                     }}
                                     pagination={true}
-                                    modules={[EffectCoverflow, Pagination,Autoplay]}
                                     className="swiper-overflow"
                                 >
                                     <div className="swiper swiper-overflow">
@@ -720,7 +714,6 @@ const Swiperjs = () => {
                                     delay: 2500,
                                     disableOnInteraction: false,
                                 }}
-                                  modules={[FreeMode, Navigation, Thumbs,Autoplay]}
                                   className="mySwiper2"
                                 >
                                     <div className="swiper swiper-preview">
@@ -757,7 +750,6 @@ const Swiperjs = () => {
                                     slidesPerView={4}
                                     freeMode={true}
                                     watchSlidesProgress={true}
-                                    modules={[FreeMode, Navigation, Thumbs]}
                                     className="mySwiper"
                                 >
                                      <div className="swiper swiper-view">
