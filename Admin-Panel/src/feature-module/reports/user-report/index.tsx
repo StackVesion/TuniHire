@@ -10,6 +10,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import './user-report.css';
 import { User, UserStats } from './types';
 import RealTimeUsers from './real-time-users';
+import environment from '../../../environment';
 
 const UserReport = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -20,6 +21,7 @@ const UserReport = () => {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [selectedRole, setSelectedRole] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [dataSource, setDataSource] = useState<'api' | 'mock'>('mock');
   const [userStats, setUserStats] = useState<UserStats>({
     total: 0,
     active: 0,
@@ -37,10 +39,21 @@ const UserReport = () => {
 
   useEffect(() => {
     fetchUsers();
-    const interval = setInterval(() => {
+    
+    // Rafraîchir les données toutes les 60 secondes
+    const dataRefreshInterval = setInterval(() => {
+      console.log("Rafraîchissement automatique des données utilisateurs...");
+      fetchUsers(false); // false = silencieux (sans afficher de toast)
+    }, 60000);
+    
+    const statusInterval = setInterval(() => {
       updateOnlineStatus();
-    }, 30000);
-    return () => clearInterval(interval);
+    }, 15000);
+    
+    return () => {
+      clearInterval(statusInterval);
+      clearInterval(dataRefreshInterval);
+    };
   }, []);
 
   useEffect(() => {
@@ -75,6 +88,9 @@ const UserReport = () => {
 
   // Fonction pour générer des utilisateurs de test
   const generateMockUsers = () => {
+    // Définir la source de données comme fictive
+    setDataSource('mock');
+    
     // Générer un ID aléatoire
     const generateId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     
@@ -179,127 +195,212 @@ const UserReport = () => {
     toast.success('Données utilisateurs générées avec succès');
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (showToast = true) => {
     try {
-      setLoading(true);
-      const response = await axios.get('http://localhost:5000/api/users');
-      const userData = response.data;
+      if (showToast) {
+        setLoading(true);
+      }
       
-      // Assign online status based on specific criteria instead of random
-      const usersWithOnlineStatus = userData.map((user: User) => {
-        // Vérifier si l'utilisateur a une date de dernière connexion
-        const hasLastLogin = user.lastLogin || user.updatedAt;
-        const lastLoginDate = hasLastLogin ? new Date(hasLastLogin) : null;
-        
-        // Vérifier si la dernière connexion est récente (moins de 30 minutes)
-        const now = new Date();
-        const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
-        const hasRecentLogin = lastLoginDate && lastLoginDate > thirtyMinutesAgo;
-        
-        // Les admins et HR sont plus susceptibles d'être en ligne
-        const isAdmin = user.role === 'admin' || user.role === 'HR';
-        
-        // Les utilisateurs vérifiés sont plus susceptibles d'être en ligne
-        const isVerified = user.isVerified || user.isEmailVerified;
-        
-        // Déterminer si l'utilisateur est actif
-        const isActive = user.status !== 'inactive';
-        
-        // Déterminer si l'utilisateur est en ligne en fonction de ces critères
-        const isOnline = isAdmin || (isActive && isVerified && hasRecentLogin);
-        
-        return {
-          ...user,
-          isOnline
-        };
+      // Configuration de la requête API avec timeout et retry
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 secondes timeout
+      
+      // Récupérer le token d'authentification
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
+      // Tenter de récupérer les données réelles depuis l'API
+      console.log("Connexion à l'API: ", `${environment.apiUrl}/users`);
+      
+      const response = await axios.get(`${environment.apiUrl}/users`, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        signal: controller.signal,
+        timeout: 8000, // 8 seconds timeout
+        withCredentials: true
       });
       
-      setUsers(usersWithOnlineStatus);
+      clearTimeout(timeoutId);
       
-      // Calculer les statistiques des utilisateurs
-      const now = new Date();
-      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-      
-      const total = usersWithOnlineStatus.length;
-      const active = usersWithOnlineStatus.filter((user: User) => user.status !== 'inactive').length;
-      const inactive = usersWithOnlineStatus.filter((user: User) => user.status === 'inactive').length;
-      const online = usersWithOnlineStatus.filter((user: User) => user.isOnline).length;
-      const admins = usersWithOnlineStatus.filter((user: User) => user.role === 'admin').length;
-      const recruiters = usersWithOnlineStatus.filter((user: User) => user.role === 'recruiter' || user.role === 'HR').length;
-      const candidates = usersWithOnlineStatus.filter((user: User) => user.role === 'candidate').length;
-      const recentlyActive = usersWithOnlineStatus.filter((user: User) => {
-        if (user.lastLogin) {
-          const lastLoginDate = new Date(user.lastLogin);
-          return lastLoginDate > oneHourAgo;
+      if (response.data && Array.isArray(response.data)) {
+        console.log("Données utilisateurs récupérées:", response.data.length);
+        const userData = response.data;
+        
+        // Traiter les données utilisateur et attribuer le statut en ligne
+        const usersWithOnlineStatus = userData.map((user: User) => {
+          // Vérifier la dernière connexion
+          const hasLastLogin = user.lastLogin || user.updatedAt;
+          const lastLoginDate = hasLastLogin ? new Date(hasLastLogin) : null;
+          
+          // Vérifier si la dernière connexion est récente (moins de 30 minutes)
+          const now = new Date();
+          const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+          const hasRecentLogin = lastLoginDate && lastLoginDate > thirtyMinutesAgo;
+          
+          // Déterminer le statut en ligne
+          const isAdmin = user.role === 'admin' || user.role === 'HR';
+          const isOnline = isAdmin || hasRecentLogin || Math.random() > 0.7; 
+          
+          return {
+            ...user,
+            isOnline,
+            // Ajouter un statut s'il n'existe pas
+            status: user.status || (Math.random() > 0.2 ? 'active' : 'inactive')
+          };
+        });
+        
+        setUsers(usersWithOnlineStatus);
+        setDataSource('api');
+        updateUserStats(usersWithOnlineStatus);
+        
+        if (showToast) {
+          toast.success(`${usersWithOnlineStatus.length} utilisateurs chargés depuis la base de données`, {
+            position: "top-right",
+            autoClose: 3000
+          });
         }
-        return false;
-      }).length;
+      } else {
+        console.warn("Format de données API invalide, utilisation des données de test");
+        if (showToast) {
+          toast.warning("Format de données invalide, génération de données de test", {
+            position: "top-right",
+            autoClose: 3000
+          });
+        }
+        setDataSource('mock');
+        generateMockUsers();
+      }
+    } catch (error: any) {
+      console.error("Erreur lors de la récupération des utilisateurs:", error);
       
-      setUserStats({
-        total,
-        active,
-        inactive,
-        online,
-        admins,
-        recruiters,
-        candidates,
-        recentlyActive,
-        onlinePercentage: total > 0 ? (online / total) * 100 : 0,
-        lastUpdate: now.toLocaleTimeString()
-      });
+      // Afficher un message d'erreur plus détaillé
+      const errorMessage = error.response 
+        ? `Erreur ${error.response.status}: ${error.response.statusText}` 
+        : error.message === 'Network Error' 
+          ? "Erreur réseau: Impossible de se connecter au serveur"
+          : error.code === 'ECONNABORTED' 
+            ? "Délai d'attente dépassé pour la connexion à l'API"
+            : "Erreur lors de la récupération des données utilisateurs";
       
-      // Filtrer les utilisateurs en fonction des critères actuels
-      applyFilters();
-      setLoading(false);
-    } catch (error) {
-      console.error('Erreur lors de la récupération des utilisateurs:', error);
-      toast.error('Erreur lors de la récupération des utilisateurs');
-      setLoading(false);
+      if (showToast) {
+        toast.error(errorMessage, {
+          position: "top-right",
+          autoClose: 5000
+        });
+      }
+      
+      // Uniquement générer des données de test si on n'a pas déjà des utilisateurs
+      if (users.length === 0) {
+        if (showToast) {
+          toast.info("Utilisation de données simulées pour la démonstration", {
+            position: "top-right",
+            autoClose: 3000
+          });
+        }
+        setDataSource('mock');
+        generateMockUsers();
+      }
+    } finally {
+      if (showToast) {
+        setLoading(false);
+      }
     }
+  };
+  
+  // Helper function to calculate user statistics
+  const updateUserStats = (userList: User[]) => {
+    const totalUsers = userList.length;
+    const activeUsers = userList.filter(user => user.status === 'active').length;
+    const inactiveUsers = totalUsers - activeUsers;
+    const onlineUsers = userList.filter(user => user.isOnline).length;
+    
+    setUserStats({
+      total: totalUsers,
+      active: activeUsers,
+      inactive: inactiveUsers,
+      online: onlineUsers,
+      admins: userList.filter(user => user.role === 'admin').length,
+      recruiters: userList.filter(user => user.role === 'recruiter').length,
+      candidates: userList.filter(user => user.role === 'candidate').length,
+      recentlyActive: userList.filter(user => {
+        return user.lastLogin && (new Date().getTime() - new Date(user.lastLogin).getTime() < 7 * 24 * 60 * 60 * 1000);
+      }).length,
+      onlinePercentage: totalUsers > 0 ? Math.round((onlineUsers / totalUsers) * 100) : 0,
+      lastUpdate: new Date().toLocaleTimeString()
+    });
+    
+    // Apply filters after updating stats
+    applyFilters();
   };
 
   const applyFilters = () => {
-    let filtered = [...users];
-    
-    // Filtre par mode de vue
-    if (viewMode === 'active') {
-      filtered = filtered.filter(user => user.status === 'active');
-    } else if (viewMode === 'inactive') {
-      filtered = filtered.filter(user => user.status === 'inactive');
-    } else if (viewMode === 'online') {
-      filtered = filtered.filter(user => user.isOnline);
-    }
-    
-    // Filtre par terme de recherche
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        user => 
-          user.firstName.toLowerCase().includes(term) || 
-          user.lastName.toLowerCase().includes(term) || 
-          user.email.toLowerCase().includes(term)
-      );
-    }
-    
-    // Filtre par date
-    if (startDate && endDate) {
-      filtered = filtered.filter(user => {
-        const createdAt = new Date(user.createdAt);
-        return createdAt >= startDate && createdAt <= endDate;
-      });
-    }
-    
-    // Filtre par rôle
-    if (selectedRole !== 'all') {
-      filtered = filtered.filter(user => user.role === selectedRole);
-    }
-    
-    // Filtre par statut
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter(user => user.status === selectedStatus);
-    }
-    
-    setFilteredUsers(filtered);
+    // Show loading state briefly to indicate filtering is being applied
+    setLoading(true);
+
+    // Use a timeout to simulate processing and ensure UI update
+    setTimeout(() => {
+      // Start with all users
+      let filtered = [...users];
+      
+      // Apply search term filter
+      if (searchTerm) {
+        filtered = filtered.filter((user: User) => {
+          const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+          const email = user.email.toLowerCase();
+          const term = searchTerm.toLowerCase();
+          return fullName.includes(term) || email.includes(term);
+        });
+      }
+      
+      // Apply role filter
+      if (selectedRole !== 'all') {
+        filtered = filtered.filter((user: User) => 
+          user.role.toLowerCase() === selectedRole.toLowerCase()
+        );
+      }
+      
+      // Apply status filter
+      if (selectedStatus !== 'all') {
+        filtered = filtered.filter((user: User) => 
+          user.status?.toLowerCase() === selectedStatus.toLowerCase()
+        );
+      }
+      
+      // Apply date range filter
+      if (startDate && endDate) {
+        filtered = filtered.filter((user: User) => {
+          const createdDate = new Date(user.createdAt);
+          return createdDate >= startDate && createdDate <= endDate;
+        });
+      }
+      
+      // Apply view mode filter
+      if (viewMode === 'active') {
+        filtered = filtered.filter((user: User) => user.status === 'active');
+      } else if (viewMode === 'inactive') {
+        filtered = filtered.filter((user: User) => user.status === 'inactive');
+      } else if (viewMode === 'online') {
+        filtered = filtered.filter((user: User) => user.isOnline);
+      }
+      
+      // If no users matched the filters, we'll still display online users
+      const hasFilters = searchTerm || selectedRole !== 'all' || selectedStatus !== 'all' || 
+                        (startDate && endDate) || viewMode !== 'all';
+      
+      // Update filtered users state
+      setFilteredUsers(filtered);
+      setLoading(false);
+
+      // Show a notification if filters were applied but no results were found
+      if (hasFilters && filtered.length === 0) {
+        toast.info('Aucun utilisateur ne correspond aux filtres appliqués. Affichage des utilisateurs en ligne.', {
+          position: "top-right",
+          autoClose: 3000
+        });
+      }
+    }, 300); // Short delay for better UX
   };
 
   const resetFilters = () => {
@@ -312,6 +413,12 @@ const UserReport = () => {
 
   const toggleStatistics = () => {
     setShowStatistics(!showStatistics);
+  };
+
+  // Gestionnaire d'événement pour le bouton toggleStatistics
+  const handleToggleStatisticsClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    toggleStatistics();
   };
 
   const setActiveUsersView = () => {
@@ -401,6 +508,35 @@ const UserReport = () => {
     });
   };
   
+  // Fonction pour le bouton Actualiser
+  const handleActualiserClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    fetchUsers(true);
+  };
+  
+  // Fonction pour le bouton Générer des utilisateurs test
+  const handleGenerateMockUsersClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    generateMockUsers();
+  };
+  
+  // Gestionnaire d'événement pour le bouton exportToCsv
+  const handleExportCsvClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    exportToCsv();
+  };
+  
+  // Gestionnaire d'événement pour le bouton resetFilters
+  const handleResetFiltersClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    resetFilters();
+  };
+  
+  // Fonction pour le composant RealTimeUsers
+  const handleRealTimeRefresh = () => {
+    fetchUsers(true);
+  };
+  
   // Effet pour mettre à jour les utilisateurs connectés toutes les 10 secondes
   useEffect(() => {
     const connectedInterval = setInterval(() => {
@@ -424,9 +560,48 @@ const UserReport = () => {
               </ul>
             </div>
             <div className="col-auto">
-              <button className="btn btn-primary me-2" onClick={toggleStatistics}>
+              <button className="btn btn-primary me-2" onClick={handleToggleStatisticsClick}>
                 {showStatistics ? 'Masquer Statistiques' : 'Afficher Statistiques'}
               </button>
+              <button 
+                className="btn btn-success"
+                onClick={handleActualiserClick}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Chargement...
+                  </>
+                ) : (
+                  <>
+                    <i className="fa fa-refresh me-1"></i> Actualiser les données
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Indicateur de source de données */}
+        <div className="data-source-indicator mb-3">
+          <div className={`alert ${dataSource === 'api' ? 'alert-success' : 'alert-warning'} d-flex align-items-center py-2`}>
+            <i className={`fa ${dataSource === 'api' ? 'fa-database' : 'fa-flask'} me-2`}></i>
+            <div>
+              {dataSource === 'api' 
+                ? "Données chargées depuis la base de données - Dernière mise à jour: " 
+                : "Données simulées pour démonstration - Générées le: "
+              }
+              <strong>{userStats.lastUpdate}</strong>
+              {dataSource === 'mock' && (
+                <button 
+                  className="btn btn-sm btn-warning ms-3" 
+                  onClick={handleActualiserClick}
+                  disabled={loading}
+                >
+                  <i className="fa fa-refresh me-1"></i> Tenter de se connecter à la base de données
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -662,13 +837,13 @@ const UserReport = () => {
               <p className="text-muted">Consultez les statistiques et les informations des utilisateurs</p>
             </div>
             <div className="d-flex">
-              <Button variant="outline-primary" className="me-2" onClick={toggleStatistics}>
+              <Button variant="outline-primary" className="me-2" onClick={handleToggleStatisticsClick}>
                 {showStatistics ? <><FeatherIcon icon="eye-off" size={16} /> Masquer les statistiques</> : <><FeatherIcon icon="bar-chart-2" size={16} /> Afficher les statistiques</>}
               </Button>
-              <Button variant="outline-success" className="me-2" onClick={generateMockUsers}>
+              <Button variant="outline-success" className="me-2" onClick={handleGenerateMockUsersClick}>
                 <FeatherIcon icon="users" size={16} /> Générer des utilisateurs test
               </Button>
-              <Button variant="primary" onClick={fetchUsers}>
+              <Button variant="primary" onClick={handleActualiserClick}>
                 <FeatherIcon icon="refresh-cw" size={16} /> Actualiser
               </Button>
             </div>
@@ -883,7 +1058,7 @@ const UserReport = () => {
               <RealTimeUsers 
                 users={users} 
                 lastUpdate={userStats.lastUpdate || new Date().toLocaleTimeString()} 
-                onRefresh={fetchUsers}
+                onRefresh={handleRealTimeRefresh}
               />
             </Card.Body>
           </Card>
@@ -923,10 +1098,10 @@ const UserReport = () => {
                   </button>
                 </div>
                 <div>
-                  <button className="btn btn-success me-2" onClick={exportToCsv}>
+                  <button className="btn btn-success me-2" onClick={handleExportCsvClick}>
                     <i className="fa fa-download me-1"></i> Exporter
                   </button>
-                  <button className="btn btn-secondary" onClick={resetFilters}>
+                  <button className="btn btn-secondary" onClick={handleResetFiltersClick}>
                     <i className="fa fa-refresh me-1"></i> Réinitialiser
                   </button>
                 </div>
@@ -1108,19 +1283,74 @@ const UserReport = () => {
                           </tr>
                         ))
                       ) : (
-                        <tr>
-                          <td colSpan={8} className="text-center">Aucun utilisateur trouvé</td>
-                        </tr>
+                        users.filter(user => user.isOnline).slice(0, 5).map((user: User) => (
+                          <tr key={user._id}>
+                            <td>{user._id.substring(0, 8)}...</td>
+                            <td>
+                              <div className="table-avatar">
+                                <Link to="#" className="avatar avatar-sm me-2 position-relative">
+                                  <img
+                                    className="avatar-img rounded-circle"
+                                    src={`https://ui-avatars.com/api/?name=${user.firstName}+${user.lastName}&background=random`}
+                                    alt="User Avatar"
+                                  />
+                                  <span className="position-absolute bottom-0 end-0 user-status-indicator user-status-online" 
+                                        style={{ width: '10px', height: '10px', border: '2px solid white' }}></span>
+                                </Link>
+                                <Link to="#" className="d-flex align-items-center">
+                                  {`${user.firstName} ${user.lastName}`}
+                                  <span className="badge bg-success ms-2" style={{ fontSize: '0.65rem', padding: '2px 6px' }}>En ligne</span>
+                                </Link>
+                              </div>
+                            </td>
+                            <td>{user.email}</td>
+                            <td>
+                              <span className={`badge ${user.role === 'admin' ? 'bg-primary' : user.role === 'recruiter' ? 'bg-info' : 'bg-success'}`}>
+                                {user.role}
+                              </span>
+                            </td>
+                            <td>
+                              <span className="badge bg-success">active</span>
+                            </td>
+                            <td>
+                              <div className="d-flex align-items-center">
+                                <span className="user-status-indicator user-status-online me-2" style={{ width: '8px', height: '8px' }}></span>
+                                <span className="text-success">En ligne</span>
+                              </div>
+                            </td>
+                            <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                            <td>{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'N/A'}</td>
+                            <td>
+                              <div className="dropdown dropdown-action">
+                                <Dropdown className="dropdown-action">
+                                  <Dropdown.Toggle className="action-icon">
+                                    <i className="material-icons">more_vert</i>
+                                  </Dropdown.Toggle>
+                                  <Dropdown.Menu className="dropdown-menu">
+                                    <Dropdown.Item
+                                      href="#"
+                                      onClick={() => window.location.href = `/user-management/manage-users?id=${user._id}`}
+                                    >
+                                      <i className="fa fa-pencil m-r-5"></i> Voir détails
+                                    </Dropdown.Item>
+                                  </Dropdown.Menu>
+                                </Dropdown>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
                       )}
                     </tbody>
                   </Table>
                 </div>
               )}
               
-              {!loading && filteredUsers.length > 0 && (
+              {!loading && (
                 <div className="d-flex justify-content-between align-items-center mt-3">
                   <div>
-                    Affichage de {Math.min(filteredUsers.length, 10)} sur {filteredUsers.length} utilisateurs
+                    {filteredUsers.length > 0 
+                      ? `Affichage de ${Math.min(filteredUsers.length, 10)} sur ${filteredUsers.length} utilisateurs` 
+                      : `Affichage des utilisateurs en ligne uniquement - ${users.filter(user => user.isOnline).length} utilisateur(s) connecté(s)`}
                   </div>
                   <nav>
                     <ul className="pagination">

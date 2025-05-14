@@ -298,3 +298,131 @@
     margin-bottom: 20px;
   }
 }
+
+/* Ajout de styles pour l'indicateur de source de données */
+.data-source-indicator .alert {
+  border-left: 5px solid;
+  transition: all 0.3s ease;
+}
+
+.data-source-indicator .alert-success {
+  border-left-color: #28a745;
+}
+
+.data-source-indicator .alert-warning {
+  border-left-color: #ffc107;
+}
+
+/* Animation pour les rafraîchissements */
+@keyframes fadeInOut {
+  0% { opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { opacity: 0.7; }
+}
+
+.refreshing-data {
+  animation: fadeInOut 1.5s infinite;
+}
+
+.online-pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #28a745;
+  position: relative;
+  margin-left: 5px;
+}
+
+.online-pulse::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: rgba(40, 167, 69, 0.4);
+  top: -2px;
+  left: -2px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+}
+
+/* Styles pour les cartes d'utilisateurs en ligne */
+.online-user-card {
+  transition: all 0.3s ease;
+  border-left: 4px solid;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.online-user-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+}
+
+.admin-card {
+  border-left-color: #0D6EFD;
+}
+
+.recruiter-card {
+  border-left-color: #17A2B8;
+}
+
+.candidate-card {
+  border-left-color: #28A745;
+}
+
+.hr-card {
+  border-left-color: #DC3545;
+}
+
+/* Indicateur d'état en ligne/hors ligne */
+.user-status-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.user-status-online {
+  background-color: #28a745;
+}
+
+.user-status-offline {
+  background-color: #6c757d;
+}
+
+/* Styles pour statistiques en ligne */
+.online-stats {
+  display: flex;
+  align-items: center;
+}
+
+.online-stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #6c757d;
+}

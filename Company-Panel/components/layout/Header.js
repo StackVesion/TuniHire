@@ -120,7 +120,7 @@ export default function Header() {
         try {
             console.log('Fetching company status for userId:', userId);
             
-            const response = await authAxios.get('/api/companies/user/my-company');
+            const response = await authAxios.get('/api/company/user/my-company');
             
             if (response.data && response.data.success && response.data.company) {
                 setCompanyStatus(response.data.company);
