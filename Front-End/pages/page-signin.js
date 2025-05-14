@@ -7,6 +7,7 @@ import Webcam from "react-webcam";
 import * as faceapi from "face-api.js";
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-webgl';
+import { saveUserData } from "../utils/authUtils";
 
 export default function Signin() {
     const [formData, setFormData] = useState({
@@ -97,8 +98,11 @@ export default function Signin() {
         try {
             console.log("Attempting sign in with:", formData.email);
             
+            // Utiliser l'URL de l'API depuis notre configuration
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+            
             const response = await axios.post(
-                "http://localhost:5000/api/users/signin", 
+                `${baseUrl}/api/users/signin`, 
                 {
                     email: formData.email,
                     password: formData.password,
@@ -114,20 +118,18 @@ export default function Signin() {
             console.log("Sign-in response:", response.data);
 
             if (response.data.token) {
-                // Store token
-                localStorage.setItem("token", response.data.token);
-                
-                // Create a user object with necessary information
+                // Créer un objet avec les données utilisateur
                 const userData = {
-                    userId: response.data.userId,
+                    userId: response.data.userId || response.data._id, // Supporter les deux formats
                     firstName: response.data.firstName,
                     lastName: response.data.lastName,
                     email: response.data.email,
-                    role: response.data.role
+                    role: response.data.role,
+                    profilePicture: response.data.profilePicture || ""
                 };
 
-                // Store user data
-                localStorage.setItem("user", JSON.stringify(userData));
+                // Utiliser notre utilitaire pour sauvegarder les données de manière cohérente
+                saveUserData(userData, response.data.token);
                 console.log("User data stored:", userData);
 
                 // Navigate to the same page or home page
@@ -163,23 +165,34 @@ export default function Signin() {
         console.log("Sending face data for authentication...");
 
         try {
+            // Utiliser l'URL de l'API depuis notre configuration
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+            
             const response = await axios.post(
-                "http://localhost:5000/api/users/signin/faceid", 
+                `${baseUrl}/api/users/signin/faceid`, 
                 requestBody, 
-                { withCredentials: true }
+                { 
+                    withCredentials: true,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
             );
             
             if (response.data.token) {
-                localStorage.setItem("token", response.data.token);
+                // Créer un objet avec les données utilisateur
                 const userData = {
-                    userId: response.data.userId,
+                    userId: response.data.userId || response.data._id, // Supporter les deux formats
                     firstName: response.data.firstName,
                     lastName: response.data.lastName,
                     email: response.data.email,
                     role: response.data.role,
+                    profilePicture: response.data.profilePicture || "",
                     faceId: true
                 };
-                localStorage.setItem("user", JSON.stringify(userData));
+                
+                // Utiliser notre utilitaire pour sauvegarder les données de manière cohérente
+                saveUserData(userData, response.data.token);
                 
                 // Fermer la modal et rediriger
                 setShowFaceIdModal(false);
@@ -194,11 +207,13 @@ export default function Signin() {
     };
 
     const handleGoogleSignIn = () => {
-        window.location.href = "http://localhost:5000/auth/google";
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        window.location.href = `${baseUrl}/auth/google`;
     };
 
     const handleGitHubSignIn = () => {
-        window.location.href = "http://localhost:5000/auth/github";
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        window.location.href = `${baseUrl}/auth/github`;
     };
     
     const openFaceIdModal = () => {
@@ -284,8 +299,8 @@ export default function Signin() {
                                         <span className="text-small">Remember me</span>
                                         <span className="checkmark" />
                                     </label>
-                                    <Link legacyBehavior href="/page-contact">
-                                        <a className="text-muted">Forgot Password</a>
+                                    <Link legacyBehavior href="/reset-password">
+                                        <a className="text-muted">Mot de passe oublié</a>
                                     </Link>
                                 </div>
                                 <div className="form-group">

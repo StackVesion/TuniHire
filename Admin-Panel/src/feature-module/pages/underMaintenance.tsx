@@ -14,7 +14,8 @@ const UnderMaintenance = () => {
             <div className="col-md-8 d-flex justify-content-center align-items-center mx-auto">
               <div>
                 <div className="p-4 text-center">
-                  <ImageWithBasePath src="assets/img/logo.svg" alt="logo" className="img-fluid" />
+                  <h1 className="display-4 text-primary fw-bold">TuniHire</h1>
+                  <p className="text-muted">Your contract is here!</p>
                 </div>
                 <div className="error-images">
                   <ImageWithBasePath
@@ -32,7 +33,7 @@ const UnderMaintenance = () => {
                       <Link to="#" className="text-primary">
                         click here
                       </Link>{" "}
-                      to create ticket if it’s urgent{" "}
+                      to create ticket if it's urgent{" "}
                     </p>
                     <div className="d-flex justify-content-center pb-4">
                       <Link

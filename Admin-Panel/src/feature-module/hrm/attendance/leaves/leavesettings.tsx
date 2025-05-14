@@ -413,36 +413,7 @@ const LeaveSettings = () => {
               </button>
             </div>
             <form action="leaves.html">
-              <div className="contact-grids-tab">
-                <ul className="nav nav-underline" id="myTab" role="tablist">
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link active"
-                      id="settings-tab"
-                      data-bs-toggle="tab"
-                      data-bs-target="#settings-info"
-                      type="button"
-                      role="tab"
-                      aria-selected="true"
-                    >
-                      Settings
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link"
-                      id="viwe-custom-policy-tab"
-                      data-bs-toggle="tab"
-                      data-bs-target="#policy"
-                      type="button"
-                      role="tab"
-                      aria-selected="false"
-                    >
-                      View Custom Policy
-                    </button>
-                  </li>
-                </ul>
-              </div>
+              
               <div className="tab-content" id="myTabContent">
                 <div
                   className="tab-pane fade show active"
@@ -948,36 +919,7 @@ const LeaveSettings = () => {
               </button>
             </div>
             <form action="leaves.html">
-              <div className="contact-grids-tab">
-                <ul className="nav nav-underline" id="myTab6" role="tablist">
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link active"
-                      id="settings-one-tab"
-                      data-bs-toggle="tab"
-                      data-bs-target="#settings-one-info"
-                      type="button"
-                      role="tab"
-                      aria-selected="true"
-                    >
-                      Settings
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link"
-                      id="viwe-custom-policy-one-tab"
-                      data-bs-toggle="tab"
-                      data-bs-target="#policy-one"
-                      type="button"
-                      role="tab"
-                      aria-selected="false"
-                    >
-                      View Custom Policy
-                    </button>
-                  </li>
-                </ul>
-              </div>
+             
               <div className="tab-content" id="myTabContent6">
                 <div
                   className="tab-pane fade show active"
@@ -1414,36 +1356,7 @@ const LeaveSettings = () => {
               </button>
             </div>
             <form action="leaves.html">
-              <div className="contact-grids-tab">
-                <ul className="nav nav-underline" id="myTab2" role="tablist">
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link active"
-                      id="settings-two-tab"
-                      data-bs-toggle="tab"
-                      data-bs-target="#settings-two-info"
-                      type="button"
-                      role="tab"
-                      aria-selected="true"
-                    >
-                      Settings
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link"
-                      id="viwe-custom-policy-two-tab"
-                      data-bs-toggle="tab"
-                      data-bs-target="#policy-two"
-                      type="button"
-                      role="tab"
-                      aria-selected="false"
-                    >
-                      View Custom Policy
-                    </button>
-                  </li>
-                </ul>
-              </div>
+            
               <div className="tab-content" id="myTabContent2">
                 <div
                   className="tab-pane fade show active"
@@ -1880,36 +1793,7 @@ const LeaveSettings = () => {
               </button>
             </div>
             <form >
-              <div className="contact-grids-tab">
-                <ul className="nav nav-underline" id="myTab3" role="tablist">
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link active"
-                      id="settings-three-tab"
-                      data-bs-toggle="tab"
-                      data-bs-target="#settings-three-info"
-                      type="button"
-                      role="tab"
-                      aria-selected="true"
-                    >
-                      Settings
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link"
-                      id="viwe-custom-policy-three-tab"
-                      data-bs-toggle="tab"
-                      data-bs-target="#policy-three"
-                      type="button"
-                      role="tab"
-                      aria-selected="false"
-                    >
-                      View Custom Policy
-                    </button>
-                  </li>
-                </ul>
-              </div>
+             
               <div className="tab-content" id="myTabContent3">
                 <div
                   className="tab-pane fade show active"
@@ -2351,36 +2235,7 @@ const LeaveSettings = () => {
               </button>
             </div>
             <form action="leaves.html">
-              <div className="contact-grids-tab">
-                <ul className="nav nav-underline" id="myTab4" role="tablist">
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link active"
-                      id="settings-four-tab"
-                      data-bs-toggle="tab"
-                      data-bs-target="#settings-four-info"
-                      type="button"
-                      role="tab"
-                      aria-selected="true"
-                    >
-                      Settings
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link"
-                      id="viwe-custom-policy-four-tab"
-                      data-bs-toggle="tab"
-                      data-bs-target="#policy-four"
-                      type="button"
-                      role="tab"
-                      aria-selected="false"
-                    >
-                      View Custom Policy
-                    </button>
-                  </li>
-                </ul>
-              </div>
+              
               <div className="tab-content" id="myTabContent4">
                 <div
                   className="tab-pane fade show active"
@@ -2822,36 +2677,7 @@ const LeaveSettings = () => {
               </button>
             </div>
             <form>
-              <div className="contact-grids-tab">
-                <ul className="nav nav-underline" id="myTab5" role="tablist">
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link active"
-                      id="settings-five-tab"
-                      data-bs-toggle="tab"
-                      data-bs-target="#settings-five-info"
-                      type="button"
-                      role="tab"
-                      aria-selected="true"
-                    >
-                      Settings
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link"
-                      id="viwe-custom-policy-five-tab"
-                      data-bs-toggle="tab"
-                      data-bs-target="#policy-five"
-                      type="button"
-                      role="tab"
-                      aria-selected="false"
-                    >
-                      View Custom Policy
-                    </button>
-                  </li>
-                </ul>
-              </div>
+            
               <div className="tab-content" id="myTabContent5">
                 <div
                   className="tab-pane fade show active"

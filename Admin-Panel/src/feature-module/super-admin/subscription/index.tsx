@@ -7,6 +7,7 @@ import ReactApexChart from "react-apexcharts";
 import { subscription_details } from '../../../core/data/json/subscriptiondetails'
 import PredefinedDateRanges from '../../../core/common/datePicker'
 import Table from "../../../core/common/dataTable/index";
+import SubscriptionPlans from './subscription-plans';
 
 const Subscription = () => {
   const data = subscription_details;
@@ -619,6 +620,9 @@ const Subscription = () => {
               </div>
             </div>
           </div>
+          {/* Plans d'abonnement */}
+          <SubscriptionPlans />
+          
           <div className="card">
             <div className="card-header d-flex align-items-center justify-content-between flex-wrap row-gap-3">
               <h5>Subscription List</h5>
@@ -771,9 +775,9 @@ const Subscription = () => {
                 <div className="col-md-6">
                   <div className="mb-4">
                     <ImageWithBasePath
-                      src="assets/Image1.png"
+                      src="assets/img/logos.png"
                       className="img-fluid"
-                      alt="logo"
+                      alt="Logo"
                     />
                   </div>
                 </div>

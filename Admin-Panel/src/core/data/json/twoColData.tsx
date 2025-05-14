@@ -738,11 +738,7 @@ export const TowColData = [
                     route: routes.invoicereport,
                     base: '/reports/invoice-report',
                   },
-                  {
-                    menuValue: 'Payment Report',
-                    route: routes.paymentreport,
-                    base: '/reports/payment-report',
-                  },
+                  
                   {
                     menuValue: 'Project Report',
                     route: routes.projectreport,
@@ -758,11 +754,7 @@ export const TowColData = [
                     route: routes.userreport,
                     base: '/reports/user-report',
                   },
-                  {
-                    menuValue: 'Employee Report',
-                    route: routes.employeereport,
-                    base: '/reports/employee-report',
-                  },
+                
                   {
                     menuValue: 'Payslip Report',
                     route: routes.payslipreport,
@@ -1058,11 +1050,7 @@ export const TowColData = [
                     route: routes.blogCategories,
                     base: 'Categories',
                   },
-                  {
-                    menuValue: 'Comments',
-                    route: routes.blogComments,
-                    base: 'Comments',
-                  },
+               
                   {
                     menuValue: 'Blog Tags',
                     route: routes.blogTags,

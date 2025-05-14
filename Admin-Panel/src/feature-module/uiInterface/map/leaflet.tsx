@@ -136,15 +136,15 @@ const Leaflet = () => {
     // }).addTo(customicon);
   
     // Custom Icon
-    const greenIcon = L.icon({
-      iconUrl: "assets/Image1.png", // Path to your SVG file
+    const customIcon = new L.Icon({
+      iconUrl: "assets/img/logos.png", // Path to your SVG file
       iconSize: [80, 25], // Size of the icon
       iconAnchor: [22, 94], // Anchor point of the icon
       popupAnchor: [-3, -76], // Point where the popup opens relative to the anchor
     });
   
     // Add the custom marker to the map
-    L.marker([51.5, -0.09], { icon: greenIcon }).addTo(customicon);
+    L.marker([51.5, -0.09], { icon: customIcon }).addTo(customicon);
   
     // Cleanup on component unmount
     return () => {

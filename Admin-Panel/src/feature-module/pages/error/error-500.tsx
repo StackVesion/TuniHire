@@ -12,7 +12,8 @@ const Error500 = () => {
           <div className="col-md-4 d-flex justify-content-center align-items-center">
             <div>
               <div className="mb-5">
-                <ImageWithBasePath src="assets/img/logo.svg" alt="logo" className="img-fluid" />
+                <h1 className="display-4 text-primary fw-bold">TuniHire</h1>
+                <p className="text-muted">Your contract is here!</p>
               </div>
               <div>
                 <h1 className="mb-3">Oops, something went wrong</h1>

@@ -186,6 +186,8 @@ import PayslipReport from "../administration/reports/payslipreport";
 import AttendanceReport from "../administration/reports/attendencereport";
 import LeaveReport from "../administration/reports/leavereport";
 import DailyReport from "../administration/reports/dailyreport";
+import UserReport from "../reports/user-report";
+import UserReportsAdmin from "../administration/reports/userreports";
 import PermissionPage from "../administration/user-management/permissionpage";
 import JobGrid from "../recruitment/jobs/jobgrid";
 import JobList from "../recruitment/joblist/joblist";
@@ -217,6 +219,7 @@ import PayRollDeduction from "../finance-accounts/payrool/payrollDedution";
 import Tickets from "../tickets/tickets";
 import TicketGrid from "../tickets/tickets-grid";
 import TicketDetails from "../tickets/ticket-details";
+import Reclamations from "../support/reclamations/reclamations";
 import PerformanceIndicator from "../performance/performanceIndicator";
 import Aisettings from "../settings/websiteSettings/ai-settings";
 import Salarysettings from "../settings/appSettings/salary-settings";
@@ -241,7 +244,6 @@ import Policy from "../hrm/employees/policy";
 import CompaniesGrid from "../crm/companies/companiesGrid";
 import ContactDetails from "../crm/contacts/contactDetails";
 import ContactList from "../crm/contacts/contactList";
-import ContactGrid from "../crm/contacts/contactGrid";
 import CompaniesList from "../crm/companies/companiesList";
 import CompaniesDetails from "../crm/companies/companiesDetails";
 import LeadsGrid from "../crm/leads/leadsGrid";
@@ -903,6 +905,11 @@ export const publicRoutes = [
     route: Route,
   },
   {
+    path: routes.reclamations,
+    element: <Reclamations />,
+    route: Route,
+  },
+  {
     path: routes.performanceIndicator,
     element: <PerformanceIndicator />,
     route: Route,
@@ -1124,10 +1131,7 @@ export const publicRoutes = [
     path: routes.invoicereport,
     element: <InvoiceReport />,
   },
-  {
-    path: routes.paymentreport,
-    element: <PaymentReport />,
-  },
+ 
   {
     path: routes.projectreport,
     element: <ProjectReport />,
@@ -1145,10 +1149,7 @@ export const publicRoutes = [
     element: <BlogCategories />,
     route: Route,
   },
-  {
-    path: routes.blogComments,
-    element: <BlogComments />,
-  },
+ 
   {
     path: routes.blogTags,
     element: <BlogTags />,
@@ -1225,12 +1226,10 @@ export const publicRoutes = [
   },
   {
     path: routes.userreport,
-    element: <UserReports />,
+    element: <UserReport />,
+    route: Route,
   },
-  {
-    path: routes.employeereport,
-    element: <EmployeeReports />,
-  },
+ 
   {
     path: routes.employeedetails,
     element: <EmployeeDetails />,
@@ -1254,6 +1253,16 @@ export const publicRoutes = [
   {
     path: routes.dailyreport,
     element: <DailyReport />,
+    route: Route,
+  },
+  {
+    path: "/user-report",
+    element: <UserReport />,
+    route: Route,
+  },
+  {
+    path: routes.userreport,
+    element: <UserReport />,
     route: Route,
   },
   {
@@ -1473,11 +1482,7 @@ export const publicRoutes = [
     element: <ContactList />,
     route: Route,
   },
-  {
-    path: routes.contactGrid,
-    element: <ContactGrid />,
-    route: Route,
-  },
+
   {
     path: routes.contactDetails,
     element: <ContactDetails />,
@@ -1575,6 +1580,11 @@ export const publicRoutes = [
   {
     path: routes.applicationDetail,
     element: <ApplicationDetail />,
+  },
+  {
+    path: routes.reclamations,
+    element: <Reclamations />,
+    route: Route,
   },
 ];
 

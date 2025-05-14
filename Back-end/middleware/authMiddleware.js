@@ -33,8 +33,15 @@ const verifyToken = (req, res, next) => {
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-jwt-secret');
             
-            // Add user info to request
+            // Add user info to request and ensure userId is always available
             req.user = decoded;
+            
+            // Compatibility: make sure userId is always available regardless of whether the token uses 'id' or 'userId'
+            if (decoded.id && !decoded.userId) {
+                console.log('Converting legacy id to userId in token for compatibility');
+                req.user.userId = decoded.id;
+            }
+            
             console.log('Token verified successfully for user:', decoded.email);
             
             // Continue

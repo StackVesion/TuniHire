@@ -36,4 +36,43 @@ const config = {
   geminiApiKey: process.env.GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY'
 };
 
-module.exports = config; 
+module.exports = config; const config = {
+  // Server configuration
+  server: {
+    port: process.env.PORT || 3001,
+  },
+  
+  // Database configuration
+  database: {
+    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/tunihire',
+    options: {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    },
+  },
+  
+  // JWT configuration
+  jwt: {
+    secret: process.env.JWT_SECRET || 'YourSecretKey',
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    algorithm: 'HS256',
+  },
+  
+  // File upload configuration
+  uploads: {
+    baseDir: process.env.UPLOAD_DIR || 'uploads',
+    resumes: process.env.RESUME_DIR || 'uploads/resumes',
+    maxFileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB
+    allowedFileTypes: ['pdf', 'docx', 'doc'],
+  },
+  
+  // External services
+  services: {
+    // AI service configuration
+    ai: {
+      url: process.env.AI_SERVICE_URL || 'http://localhost:5001',
+      enabled: process.env.USE_AI_SERVICE === 'true' || false,
+      apiKey: process.env.AI_SERVICE_API_KEY || '',
+    },
+  }
+};

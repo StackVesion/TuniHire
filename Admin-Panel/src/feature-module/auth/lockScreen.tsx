@@ -31,7 +31,8 @@ const LockScreen = () => {
           <form>
             <div className="d-flex flex-column justify-content-between vh-100">
               <div className=" mx-auto p-4 text-center">
-                <ImageWithBasePath src="assets/Image1.png" className="img-fluid" alt="Logo" />
+                <h1 className="display-4 text-primary fw-bold">TuniHire</h1>
+                <p className="text-muted">Your contract is here!</p>
               </div>
               <div className="card border-primary">
                 <div className="card-body bg-primary bg-opacity-10  rounded p-4">

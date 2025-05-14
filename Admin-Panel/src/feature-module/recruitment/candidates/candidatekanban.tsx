@@ -1966,49 +1966,7 @@ const CandidateKanban = () => {
                             </div>
                         </div>
                     </div>
-                    <div className="contact-grids-tab p-0 mb-3">
-                        <ul className="nav nav-underline" id="myTab" role="tablist">
-                            <li className="nav-item" role="presentation">
-                                <button
-                                    className="nav-link active pt-0"
-                                    id="info-tab"
-                                    data-bs-toggle="tab"
-                                    data-bs-target="#basic-info"
-                                    type="button"
-                                    role="tab"
-                                    aria-selected="true"
-                                >
-                                    Profile
-                                </button>
-                            </li>
-                            <li className="nav-item" role="presentation">
-                                <button
-                                    className="nav-link pt-0"
-                                    id="address-tab"
-                                    data-bs-toggle="tab"
-                                    data-bs-target="#address"
-                                    type="button"
-                                    role="tab"
-                                    aria-selected="false"
-                                >
-                                    Hiring Pipeline
-                                </button>
-                            </li>
-                            <li className="nav-item" role="presentation">
-                                <button
-                                    className="nav-link pt-0"
-                                    id="address-tab2"
-                                    data-bs-toggle="tab"
-                                    data-bs-target="#address2"
-                                    type="button"
-                                    role="tab"
-                                    aria-selected="false"
-                                >
-                                    Notes
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
+                
                     <div className="tab-content" id="myTabContent">
                         <div
                             className="tab-pane fade show active"

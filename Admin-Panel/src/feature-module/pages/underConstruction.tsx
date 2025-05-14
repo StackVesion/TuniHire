@@ -14,7 +14,8 @@ const UnderConstruction = () => {
             <div className="col-md-8 d-flex justify-content-center align-items-center mx-auto">
               <div>
                 <div className="p-4 text-center">
-                  <ImageWithBasePath src="assets/img/logo.svg" alt="logo" className="img-fluid" />
+                  <h1 className="display-4 text-primary fw-bold">TuniHire</h1>
+                  <p className="text-muted">Your contract is here!</p>
                 </div>
                 <div className="error-images mb-4">
                   <ImageWithBasePath

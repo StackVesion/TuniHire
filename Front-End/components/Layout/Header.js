@@ -56,16 +56,33 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
             try {
                 console.log("Validating token with server...");
                 // Use authAxios which handles network errors gracefully
-                const response = await authAxios.get("/api/users/validate-token");
+                const response = await authAxios.get("/api/users/me", {
+                    // Explicitement définir withCredentials pour cette requête particulière
+                    withCredentials: true,
+                    // S'assurer que l'en-tête d'autorisation est correctement formaté
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
                 
-                if (response.data.valid) {
+                if (response.data.user) {
                     console.log("Token validated by server");
                     // If user state isn't already set, set it now
                     if (!user) {
-                        const storedUser = getCurrentUser();
-                        if (storedUser) {
-                            console.log("Setting user state from valid token:", storedUser.firstName, storedUser.role);
-                            setUser(storedUser);
+                        const userData = response.data.user;
+                        if (userData) {
+                            console.log("Setting user state from valid token:", userData.firstName, userData.role);
+                            // Save user data with the same format as expected by getCurrentUser
+                            const userToStore = {
+                                userId: userData._id,
+                                email: userData.email,
+                                firstName: userData.firstName,
+                                lastName: userData.lastName,
+                                role: userData.role,
+                                profilePicture: userData.profilePicture || ""
+                            };
+                            localStorage.setItem("user", JSON.stringify(userToStore));
+                            setUser(userToStore);
                         }
                     }
                 } else {
@@ -84,6 +101,20 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                     if (!user) {
                         const storedUser = getCurrentUser();
                         if (storedUser) setUser(storedUser);
+                    }
+                } else if (error.response) {
+                    // Log detailed response error
+                    console.error('Server response error:', {
+                        status: error.response.status,
+                        data: error.response.data,
+                        headers: error.response.headers
+                    });
+                    
+                    if (error.response.status === 401) {
+                        console.warn('Authentication token rejected by server (401 Unauthorized)');
+                        // Clear invalid tokens only on 401 errors
+                        clearUserData();
+                        setUser(null);
                     }
                 }
                 // Note: Auth errors (401/403) are already handled by the authAxios interceptor

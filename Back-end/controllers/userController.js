@@ -966,10 +966,20 @@ const validateToken = async (req, res) => {
         }
         
         // Get the complete user object to maintain session data across domains
-        const user = await User.findById(decoded.userId).select('-password');
+        // Support both id and userId formats in tokens for backward compatibility
+        const userId = decoded.userId || decoded.id;
+        if (!userId) {
+            console.error('No userId or id found in token:', Object.keys(decoded));
+            return res.status(400).json({ 
+                valid: false, 
+                message: "Invalid token format: missing user identifier" 
+            });
+        }
+        
+        const user = await User.findById(userId).select('-password');
         
         if (!user) {
-            console.error('User not found for token validation, userId:', decoded.userId);
+            console.error('User not found for token validation, userId:', userId);
             return res.status(404).json({ 
                 valid: false, 
                 message: "User not found" 
@@ -981,7 +991,7 @@ const validateToken = async (req, res) => {
         // Return full user object for client-side session management
         return res.status(200).json({ 
             valid: true,
-            userId: decoded.userId,
+            userId: userId,
             user: {
                 _id: user._id,
                 email: user.email,

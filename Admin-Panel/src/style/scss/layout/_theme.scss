@@ -7202,17 +7202,7 @@ body {
             background: $darkmode-white;
         }
     }
-    .accordion-button {
-        background-color: $darkmode-white;
-        color: $text-color;
-        &:not(.collapsed) {
-        }
-        &:after {
-            content: "\f078";
-            background-color: $darkmode-white;
-            color: $text-color;
-        }
-    }  
+    
     .accordion-body {
         color: $text-muted;
     }
@@ -8018,14 +8008,7 @@ body {
     .bg-transparent-light {
         background: $darkmode-light !important;
     }
-    .contact-grids-tab .nav-underline {
-        border-color: $border-color;
-        .nav-item .nav-link {
-            &.active, &:hover {
-                background-color: $darkmode-white;
-            }
-        }
-    }
+    
     .bg-primary-100 {
         a {
             color: $darkmode-white;

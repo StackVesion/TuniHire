@@ -1685,36 +1685,7 @@ const Project = () => {
               </button>
             </div>
             <div className="add-info-fieldset ">
-              <div className="contact-grids-tab p-3 pb-0">
-                <ul className="nav nav-underline" id="myTab" role="tablist">
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link active"
-                      id="basic-tab"
-                      data-bs-toggle="tab"
-                      data-bs-target="#basic-info"
-                      type="button"
-                      role="tab"
-                      aria-selected="true"
-                    >
-                      Basic Information
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link"
-                      id="member-tab"
-                      data-bs-toggle="tab"
-                      data-bs-target="#member"
-                      type="button"
-                      role="tab"
-                      aria-selected="false"
-                    >
-                      Members
-                    </button>
-                  </li>
-                </ul>
-              </div>
+              
               <div className="tab-content" id="myTabContent">
                 <div
                   className="tab-pane fade show active"
@@ -1986,36 +1957,7 @@ const Project = () => {
               </button>
             </div>
             <div className="add-info-fieldset ">
-              <div className="contact-grids-tab p-3 pb-0">
-                <ul className="nav nav-underline" id="myTab1" role="tablist">
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link active"
-                      id="basic-tab1"
-                      data-bs-toggle="tab"
-                      data-bs-target="#basic-info1"
-                      type="button"
-                      role="tab"
-                      aria-selected="true"
-                    >
-                      Basic Information
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link"
-                      id="member-tab1"
-                      data-bs-toggle="tab"
-                      data-bs-target="#member1"
-                      type="button"
-                      role="tab"
-                      aria-selected="false"
-                    >
-                      Members
-                    </button>
-                  </li>
-                </ul>
-              </div>
+             
               <div className="tab-content" id="myTabContent1">
                 <div
                   className="tab-pane fade show active"

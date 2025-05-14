@@ -219,9 +219,9 @@ const Bussinesssettings = () => {
                                                         <div className="d-flex align-items-center flex-wrap row-gap-3 bg-light w-100 rounded p-3 mb-4">
                                                             <div className="d-flex align-items-center justify-content-center avatar avatar-xxl bg-white rounded border border-dashed me-2 flex-shrink-0 text-dark frames px-2">
                                                                 <ImageWithBasePath
-                                                                    src="assets/img/logo.svg"
+                                                                    src="assets/img/logos.png"
                                                                     className="img-fluid"
-                                                                    alt="logo"
+                                                                    alt="Logo"
                                                                 />
                                                             </div>
                                                             <div className="profile-upload">

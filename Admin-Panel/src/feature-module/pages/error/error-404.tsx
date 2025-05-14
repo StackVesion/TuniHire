@@ -12,12 +12,13 @@ const Error404 = () => {
           <div className="col-md-4 d-flex justify-content-center align-items-center">
             <div>
               <div className="mb-5">
-                <ImageWithBasePath src="assets/img/logo.svg" alt="logo" className="img-fluid" />
+                <h1 className="display-4 text-primary fw-bold">TuniHire</h1>
+                <p className="text-muted">Your contract is here!</p>
               </div>
               <div>
                 <h1 className="mb-3">Oops, something went wrong</h1>
                 <p className="fs-16">
-                  Error 404 Page not found. Sorry the page you looking for doesn’t
+                  Error 404 Page not found. Sorry the page you looking for doesn't
                   exist or has been moved
                 </p>
                 <div className="d-flex">

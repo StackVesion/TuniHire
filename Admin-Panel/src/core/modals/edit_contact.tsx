@@ -115,62 +115,7 @@ const EditContact = () => {
               </button>
             </div>
             <form>
-              <div className="contact-grids-tab">
-                <ul className="nav nav-underline" id="myTab2" role="tablist">
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link active"
-                      id="info-tab2"
-                      data-bs-toggle="tab"
-                      data-bs-target="#basic-info2"
-                      type="button"
-                      role="tab"
-                      aria-selected="true"
-                    >
-                      Basic Information
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link"
-                      id="address-tab2"
-                      data-bs-toggle="tab"
-                      data-bs-target="#address2"
-                      type="button"
-                      role="tab"
-                      aria-selected="false"
-                    >
-                      Address
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link"
-                      id="social-profile-tab2"
-                      data-bs-toggle="tab"
-                      data-bs-target="#social-profile2"
-                      type="button"
-                      role="tab"
-                      aria-selected="false"
-                    >
-                      Social Profiles
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link"
-                      id="access-tab2"
-                      data-bs-toggle="tab"
-                      data-bs-target="#access2"
-                      type="button"
-                      role="tab"
-                      aria-selected="false"
-                    >
-                      Access
-                    </button>
-                  </li>
-                </ul>
-              </div>
+             
               <div className="tab-content" id="myTabContent2">
                 <div
                   className="tab-pane fade show active"

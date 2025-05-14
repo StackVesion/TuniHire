@@ -208,14 +208,7 @@ const PaymentReport = () => {
                                                     </div>
                                                 </div>
                                                 <div className="d-flex justify-content-between align-items-center flex-wrap">
-                                                    <Link
-                                                        to="#"
-                                                        className="avatar avatar-md br-5 payment-report-icon  bg-transparent-primary border border-primary"
-                                                    >
-                                                        <span className="text-primary">
-                                                            <i className="ti ti-currency-dollar" />
-                                                        </span>
-                                                    </Link>
+                                                    
                                                 </div>
                                             </div>
                                             <div className="d-flex justify-content-center mt-2">
@@ -245,14 +238,7 @@ const PaymentReport = () => {
                                                     </div>
                                                 </div>
                                                 <div className="d-flex justify-content-between align-items-center flex-wrap">
-                                                    <Link
-                                                        to="#"
-                                                        className="avatar avatar-md br-5 payment-report-icon  bg-transparent-skyblue border border-skyblue"
-                                                    >
-                                                        <span className="text-skyblue">
-                                                            <i className="ti ti-currency-dollar" />
-                                                        </span>
-                                                    </Link>
+                                                    
                                                 </div>
                                             </div>
                                             <div className="d-flex justify-content-center mt-2">
@@ -282,14 +268,7 @@ const PaymentReport = () => {
                                                     </div>
                                                 </div>
                                                 <div className="d-flex justify-content-between align-items-center flex-wrap">
-                                                    <Link
-                                                        to="#"
-                                                        className="avatar avatar-md br-5 payment-report-icon  bg-transparent-danger border border-danger"
-                                                    >
-                                                        <span className="text-danger">
-                                                            <i className="ti ti-currency-dollar" />
-                                                        </span>
-                                                    </Link>
+                                                   
                                                 </div>
                                             </div>
                                             <div className="d-flex justify-content-center mt-2">
@@ -319,14 +298,7 @@ const PaymentReport = () => {
                                                     </div>
                                                 </div>
                                                 <div className="d-flex justify-content-between align-items-center flex-wrap">
-                                                    <Link
-                                                        to="#"
-                                                        className="avatar avatar-md br-5 payment-report-icon  bg-pink-transparent border border-pink"
-                                                    >
-                                                        <span className="text-pink">
-                                                            <i className="ti ti-currency-dollar" />
-                                                        </span>
-                                                    </Link>
+                                                   
                                                 </div>
                                             </div>
                                             <div className="d-flex justify-content-center mt-2">
@@ -395,21 +367,7 @@ const PaymentReport = () => {
                                 <div className="card-body d-flex align-items-center justify-content-between pt-0">
                                     <div className="row align-items-center">
                                         <div className="col-md-6">
-                                            <div className="position-relative payment-total">
-                                                <ReactApexChart
-                                                    id="payment-report"
-                                                    options={paymentreport}
-                                                    series={paymentreport.series}
-                                                    type="donut"
-                                                    height={195}
-                                                />
-                                                <div className="payment-total-content ">
-                                                    <span className="display-3 fs-24 fw-bold text-skyblue">
-                                                        +14%
-                                                    </span>
-                                                    <p className="fs-16 fw-normal">vs last year</p>
-                                                </div>
-                                            </div>
+                                            
                                         </div>
                                         <div className="col-md-6">
                                             <div className="row gy-4">

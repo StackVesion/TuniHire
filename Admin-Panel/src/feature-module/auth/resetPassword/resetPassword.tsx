@@ -29,6 +29,8 @@ const ResetPassword = () => {
     passwordResponceText: "Utilisez 8 caractères ou plus avec des lettres, des chiffres et des symboles.",
     passwordResponceKey: "",
   });
+  const [message, setMessage] = useState({ text: "", isError: false });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     // Get token from URL query parameters (e.g., ?token=abc123)
@@ -85,6 +87,8 @@ const ResetPassword = () => {
       [field]: !prevState[field],
     }));
   };
+
+
   const onChangePassword = (password: string) => {
     setPassword(password);
     if (password.match(/^$|\s+/)) {

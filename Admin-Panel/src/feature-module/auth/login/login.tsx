@@ -206,12 +206,11 @@ const Login = () => {
               <div className="col-md-7 mx-auto vh-100">
                 <form className="vh-100" onSubmit={handleSubmit}>
                   <div className="vh-100 d-flex flex-column justify-content-between p-4 pb-0">
-                    <div className=" mx-auto mb-5 text-center">
-                      <ImageWithBasePath
-                        src="assets/logoBanner.png"
-                        className="img-fluid"
-                        alt="Logo"
-                      />
+                    <div className="mx-auto mb-5 text-center">
+                      <div style={{ maxWidth: '300px', margin: '0 auto' }}>
+                        <h1 className="display-4 text-primary fw-bold">TuniHire</h1>
+                        <p className="text-muted">Your contract is here!</p>
+                      </div>
                     </div>
                     <div className="">
                       <div className="text-center mb-3">

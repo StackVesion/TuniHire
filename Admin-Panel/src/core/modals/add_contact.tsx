@@ -115,62 +115,7 @@ const AddContact = () => {
               </button>
             </div>
             <form>
-              <div className="contact-grids-tab">
-                <ul className="nav nav-underline" id="myTab1" role="tablist">
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link active"
-                      id="info-tab1"
-                      data-bs-toggle="tab"
-                      data-bs-target="#basic-info1"
-                      type="button"
-                      role="tab"
-                      aria-selected="true"
-                    >
-                      Basic Information
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link"
-                      id="address-tab1"
-                      data-bs-toggle="tab"
-                      data-bs-target="#address1"
-                      type="button"
-                      role="tab"
-                      aria-selected="false"
-                    >
-                      Address
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link"
-                      id="social-profile-tab1"
-                      data-bs-toggle="tab"
-                      data-bs-target="#social-profile1"
-                      type="button"
-                      role="tab"
-                      aria-selected="false"
-                    >
-                      Social Profiles
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className="nav-link"
-                      id="access-tab1"
-                      data-bs-toggle="tab"
-                      data-bs-target="#access1"
-                      type="button"
-                      role="tab"
-                      aria-selected="false"
-                    >
-                      Access
-                    </button>
-                  </li>
-                </ul>
-              </div>
+              
               <div className="tab-content" id="myTabContent1">
                 <div
                   className="tab-pane fade show active"
@@ -792,62 +737,7 @@ const AddContact = () => {
           </button>
         </div>
         <form >
-          <div className="contact-grids-tab">
-            <ul className="nav nav-underline" id="myTab3" role="tablist">
-              <li className="nav-item" role="presentation">
-                <button
-                  className="nav-link active"
-                  id="info-tab3"
-                  data-bs-toggle="tab"
-                  data-bs-target="#basic-info3"
-                  type="button"
-                  role="tab"
-                  aria-selected="true"
-                >
-                  Basic Information
-                </button>
-              </li>
-              <li className="nav-item" role="presentation">
-                <button
-                  className="nav-link"
-                  id="address-tab3"
-                  data-bs-toggle="tab"
-                  data-bs-target="#address3"
-                  type="button"
-                  role="tab"
-                  aria-selected="false"
-                >
-                  Address
-                </button>
-              </li>
-              <li className="nav-item" role="presentation">
-                <button
-                  className="nav-link"
-                  id="social-profile-tab3"
-                  data-bs-toggle="tab"
-                  data-bs-target="#social-profile3"
-                  type="button"
-                  role="tab"
-                  aria-selected="false"
-                >
-                  Social Profiles
-                </button>
-              </li>
-              <li className="nav-item" role="presentation">
-                <button
-                  className="nav-link"
-                  id="access-tab3"
-                  data-bs-toggle="tab"
-                  data-bs-target="#access3"
-                  type="button"
-                  role="tab"
-                  aria-selected="false"
-                >
-                  Access
-                </button>
-              </li>
-            </ul>
-          </div>
+         
           <div className="tab-content" id="myTabContent3">
             <div
               className="tab-pane fade show active"

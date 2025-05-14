@@ -205,13 +205,7 @@ const EmployeeReports = () => {
                                     <div className="card flex-fill">
                                         <div className="card-body">
                                             <div className="overflow-hidden d-flex mb-2 align-items-center">
-                                                <span className="me-2">
-                                                    <ImageWithBasePath
-                                                        src="assets/img/reports-img/employee-report-icon.svg"
-                                                        alt="Img"
-                                                        className="img-fluid"
-                                                    />
-                                                </span>
+                                                
                                                 <div>
                                                     <p className="fs-14 fw-normal mb-1 text-truncate">
                                                         Total Employee
@@ -237,13 +231,7 @@ const EmployeeReports = () => {
                                     <div className="card flex-fill">
                                         <div className="card-body">
                                             <div className="overflow-hidden d-flex mb-2 align-items-center">
-                                                <span className="me-2">
-                                                    <ImageWithBasePath
-                                                        src="assets/img/reports-img/employee-report-success.svg"
-                                                        alt="Img"
-                                                        className="img-fluid"
-                                                    />
-                                                </span>
+                                               
                                                 <div>
                                                     <p className="fs-14 fw-normal mb-1 text-truncate">
                                                         Active Employee
@@ -269,13 +257,7 @@ const EmployeeReports = () => {
                                     <div className="card flex-fill">
                                         <div className="card-body">
                                             <div className="overflow-hidden d-flex mb-2 align-items-center">
-                                                <span className="me-2">
-                                                    <ImageWithBasePath
-                                                        src="assets/img/reports-img/employee-report-info.svg"
-                                                        alt="Img"
-                                                        className="img-fluid"
-                                                    />
-                                                </span>
+                                             
                                                 <div>
                                                     <p className="fs-14 fw-normal mb-1 text-truncate">
                                                         New Employee
@@ -301,13 +283,7 @@ const EmployeeReports = () => {
                                     <div className="card flex-fill">
                                         <div className="card-body">
                                             <div className="overflow-hidden d-flex mb-2 align-items-center">
-                                                <span className="me-2">
-                                                    <ImageWithBasePath
-                                                        src="assets/img/reports-img/employee-report-danger.svg"
-                                                        alt="Img"
-                                                        className="img-fluid"
-                                                    />
-                                                </span>
+                                               
                                                 <div>
                                                     <p className="fs-14 fw-normal mb-1 text-truncate">
                                                         Inactive Employee
@@ -387,15 +363,7 @@ const EmployeeReports = () => {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="card-body py-0">
-                                    <ReactApexChart
-                                        id="employee-reports"
-                                        options={employeechart}
-                                        series={employeechart.series}
-                                        type="bar"
-                                        height={180}
-                                    />
-                                </div>
+                              
                             </div>
                         </div>
                     </div>

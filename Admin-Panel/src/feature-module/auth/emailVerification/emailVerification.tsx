@@ -92,11 +92,8 @@ const EmailVerification = () => {
                 <form>
                   <div>
                     <div className=" mx-auto mb-5 text-center">
-                      <ImageWithBasePath
-                        src="assets/Image1.png"
-                        className="img-fluid"
-                        alt="Logo"
-                      />
+                      <h1 className="display-4 text-primary fw-bold">TuniHire</h1>
+                      <p className="text-muted">Your contract is here!</p>
                     </div>
                     <div className="card">
                       <div className="card-body p-4">
@@ -111,7 +108,7 @@ const EmailVerification = () => {
                         </div>
                         <div className="text-center mb-3">
                           <h6 className="fw-normal text-dark mb-0">
-                            Didn’t receive an email?
+                            Didn't receive an email?
                             <Link to="#" className="hover-a ">
                               {" "}
                               Resend Link
