@@ -5,7 +5,7 @@ pipeline {
         NODE_VERSION         = 'node:18'
         DOCKER_REGISTRY      = '172.23.202.74:8083'
         registry             = '172.23.202.74:8083' // Gardé pour référence, mais on forcera http://
-        registryCredentials  = 'docker' // Assurez-vous que cet ID de credential Jenkins est correct et a les droits de push
+        registryCredentials  = 'nexus' // Assurez-vous que cet ID de credential Jenkins est correct et a les droits de push
         APP_VERSION          = "1.0.${BUILD_NUMBER}"
 
         // Secrets...
