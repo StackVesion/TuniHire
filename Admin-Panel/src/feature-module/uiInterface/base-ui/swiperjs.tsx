@@ -1,15 +1,37 @@
 import React, { useState } from 'react'
 import ImageWithBasePath from '../../../core/common/imageWithBasePath';
 
-// Importations simplifiées pour Swiper v8
-import SwiperCore, { Pagination, Navigation, Mousewheel, Keyboard, Scrollbar, EffectCube, EffectFade, EffectFlip, EffectCoverflow, FreeMode, Thumbs, Autoplay } from 'swiper';
+// Import Swiper React components
 import { Swiper, SwiperSlide } from 'swiper/react';
+
+// Import required modules
+import { Pagination } from 'swiper/modules';
+import { Navigation } from 'swiper/modules';
+import { Mousewheel } from 'swiper/modules';
+import { Keyboard } from 'swiper/modules';
+import { Scrollbar } from 'swiper/modules';
+import { EffectCube } from 'swiper/modules';
+import { EffectFade } from 'swiper/modules';
+import { EffectFlip } from 'swiper/modules';
+import { EffectCoverflow } from 'swiper/modules';
+import { FreeMode } from 'swiper/modules';
+import { Thumbs } from 'swiper/modules';
+import { Autoplay } from 'swiper/modules';
 
 // Import Swiper styles
 import 'swiper/css';
+import 'swiper/css/pagination';
+import 'swiper/css/navigation';
+import 'swiper/css/scrollbar';
+import 'swiper/css/effect-cube';
+import 'swiper/css/effect-fade';
+import 'swiper/css/effect-flip';
+import 'swiper/css/effect-coverflow';
+import 'swiper/css/free-mode';
+import 'swiper/css/thumbs';
 
-// Installer les modules Swiper
-SwiperCore.use([Pagination, Navigation, Mousewheel, Keyboard, Scrollbar, EffectCube, EffectFade, EffectFlip, EffectCoverflow, FreeMode, Thumbs, Autoplay]);
+// Dans Swiper v11, l'enregistrement des modules se fait automatiquement lors de l'importation
+// ou directement dans les props du composant Swiper
 
 const Swiperjs = () => {
 
@@ -55,7 +77,7 @@ const Swiperjs = () => {
                                         clickable: true,
                                     }}
                                     navigation={false}
-                                    modules={[Autoplay]}
+                                    modules={[Autoplay, Pagination]}
                                     className="swiper swiper-basic"
                                 >
                                     <div className="swiper swiper-basic">
