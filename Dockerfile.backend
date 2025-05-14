@@ -1,0 +1,24 @@
+# Utiliser une image Node.js officielle comme image de base
+FROM node:18-alpine
+
+# Définir le répertoire de travail dans le conteneur
+WORKDIR /usr/src/app
+
+# Copier package.json et package-lock.json (si disponible) depuis le sous-dossier Back-end
+# Le contexte de build est la racine du projet TuniHire, donc les chemins sont relatifs à cela.
+COPY Back-end/package*.json ./
+
+# Installer les dépendances du projet
+# Cette commande sera exécutée dans WORKDIR (/usr/src/app)
+RUN npm install
+
+# Copier le reste du code de l'application backend depuis le sous-dossier Back-end vers WORKDIR
+COPY Back-end/ .
+
+# Exposer le port sur lequel l'application s'exécute (doit correspondre à ce que l'application écoute)
+# Le docker-compose.yml mappe le port 3000 de l'hôte vers ce port du conteneur.
+EXPOSE 5000
+
+# Commande pour démarrer l'application en utilisant le script npm start défini dans Back-end/package.json
+# Le script start dans package.json est "node index.js"
+CMD [ "npm", "start" ]

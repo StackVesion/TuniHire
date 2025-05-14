@@ -1,0 +1,42 @@
+version: '3.8'
+services:
+  backend:
+    image: ${DOCKER_REGISTRY}/nodemongoapp:6.0
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      # Adapter MONGODB_CONNECTION pour pointer vers le service db interne
+      - MONGODB_URI=mongodb://root:example@db:27017/TuniHireDB?authSource=admin 
+      - APP_VERSION=${APP_VERSION}         # Fourni par l'environnement Jenkinsfile
+      - SESSION_SECRET=${SESSION_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - EMAIL_APP_USER=${EMAIL_APP_USER}
+      - EMAIL_APP_PASSWORD=${EMAIL_APP_PASSWORD}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+    depends_on:
+      - db
+  db:
+    image: mongo:4.2 # Ou une version plus récente si compatible
+    container_name: tunihire_mongo_db
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root # À sécuriser ou externaliser via credentials si besoin
+      MONGO_INITDB_ROOT_PASSWORD: example # À sécuriser ou externaliser via credentials si besoin
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db # Volume nommé pour la persistance des données
+volumes:
+  mongo-data:
