@@ -2,6 +2,16 @@
 
 A machine learning-powered recommendation engine for TuniHire that analyzes candidate portfolios, job postings, and historical application data to provide intelligent job matching, ATS pass predictions, and personalized recommendations.
 
+## Technology Stack
+
+- **Python**: Core programming language
+- **Flask**: Web framework for API endpoints
+- **Scikit-learn**: Machine learning library for core algorithms
+- **TensorFlow/PyTorch**: Deep learning capabilities for advanced models
+- **Pandas/NumPy**: Data manipulation and numerical computing
+- **NLTK/SpaCy**: Natural language processing for text analysis
+- **MongoDB**: Storage for model weights and processed data
+
 ## Key Features
 
 ### AI-Powered Recommendations
@@ -19,6 +29,59 @@ A machine learning-powered recommendation engine for TuniHire that analyzes cand
   - **Platinum**: 20% bonus to match scores and balanced premium/standard job recommendations
   - **Master**: 30% bonus to match scores and primarily premium job recommendations
 - **Premium Job Filtering**: Higher-tier subscribers receive access to higher quality job recommendations based on:
+
+## API Endpoints
+
+- **`/api/recommendation?user_id=<user_id>&job_id=<job_id>`**: Get match score between user and job
+- **`/api/better-matches/<user_id>`**: Get better job matches for a user
+- **`/api/health`**: Health check endpoint
+- **`/api/training/stats`**: Get model training statistics
+
+## Setup and Installation
+
+1. Set up a Python virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Run the API service using the provided launcher:
+   ```bash
+   python run_api.py [port]
+   ```
+   For example: `python run_api.py 5003` will run the service on port 5003
+
+## Configuration
+
+Create a `.env` file with the following variables:
+
+```
+MONGODB_URI=mongodb://localhost:27017/tunihire_recommendations
+DEBUG=False
+MODEL_VERSION=1.0.0
+```
+
+## Integration with TuniHire
+
+The Recommendation-AI service integrates with:
+- **Back-end API** (port 5000): For data retrieval
+- **Company-Panel** (port 3001): For displaying match scores and recommendations
+- **Admin-Panel** (port 3002): For model monitoring and management
+
+## Model Training
+
+The recommendation engine uses several ML models:
+
+1. **TF-IDF Vectorization**: For text feature extraction from job descriptions and resumes
+2. **Random Forest Classifier**: For classification tasks
+3. **Neural Networks**: For advanced feature learning
+
+Training data is stored in the MongoDB database and models are periodically retrained with new data to improve recommendations.
   - Salary ranges
   - Job titles (senior, lead, manager positions)
   - Market demand

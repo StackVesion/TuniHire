@@ -28,14 +28,54 @@ exports.createMeeting = async (req, res) => {
 
     // Validate that candidate exists and is a candidate
     const candidate = await User.findById(candidate_id);
-    if (!candidate || candidate.role.toString().toUpperCase() !== 'CANDIDATE') {
-      return res.status(404).json({ success: false, message: 'Candidate not found or user is not a candidate' });
+    console.log('Candidate role check:', {
+      candidate_id,
+      found: !!candidate,
+      role: candidate ? candidate.role : 'N/A',
+      roleType: candidate ? typeof candidate.role : 'N/A'
+    });
+    
+    if (!candidate) {
+      return res.status(404).json({ success: false, message: 'Candidate not found' });
+    }
+    
+    // More flexible role check - handle different formats of the role field
+    const candidateRole = String(candidate.role).toUpperCase();
+    if (candidateRole !== 'CANDIDATE' && 
+        !candidateRole.includes('CANDIDATE') && 
+        candidateRole !== 'USER' && // Sometimes regular users are considered candidates
+        candidateRole !== 'JOBSEEKER') {
+      console.log(`Invalid candidate role: ${candidateRole}`);
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid user role for candidate: ${candidateRole}. Expected 'CANDIDATE'` 
+      });
     }
 
     // Validate that HR exists and is an HR
     const hr = await User.findById(hr_id);
-    if (!hr || (hr.role.toString().toUpperCase() !== 'HR')) {
-      return res.status(404).json({ success: false, message: 'HR not found or user is not an HR' });
+    console.log('HR role check:', {
+      hr_id,
+      found: !!hr,
+      role: hr ? hr.role : 'N/A',
+      roleType: hr ? typeof hr.role : 'N/A'
+    });
+    
+    if (!hr) {
+      return res.status(404).json({ success: false, message: 'HR user not found' });
+    }
+    
+    // More flexible role check for HR - handle different formats of the role field
+    const hrRole = String(hr.role).toUpperCase();
+    if (hrRole !== 'HR' && 
+        !hrRole.includes('HR') && 
+        hrRole !== 'ADMIN' && // Admins can also schedule meetings
+        hrRole !== 'RECRUITER') {
+      console.log(`Invalid HR role: ${hrRole}`);
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid user role for HR: ${hrRole}. Expected 'HR'` 
+      });
     }
 
     // Create new meeting

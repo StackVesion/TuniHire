@@ -296,7 +296,7 @@ exports.updateCompany = async (req, res) => {
       }
       
       // Generate URL for the new uploaded file
-      const baseUrl = process.env.BASE_URL || 'http://localhost:5050';
+      const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
       const relativePath = req.file.path.replace(/\\/g, '/').split('/uploads/')[1];
       company.logo = `${baseUrl}/uploads/${relativePath}`;
     }

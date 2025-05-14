@@ -117,7 +117,7 @@ def run_flask_app(python_executable, port=None):
     # Set environment variable for port if specified
     env = os.environ.copy()
     if port:
-        env["FLASK_RUN_PORT"] = str(port)
+        env["PORT"] = str(port)  # Set PORT which is what run.py checks for
         print(f"Running on port: {port}")
     
     # Use subprocess to run the Flask app

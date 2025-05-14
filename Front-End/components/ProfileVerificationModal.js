@@ -101,7 +101,7 @@ const ProfileVerificationModal = ({ show, onHide, onVerificationSuccess }) => {
             // Handle success
             if (response.status === 200) {
                 // Show verification success with score if available
-                const score = response.data.score || 56.11; // Default to 56.11% if no score provided
+                const score = response.data.score ; // Default to 56.11% if no score provided
                 const verificationScore = `Verification Score: ${score}%`;
                 
                 setError(null);

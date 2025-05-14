@@ -53,5 +53,5 @@
       "681a4537ac8558e08d82d32e"
     ]
   },
-  "recommendationTestEndpoint": "http://localhost:5001/api/recommendation?user_id=681a4536ac8558e08d82d2ea&job_id=681a4537ac8558e08d82d312"
+  "recommendationTestEndpoint": "http://localhost:5003/api/recommendation?user_id=681a4536ac8558e08d82d2ea&job_id=681a4537ac8558e08d82d312"
 }

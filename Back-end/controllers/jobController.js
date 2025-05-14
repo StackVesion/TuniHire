@@ -8,10 +8,23 @@ exports.getJobApplicants = async (req, res) => {
     const { jobId } = req.params;
     
     // Find all applications for this job
-    const applications = await Application.find({ jobId }).populate('userId', 'firstName lastName email profilePicture');
+    const applications = await Application.find({ jobId }).populate('userId', 'firstName lastName email profilePicture role');
     
-    // Extract candidate information
-    const candidates = applications.map(app => app.userId);
+    // Extract candidate information and ensure they're really candidates
+    const candidates = applications
+      .map(app => app.userId)
+      .filter(user => {
+        // Filter out non-candidate users to prevent role mismatch errors
+        if (!user) return false;
+        
+        const role = String(user.role || '').toUpperCase();
+        return role === 'CANDIDATE' || 
+               role.includes('CANDIDATE') || 
+               role === 'USER' || 
+               role === 'JOBSEEKER';
+      });
+    
+    console.log(`Found ${applications.length} applications, filtered to ${candidates.length} valid candidates`);
     
     return res.status(200).json({
       success: true,
