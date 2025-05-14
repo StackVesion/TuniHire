@@ -185,6 +185,13 @@ export const SidebarDataTest = [
             customSubmenuTwo: false,
             base: 'email',
           },
+          {
+            label: 'Complaints',
+            showSubRoute: false,
+            link: routes.reclamations,
+            customSubmenuTwo: false,
+            base: 'reclamations',
+          },
         ],
       },
       {

@@ -6,6 +6,7 @@ import 'sweetalert2/dist/sweetalert2.min.css';
 import 'animate.css';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 function MyApp({ Component, pageProps }) {
     useEffect(() => {

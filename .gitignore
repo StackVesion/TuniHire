@@ -1,3 +1,13 @@
+# Python compiled files
+__pycache__/
+*.py[cod]
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+
+
 # Environment Variables
 .env
 .env.local

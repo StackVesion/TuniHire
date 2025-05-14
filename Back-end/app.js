@@ -4,8 +4,13 @@ const mongoose = require('mongoose');
 const app = express();
 require('dotenv').config();
 
-// Enable CORS for front-end communication
-app.use(cors());
+// Enable CORS for front-end communication with credentials support
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // JSON parsing middleware
 app.use(express.json());
@@ -20,6 +25,7 @@ const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const dashboardRoutes = require('./routes/dashboard');
 const courseRoutes = require('./routes/courseRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
+const meetingRoutes = require('./routes/meetingRoutes');
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/tunihire', {
@@ -40,6 +46,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/certificates', certificateRoutes);
+app.use('/api/meetings', meetingRoutes);
 
 // ...existing code...
 

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import styles from '../../styles/dashboard-button.module.css';
-import { getCurrentUser, clearUserData } from '../../utils/authUtils';
+import { getCurrentUser, clearUserData, createAuthAxios, getBaseUrl } from '../../utils/authUtils';
 
 const Header = ({handleOpen,handleRemove,openClass}) => {
     const [scroll, setScroll] = useState(false);
@@ -50,22 +50,39 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                 return;
             }
             
+            // Get the authAxios instance for making requests
+            const authAxios = createAuthAxios();
+            
             try {
                 console.log("Validating token with server...");
-                const response = await axios.get("http://localhost:5000/api/users/validate-token", {
+                // Use authAxios which handles network errors gracefully
+                const response = await authAxios.get("/api/users/me", {
+                    // Explicitement définir withCredentials pour cette requête particulière
+                    withCredentials: true,
+                    // S'assurer que l'en-tête d'autorisation est correctement formaté
                     headers: {
-                        Authorization: `Bearer ${token}`
+                        'Authorization': `Bearer ${token}`
                     }
                 });
                 
-                if (response.data.valid) {
+                if (response.data.user) {
                     console.log("Token validated by server");
                     // If user state isn't already set, set it now
                     if (!user) {
-                        const storedUser = getCurrentUser();
-                        if (storedUser) {
-                            console.log("Setting user state from valid token:", storedUser.firstName, storedUser.role);
-                            setUser(storedUser);
+                        const userData = response.data.user;
+                        if (userData) {
+                            console.log("Setting user state from valid token:", userData.firstName, userData.role);
+                            // Save user data with the same format as expected by getCurrentUser
+                            const userToStore = {
+                                userId: userData._id,
+                                email: userData.email,
+                                firstName: userData.firstName,
+                                lastName: userData.lastName,
+                                role: userData.role,
+                                profilePicture: userData.profilePicture || ""
+                            };
+                            localStorage.setItem("user", JSON.stringify(userToStore));
+                            setUser(userToStore);
                         }
                     }
                 } else {
@@ -75,12 +92,32 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                     setUser(null);
                 }
             } catch (error) {
+                // Log the error but don't clear user data for network errors
                 console.error("Token validation error:", error);
-                // Only clear data if it's an authentication error
-                if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-                    clearUserData();
-                    setUser(null);
+                
+                if (error.code === 'ERR_NETWORK') {
+                    console.warn('Network error occurred during token validation. Using cached user data.');
+                    // Keep existing user data from localStorage for better UX during network issues
+                    if (!user) {
+                        const storedUser = getCurrentUser();
+                        if (storedUser) setUser(storedUser);
+                    }
+                } else if (error.response) {
+                    // Log detailed response error
+                    console.error('Server response error:', {
+                        status: error.response.status,
+                        data: error.response.data,
+                        headers: error.response.headers
+                    });
+                    
+                    if (error.response.status === 401) {
+                        console.warn('Authentication token rejected by server (401 Unauthorized)');
+                        // Clear invalid tokens only on 401 errors
+                        clearUserData();
+                        setUser(null);
+                    }
                 }
+                // Note: Auth errors (401/403) are already handled by the authAxios interceptor
             }
         };
         
@@ -94,6 +131,8 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
 
     const handleLogout = async () => {
         const user = getCurrentUser();
+        const authAxios = createAuthAxios();
+        const baseUrl = getBaseUrl();
 
         // Confirm logout
         const Swal = (await import('sweetalert2')).default;
@@ -111,13 +150,13 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                 // Check authentication type
                 if (user && user.googleId) {
                     // Google logout
-                    await axios.get("http://localhost:5000/api/users/google/logout", { withCredentials: true });
+                    await authAxios.get("/api/users/google/logout", { withCredentials: true });
                 } else if (user && user.githubId) {
                     // GitHub logout
-                    await axios.get("http://localhost:5000/api/users/github/logout", { withCredentials: true });
+                    await authAxios.get("/api/users/github/logout", { withCredentials: true });
                 } else {
                     // Regular logout
-                    await axios.post("http://localhost:5000/api/users/signout", {}, { withCredentials: true });
+                    await authAxios.post("/api/users/signout", {}, { withCredentials: true });
                 }
 
                 // Clear localStorage using auth utility
@@ -156,6 +195,7 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
     };
 
     const handleFaceLogout = async () => {
+        const authAxios = createAuthAxios();
         const Swal = (await import('sweetalert2')).default;
         const result = await Swal.fire({
             title: 'Logout',
@@ -168,9 +208,10 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
 
         if (result.isConfirmed) {
             try {
-                await axios.post("http://localhost:5000/api/users/signout", {}, { withCredentials: true });
-                localStorage.removeItem("token");
-                localStorage.removeItem("user");
+                await authAxios.post("/api/users/signout", {}, { withCredentials: true });
+                // Use our clearUserData utility instead of direct localStorage calls
+                clearUserData();
+                setUser(null);
                 Swal.fire({
                     title: 'Logged Out!',
                     text: 'You have been successfully logged out',
@@ -181,8 +222,9 @@ const Header = ({handleOpen,handleRemove,openClass}) => {
                 router.push('/page-signin');
             } catch (error) {
                 console.error("Logout error:", error);
-                localStorage.removeItem("token");
-                localStorage.removeItem("user");
+                // Use our clearUserData utility instead of direct localStorage calls
+                clearUserData();
+                setUser(null);
                 Swal.fire({
                     title: 'Logged Out',
                     text: 'You have been logged out, but there was an issue contacting the server.',

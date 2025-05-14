@@ -284,8 +284,8 @@ export default function Signin() {
                                         <span className="text-small">Remember me</span>
                                         <span className="checkmark" />
                                     </label>
-                                    <Link legacyBehavior href="/page-contact">
-                                        <a className="text-muted">Forgot Password</a>
+                                    <Link legacyBehavior href="/reset-password">
+                                        <a className="text-muted">Mot de passe oublié</a>
                                     </Link>
                                 </div>
                                 <div className="form-group">

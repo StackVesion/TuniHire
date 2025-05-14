@@ -250,6 +250,7 @@ export const all_routes = {
   ticketGrid: "/tickets/ticket-grid",
   ticketList: "/support/ticket-list",
   ticketDetails: "/tickets/ticket-details",
+  reclamations: "/support/reclamations",
 
   // Performance
 
