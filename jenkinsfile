@@ -102,7 +102,7 @@ pipeline {
         stage('Push to Nexus') {
             steps {
                 script {
-                    def imageName = "${DOCKER_REGISTRY}/docker-repo/nodemongoapp:6.0"
+                    def imageName = "${DOCKER_REGISTRY}/docker-repo/backend:latest"
                     sh "docker tag backend ${imageName}"
 
                     docker.withRegistry("http://${registry}", registryCredentials) {
@@ -115,7 +115,7 @@ pipeline {
         stage('Run App with Docker') {
             steps {
                 script {
-                    def imageName = "${DOCKER_REGISTRY}/docker-repo/nodemongoapp:6.0"
+                    def imageName = "${DOCKER_REGISTRY}/docker-repo/backend:latest"
 
                     docker.withRegistry("http://${registry}", registryCredentials) {
                         sh """
