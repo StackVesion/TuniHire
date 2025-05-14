@@ -115,29 +115,34 @@ pipeline {
             }
         }
 
-        stage('Push to Nexus') {
-            steps {
-                script {
-                    docker.withRegistry("http://${registry}", registryCredentials) {
-                        sh 'docker push ${DOCKER_REGISTRY}/nodemongoapp:6.0'
-                    }
-                }
-            }
-        }
+stage('Push to Nexus') {
+    steps {
+        script {
+            def imageName = "${DOCKER_REGISTRY}/docker-repo/nodemongoapp:6.0"
+            sh "docker tag backend ${imageName}"
 
-        stage('Run App with Docker') {
-            steps {
-                script {
-                    docker.withRegistry("http://${registry}", registryCredentials) {
-                        sh '''
-                            docker pull ${DOCKER_REGISTRY}/nodemongoapp:6.0
-                            docker-compose up -d backend
-                        '''
-                    }
-                }
+            docker.withRegistry("http://${registry}", registryCredentials) {
+                sh "docker push ${imageName}"
             }
         }
     }
+}
+
+
+stage('Run App with Docker') {
+    steps {
+        script {
+            def imageName = "${DOCKER_REGISTRY}/docker-repo/nodemongoapp:6.0"
+            docker.withRegistry("http://${registry}", registryCredentials) {
+                sh """
+                    docker pull ${imageName}
+                    docker tag ${imageName} backend
+                    docker-compose up -d backend
+                """
+            }
+        }
+    }
+}
 
     post {
         success {
