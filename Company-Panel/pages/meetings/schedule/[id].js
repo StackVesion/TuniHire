@@ -3,7 +3,7 @@ import Layout from '../../../components/layout/Layout';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import axios from 'axios';
-import { getCurrentUser } from '../../../utils/authUtils';
+import { getCurrentUser, getToken, createAuthAxios } from '../../../utils/authUtils';
 import LoadingScreen from '../../../components/LoadingScreen';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -16,6 +16,7 @@ export default function ScheduleMeetingPage() {
   const router = useRouter();
   const { id } = router.query; // job ID
   const [user, setUser] = useState(null);
+  const authAxios = createAuthAxios();
   
   // Form state
   const [selectedCandidate, setSelectedCandidate] = useState('');
@@ -25,6 +26,11 @@ export default function ScheduleMeetingPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    // This check ensures we're running on the client side
+    if (typeof window === 'undefined') {
+      return; // Don't execute on server side
+    }
+    
     // Check if user is logged in and is HR
     const currentUser = getCurrentUser();
     if (!currentUser) {
@@ -47,22 +53,14 @@ export default function ScheduleMeetingPage() {
       try {
         setLoading(true);
         
-        // Get token from local storage
-        const token = localStorage.getItem('auth_token');
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-        
-        // Fetch job details
-        const jobResponse = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/${id}`, 
-          { headers: { Authorization: `Bearer ${token}` } }
+        // Fetch job details using authAxios
+        const jobResponse = await authAxios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/${id}`
         );
         
-        // Fetch candidates who applied to this job (let's assume there's an API endpoint for this)
-        const applicantsResponse = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/${id}/applicants`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        // Fetch candidates who applied to this job
+        const applicantsResponse = await authAxios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/${id}/applicants`
         );
         
         setJob(jobResponse.data.data);
@@ -101,19 +99,13 @@ export default function ScheduleMeetingPage() {
     try {
       setSubmitting(true);
       
-      // Get token from local storage
-      const token = localStorage.getItem('auth_token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-      
       // Combine date and time for meeting date
       const [hours, minutes] = meetingTime.split(':').map(Number);
       const meetingDateTime = new Date(meetingDate);
       meetingDateTime.setHours(hours, minutes, 0, 0);
       
-      // Create meeting
-      const response = await axios.post(
+      // Create meeting using authAxios
+      const response = await authAxios.post(
         `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/meetings`,
         {
           job_id: id,
@@ -121,8 +113,7 @@ export default function ScheduleMeetingPage() {
           hr_id: user._id,
           meetingDate: meetingDateTime,
           notes
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
+        }
       );
       
       // Show success message

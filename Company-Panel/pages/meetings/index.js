@@ -3,7 +3,7 @@ import Layout from '../../components/layout/Layout';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import axios from 'axios';
-import { getCurrentUser } from '../../utils/authUtils';
+import { getCurrentUser, getToken, createAuthAxios } from '../../utils/authUtils';
 import LoadingScreen from '../../components/LoadingScreen';
 
 export default function MeetingsPage() {
@@ -12,8 +12,14 @@ export default function MeetingsPage() {
   const [error, setError] = useState(null);
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const authAxios = createAuthAxios();
 
   useEffect(() => {
+    // This check ensures we're running on the client side
+    if (typeof window === 'undefined') {
+      return; // Don't execute on server side
+    }
+
     // Check if user is logged in and is HR
     const currentUser = getCurrentUser();
     if (!currentUser) {
@@ -28,30 +34,36 @@ export default function MeetingsPage() {
 
     setUser(currentUser);
     
-    // Fetch jobs associated with this HR
+    // Fetch jobs associated with this HR's company
     const fetchJobs = async () => {
       try {
         setLoading(true);
         
-        // Get token from local storage
-        const token = localStorage.getItem('auth_token');
-        if (!token) {
-          throw new Error('No authentication token found');
+        // First get the user's company - same approach as my-job-grid
+        const companyResponse = await authAxios.get('/api/companies/user/my-company');
+        
+        // Check if we received valid company data
+        if (!companyResponse.data || !companyResponse.data.company || !companyResponse.data.company._id) {
+          console.error('Company data structure:', companyResponse.data);
+          setError('No company found for your account. Please create a company first.');
+          setLoading(false);
+          return;
         }
         
-        // Fetch jobs with meeting counts
-        const jobsResponse = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/hr/${currentUser._id}`, 
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        console.log('Found company:', companyResponse.data.company.name, 'with ID:', companyResponse.data.company._id);
+        const companyId = companyResponse.data.company._id;
+        
+        // Get all jobs for this company
+        const jobsResponse = await authAxios.get(`/api/jobs/company/${companyId}`);
+        
+        console.log('Found jobs:', jobsResponse.data.length);
         
         // For each job, fetch meeting counts
         const jobsWithMeetings = await Promise.all(
-          jobsResponse.data.data.map(async (job) => {
+          jobsResponse.data.map(async (job) => {
             try {
-              const meetingsResponse = await axios.get(
-                `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/meetings/job/${job._id}`,
-                { headers: { Authorization: `Bearer ${token}` } }
+              const meetingsResponse = await authAxios.get(
+                `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/meetings/job/${job._id}`
               );
               
               return {

@@ -3,7 +3,7 @@ import Layout from '../../../components/layout/Layout';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import axios from 'axios';
-import { getCurrentUser } from '../../../utils/authUtils';
+import { getCurrentUser, getToken, createAuthAxios } from '../../../utils/authUtils';
 import LoadingScreen from '../../../components/LoadingScreen';
 
 export default function JobMeetingsPage() {
@@ -14,8 +14,14 @@ export default function JobMeetingsPage() {
   const router = useRouter();
   const { id } = router.query;
   const [user, setUser] = useState(null);
+  const authAxios = createAuthAxios();
 
   useEffect(() => {
+    // This check ensures we're running on the client side
+    if (typeof window === 'undefined') {
+      return; // Don't execute on server side
+    }
+
     // Check if user is logged in and is HR
     const currentUser = getCurrentUser();
     if (!currentUser) {
@@ -38,22 +44,14 @@ export default function JobMeetingsPage() {
       try {
         setLoading(true);
         
-        // Get token from local storage
-        const token = localStorage.getItem('auth_token');
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-        
-        // Fetch job details
-        const jobResponse = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/${id}`, 
-          { headers: { Authorization: `Bearer ${token}` } }
+        // Fetch job details using authAxios
+        const jobResponse = await authAxios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/${id}`
         );
         
         // Fetch meetings for this job
-        const meetingsResponse = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/meetings/job/${id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        const meetingsResponse = await authAxios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/meetings/job/${id}`
         );
         
         setJob(jobResponse.data.data);
@@ -78,17 +76,10 @@ export default function JobMeetingsPage() {
   // Function to update meeting status
   const handleStatusUpdate = async (meetingId, newStatus) => {
     try {
-      // Get token from local storage
-      const token = localStorage.getItem('auth_token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-      
-      // Update meeting status
-      await axios.patch(
+      // Update meeting status using authAxios
+      await authAxios.patch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/meetings/${meetingId}/status`,
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { status: newStatus }
       );
       
       // Update UI
@@ -138,17 +129,10 @@ export default function JobMeetingsPage() {
       
       if (!roomUrl) return;
       
-      // Get token from local storage
-      const token = localStorage.getItem('auth_token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-      
-      // Update meeting room URL
-      await axios.patch(
+      // Update meeting room URL using authAxios
+      await authAxios.patch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/meetings/${meetingId}/room`,
-        { roomUrl },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { roomUrl }
       );
       
       // Update UI
