@@ -25,8 +25,7 @@ const ResetPassword = () => {
     confirmPassword: false,
   });
 
-  const [password, setPassword] = useState("");
-  const [passwordResponce, setPasswordResponce] = useState({
+  const [password, setPassword] = useState("");  const [passwordResponce, setPasswordResponce] = useState({
     passwordResponceText: "Utilisez 8 caractères ou plus avec des lettres, des chiffres et des symboles.",
     passwordResponceKey: "",
   });
@@ -86,34 +85,28 @@ const ResetPassword = () => {
       [field]: !prevState[field],
     }));
   };
-
   const onChangePassword = (password: string) => {
     setPassword(password);
     if (password.match(/^$|\s+/)) {
-
       setPasswordResponce({
         passwordResponceText: "Utilisez 8 caractères ou plus avec des lettres, des chiffres et des symboles",
         passwordResponceKey: "",
-
       });
     } else if (password.length === 0) {
-      setPasswordResponse({
-        passwordResponseText: "",
-        passwordResponseKey: "",
+      setPasswordResponce({
+        passwordResponceText: "",
+        passwordResponceKey: "",
       });
     } else if (password.length < 8) {
-
       setPasswordResponce({
         passwordResponceText: "Faible. Doit contenir au moins 8 caractères",
         passwordResponceKey: "0",
-
       });
     } else if (
       password.search(/[a-z]/) < 0 ||
       password.search(/[A-Z]/) < 0 ||
       password.search(/[0-9]/) < 0
     ) {
-
       setPasswordResponce({
         passwordResponceText: "Moyen. Doit contenir au moins 1 majuscule et 1 chiffre",
         passwordResponceKey: "1",
@@ -127,48 +120,7 @@ const ResetPassword = () => {
       setPasswordResponce({
         passwordResponceText: "Excellent! Votre mot de passe est sécurisé.",
         passwordResponceKey: "3",
-
       });
-      return;
-    }
-    
-    if (!password || password.length < 8) {
-      setMessage({
-        text: "Please enter a strong password (at least 8 characters)",
-        isError: true
-      });
-      return;
-    }
-    
-    if (password !== confirmPassword) {
-      setMessage({
-        text: "Passwords do not match",
-        isError: true
-      });
-      return;
-    }
-    
-    // Submit form
-    setIsSubmitting(true);
-    setMessage({ text: "", isError: false });
-    
-    try {
-      const response = await resetPassword(token, password);
-      
-      if (response.success) {
-        setMessage({ text: response.message, isError: false });
-        // Redirect after successful password reset
-        setTimeout(() => {
-          navigate(routes.resetPasswordSuccess);
-        }, 2000);
-      } else {
-        setMessage({ text: response.message, isError: true });
-      }
-    } catch (error) {
-      setMessage({ text: "An unexpected error occurred", isError: true });
-      console.error("Password reset error:", error);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
