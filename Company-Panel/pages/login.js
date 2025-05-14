@@ -6,7 +6,8 @@ import axios from "axios"
 import { saveUserData, getCurrentUser } from "../utils/authUtils"
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-const apiUrll = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
+// Use the vercel URL for frontend redirections, not localhost
+const apiUrll = process.env.NEXT_PUBLIC_FRONT_API_URL || 'https://localhost:3000';
 
 export default function Login() {
     const [loginData, setLoginData] = useState({

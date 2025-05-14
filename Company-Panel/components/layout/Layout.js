@@ -10,8 +10,8 @@ import Sidebar from "./Sidebar";
 import { getCurrentUser, clearUserData, checkAndRefreshToken, redirectToLogin } from "../../utils/authUtils";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-const apiUrll = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
-const apiUrlll = process.env.NEXT_ADMIN_API_URL || 'http://localhost:3002';
+const apiUrll = process.env.NEXT_PUBLIC_FRONT_API_URL || 'http://localhost:3000';
+const apiUrlll = process.env.NEXT_PUBLIC_ADMIN_API_URL || 'http://localhost:3002';
 
 export default function Layout({ headTitle, breadcrumbTitle, breadcrumbActive, children }) {
   const [isToggled, setToggled] = useState(false);

@@ -3,7 +3,8 @@ import { useRouter } from 'next/router';
 import { getCurrentUser, saveUserData } from './authUtils';
 import axios from 'axios';
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-const apiUrll = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
+// Use the vercel URL for frontend redirections, not localhost
+const apiUrll = process.env.NEXT_PUBLIC_FRONT_API_URL || 'https://tunihire-frontend.vercel.app';
 /**
  * Higher-order component that handles authentication and role-based access
  * @param {Component} WrappedComponent - The component to wrap with authentication

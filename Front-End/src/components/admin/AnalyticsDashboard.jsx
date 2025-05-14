@@ -36,8 +36,8 @@ const AnalyticsDashboard = () => {
         
        const baseUrl =
        process.env.REACT_APP_API_URL ||
-       process.env.NEXT_FRONT_API_URL ||
-       process.env.NEXT_COMPANY_API_URL;
+       process.env.NEXT_PUBLIC_FRONT_API_URL ||
+       process.env.NEXT_PUBLIC_COMPANY_API_URL;
       const response = await axios.get(
       `${baseUrl}/companies/admin/analytics`,
         { headers: { Authorization: `Bearer ${token}` } }

@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-const apiUrll = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
+const apiUrll = process.env.NEXT_PUBLIC_FRONT_API_URL || 'http://localhost:3000';
 
 // Get auth token from localStorage
 export const getToken = () => {

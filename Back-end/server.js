@@ -16,7 +16,7 @@ const path = require('path');
 require('./config/githubAuth');
 const upload = require('./utils/fileUpload');
 
-const API_URLL = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
+const API_URLL = process.env.NEXT_PUBLIC_FRONT_API_URL || 'http://localhost:3000';
 
 // Express app
 const app = express();

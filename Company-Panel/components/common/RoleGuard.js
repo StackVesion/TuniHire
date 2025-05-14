@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { getCurrentUser, clearUserData } from '../../utils/authUtils';
 
-const API_URLL = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
-const API_URLLL= process.env.NEXT_ADMIN_API_URL || 'http://localhost:3002';
+const API_URLL = process.env.NEXT_PUBLIC_FRONT_API_URL || 'http://localhost:3000';
+const API_URLLL= process.env.NEXT_PUBLIC_ADMIN_API_URL || 'http://localhost:3002';
 /**
  * Role-based access control component
  * Validates user has required role, redirects if unauthorized

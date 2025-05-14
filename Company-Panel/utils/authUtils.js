@@ -217,7 +217,7 @@ export const redirectToLogin = () => {
   // Check if we're in a browser environment
   if (typeof window === 'undefined') return;
   
-  const mainAppUrl = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
+  const mainAppUrl = process.env.NEXT_PUBLIC_FRONT_API_URL || 'https://tunihire-frontend.vercel.app';
   const returnUrl = encodeURIComponent(window.location.href);
   
   // Redirect to the main application's login page with return URL
@@ -277,6 +277,6 @@ export const checkAndRefreshToken = async () => {
 // Function to handle logout and redirect to main application
 export const logout = () => {
   clearUserData();
-  const mainAppUrl = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
+  const mainAppUrl = process.env.NEXT_PUBLIC_FRONT_API_URL || 'http://localhost:3000';
   window.location.href = `${mainAppUrl}/login?logout=true`;
 };

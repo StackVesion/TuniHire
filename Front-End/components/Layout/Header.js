@@ -11,17 +11,6 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const API_URLL = process.env.NEXT_PUBLIC_COMPANY_API_URL || 'http://localhost:3001';
 const API_URLLL = process.env.NEXT_PUBLIC_ADMIN_API_URL || 'http://localhost:3002';
 
-// Console log for debugging purposes
-console.log('API URLs loaded in header:', {
-    API_URL,
-    API_URLL,
-    API_URLLL,
-    envVars: {
-        NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
-        NEXT_PUBLIC_COMPANY_API_URL: process.env.NEXT_PUBLIC_COMPANY_API_URL,
-        NEXT_PUBLIC_ADMIN_API_URL: process.env.NEXT_PUBLIC_ADMIN_API_URL
-    }
-});
 
 const Header = ({handleOpen,handleRemove,openClass}) => {
     const [scroll, setScroll] = useState(false);

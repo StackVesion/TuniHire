@@ -5,7 +5,7 @@ import { useRouter } from 'next/router'
 import axios from 'axios'
 import { getCurrentUser, clearUserData, getToken, createAuthAxios } from '../../utils/authUtils'
 
-const apiUrl = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
+const apiUrl = process.env.NEXT_PUBLIC_FRONT_API_URL || 'http://localhost:3000';
 
 // Logo style for responsive design with adaptive sizing
 const getLogoStyle = (windowWidth) => {

@@ -1045,7 +1045,7 @@ const generateNewVerificationToken = async (req, res) => {
         
         return res.status(200).json({
             message: "Nouveau token généré avec succès",
-            verificationUrl: `${process.env.NEXT_FRONT_API_URL || 'http://localhost:3000'}/verify-email/${emailVerificationToken}`,
+            verificationUrl: `${process.env.NEXT_PUBLIC_FRONT_API_URL || 'http://localhost:3000'}/verify-email/${emailVerificationToken}`,
             token: emailVerificationToken,
             expires: emailVerificationExpires
         });

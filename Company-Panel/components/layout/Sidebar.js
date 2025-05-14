@@ -5,7 +5,7 @@ import { buildStyles, CircularProgressbar } from 'react-circular-progressbar'
 import 'react-circular-progressbar/dist/styles.css'
 import { getCurrentUser, clearUserData } from "../../utils/authUtils"
 import axios from 'axios';
-const apiUrl = process.env.NEXT_FRONT_API_URL || 'http://localhost:3000';
+const apiUrl = process.env.NEXT_PUBLIC_FRONT_API_URL || 'http://localhost:3000';
 const percentage = 67;
 export default function Sidebar() {
     const [isToggled, setToggled] = useState(false);

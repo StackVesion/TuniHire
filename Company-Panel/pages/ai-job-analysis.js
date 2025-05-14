@@ -98,7 +98,7 @@ const AIJobAnalysis = () => {
       try {
         // Create an axios instance with authentication
         const authAxios = axios.create({
-          baseURL: process.env.NEXT_PUBLIC_API_URL || '',
+          baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
           headers: {
             Authorization: user.token ? `Bearer ${user.token}` : '',
           },
