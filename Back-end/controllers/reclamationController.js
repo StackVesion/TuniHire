@@ -26,11 +26,31 @@ exports.getReclamationById = async (req, res) => {
 // Create new reclamation
 exports.createReclamation = async (req, res) => {
   try {
-    const newReclamation = new Reclamation(req.body);
+    // Create reclamation object from request body
+    const reclamationData = {
+      ...req.body,
+      // Add current user as the user who created the reclamation
+      userId: req.user.id
+    };
+    
+    // If no targetType specified, set to General
+    if (!reclamationData.targetType) {
+      reclamationData.targetType = 'General';
+    }
+    
+    const newReclamation = new Reclamation(reclamationData);
     const savedReclamation = await newReclamation.save();
-    res.status(201).json(savedReclamation);
+    res.status(201).json({
+      success: true,
+      message: 'Reclamation submitted successfully',
+      data: savedReclamation
+    });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    console.error('Error creating reclamation:', error);
+    res.status(400).json({ 
+      success: false, 
+      error: error.message 
+    });
   }
 };
 

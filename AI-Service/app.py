@@ -1,92 +1,75 @@
 import os
-from flask import Flask, request, jsonify
-from flask_cors import CORS
 import json
-from dotenv import load_dotenv
-import logging
 import traceback
-from datetime import datetime
+import logging
+from datetime import datetime, timedelta
+from flask import Flask, jsonify
+from flask_cors import CORS
+from dotenv import load_dotenv
+from flask_jwt_extended import JWTManager
 
-# Configurer le logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(_name_)
-
-
-try:
-    from services.face_recognition_service import FaceRecognitionService
-    FACE_RECOGNITION_SERVICE_AVAILABLE = True
-    logger.info("Service de reconnaissance faciale chargé avec succès")
-except ImportError as e:
-    logger.warning(f"FaceRecognitionService non disponible: {str(e)}")
-    logger.warning(traceback.format_exc())
-    FACE_RECOGNITION_SERVICE_AVAILABLE = False
-
-try:
-    from routes.face_routes import face_bp, init_face_routes
-    FACE_ROUTES_AVAILABLE = True
-    logger.info("Routes de reconnaissance faciale chargées avec succès")
-except ImportError as e:
-    logger.warning(f"Routes de reconnaissance faciale non disponibles: {str(e)}")
-    logger.warning(traceback.format_exc())
-    FACE_ROUTES_AVAILABLE = False
-
-
-    logger.warning(f"Routes ATS 2025 non disponibles: {str(e)}")
-    logger.warning(traceback.format_exc())
-    ATS_2025_ROUTES_AVAILABLE = False
-
-from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity
-from datetime import timedelta
-
-# Charger les variables d'environnement
+# Load environment variables
 load_dotenv()
 
-app = Flask(_name_)
+# Logger configuration
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Configuration CORS appropriée pour permettre toutes les origines et méthodes
-CORS(app, resources={r"/": {"origins": "", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": "*"}})
+# Initialize Flask app
+app = Flask(__name__)
 
-# Configuration JWT
+# CORS Configuration: allow all origins
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+# JWT Configuration
 app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'default-dev-secret-key')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
 jwt = JWTManager(app)
 
-
-
-# Initialiser le service de reconnaissance faciale si disponible
+# Import face recognition service (optional)
+FACE_RECOGNITION_SERVICE_AVAILABLE = False
 face_recognition_service = None
-if FACE_RECOGNITION_SERVICE_AVAILABLE:
-    try:
-        face_recognition_service = FaceRecognitionService()
-        logger.info("Service de reconnaissance faciale initialisé avec succès")
-    except Exception as e:
-        logger.error(f"Erreur lors de l'initialisation du service de reconnaissance faciale: {str(e)}")
-        FACE_RECOGNITION_SERVICE_AVAILABLE = False
 
+try:
+    from services.face_recognition_service import FaceRecognitionService
+    face_recognition_service = FaceRecognitionService()
+    FACE_RECOGNITION_SERVICE_AVAILABLE = True
+    logger.info("Service de reconnaissance faciale chargé et initialisé avec succès")
+except ImportError as e:
+    logger.warning("FaceRecognitionService non disponible: %s", str(e))
+    logger.debug(traceback.format_exc())
+except Exception as e:
+    logger.error("Erreur lors de l'initialisation du service de reconnaissance faciale: %s", str(e))
+    logger.debug(traceback.format_exc())
 
-if FACE_ROUTES_AVAILABLE and face_recognition_service:
-    app.register_blueprint(face_bp, url_prefix='/api/face')
-    init_face_routes(face_recognition_service)
-    logger.info("Blueprint de reconnaissance faciale enregistré")
+# Import and register face recognition routes if service is available
+try:
+    if FACE_RECOGNITION_SERVICE_AVAILABLE:
+        from routes.face_routes import face_bp, init_face_routes
+        app.register_blueprint(face_bp, url_prefix='/api/face')
+        init_face_routes(face_recognition_service)
+        logger.info("Blueprint de reconnaissance faciale enregistré")
+except ImportError as e:
+    logger.warning("Routes de reconnaissance faciale non disponibles: %s", str(e))
+    logger.debug(traceback.format_exc())
 
+# Ensure uploads directory exists
+upload_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+os.makedirs(upload_folder, exist_ok=True)
 
-# Make sure the upload folder exists
-upload_folder = os.path.join(os.path.dirname(os.path.abspath(_file_)), 'uploads')
-if not os.path.exists(upload_folder):
-    os.makedirs(upload_folder)
-    
 @app.route('/')
 def index():
     return jsonify({
         "message": "TuniHire AI Service API",
         "status": "online",
-        "services_available": {   
+        "services_available": {
             "face_recognition": FACE_RECOGNITION_SERVICE_AVAILABLE
         }
     })
 
-if _name_ == '_main_':
+# Run the app
+if __name__ == '__main__':
     host = os.environ.get('HOST', '0.0.0.0')
     port = int(os.environ.get('PORT', 5001))
     logger.info(f"Démarrage du serveur Flask sur {host}:{port}")
-    app.run(debug=True, host=host, port=port)
+    app.run(debug=True, host=host, port=port)

@@ -16,7 +16,7 @@ history_dir = os.path.join(os.path.dirname(__file__), 'training_history')
 os.makedirs(history_dir, exist_ok=True)
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  # Render injects PORT
+    port = int(os.environ.get('FLASK_RUN_PORT', os.environ.get('PORT', 5003)))  # Use FLASK_RUN_PORT or fallback to PORT or default 5003
     debug = os.environ.get('DEBUG', 'False').lower() == 'true'
 
     print("\n" + "="*80)

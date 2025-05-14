@@ -15,13 +15,14 @@ const mongoose = require('mongoose');
 const path = require('path');
 require('./config/githubAuth');
 const upload = require('./utils/fileUpload');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 
 // Express app
 const app = express();
 
 // Update CORS configuration
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:5003'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true,
@@ -30,6 +31,48 @@ app.use(cors({
 
 // Add preflight OPTIONS handler
 app.options('*', cors());
+
+// Configure AI Recommendation Service Proxy
+const aiRecommendationServiceConfig = {
+  target: 'http://localhost:5003',
+  changeOrigin: true,
+  onProxyRes: (proxyRes, req, res) => {
+    // Log proxy interaction
+    console.log(`[AI-Recommendation Proxy] ${req.method} ${req.originalUrl} => ${proxyRes.statusCode}`);
+  },
+  onError: (err, req, res) => {
+    console.error(`[AI-Recommendation Proxy Error] ${err.message}`);
+    res.status(503).json({
+      success: false,
+      message: 'AI Recommendation service unavailable',
+      error: err.message
+    });
+  }
+};
+
+// Setup proxy for recommendation endpoint
+app.use('/api/recommendation', createProxyMiddleware({
+  ...aiRecommendationServiceConfig,
+  pathRewrite: {
+    '^/api/recommendation': '/api/recommendation' // Keep path as is
+  }
+}));
+
+// Setup proxy for better-matches endpoint
+app.use('/api/better-matches', createProxyMiddleware({
+  ...aiRecommendationServiceConfig,
+  pathRewrite: {
+    '^/api/better-matches': '/api/better-matches' // Keep path as is
+  }
+}));
+
+// Setup proxy for AI health check
+app.use('/api/ai/health', createProxyMiddleware({
+  ...aiRecommendationServiceConfig,
+  pathRewrite: {
+    '^/api/ai/health': '/api/health' // Rewrite to /api/health
+  }
+}));
 
 // Configure Helmet with relaxed CSP for PDF viewing
 app.use(
@@ -42,7 +85,7 @@ app.use(
         imgSrc: ["'self'", "data:", "blob:", "https:"],
         connectSrc: ["'self'", "https:"],
         frameSrc: ["'self'"],
-        frameAncestors: ["'self'", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
+        frameAncestors: ["'self'", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:5003"],
       },
     },
     crossOriginEmbedderPolicy: false,

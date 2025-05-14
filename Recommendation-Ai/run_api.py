@@ -16,7 +16,7 @@ Options:
     --install        Install dependencies in a virtual environment first
     --data           Generate test data if database is empty
     --recreate-venv  Recreate the virtual environment
-    port             Port to run the Flask app on (default: 5000)
+    port             Port to run the Flask app on (default: 5003)
 """
 
 import os
@@ -104,7 +104,7 @@ def log_training_run():
     
     print(f"Logged training run information to {history_file}")
 
-def run_flask_app(python_executable, port=None):
+def run_flask_app(python_executable, port=5003):
     """Run the Flask application"""
     print("\nStarting TuniHire AI Recommendation API...")
     run_script = os.path.join(BASE_DIR, "run.py")
@@ -116,9 +116,8 @@ def run_flask_app(python_executable, port=None):
     
     # Set environment variable for port if specified
     env = os.environ.copy()
-    if port:
-        env["PORT"] = str(port)  # Set PORT which is what run.py checks for
-        print(f"Running on port: {port}")
+    env["FLASK_RUN_PORT"] = str(port)
+    print(f"Running on port: {port}")
     
     # Use subprocess to run the Flask app
     subprocess.run([python_executable, run_script], env=env)
@@ -129,7 +128,7 @@ def main():
     parser.add_argument("--install", action="store_true", help="Install dependencies in virtual environment")
     parser.add_argument("--data", action="store_true", help="Generate test data")
     parser.add_argument("--recreate-venv", action="store_true", help="Recreate the virtual environment")
-    parser.add_argument("port", nargs="?", type=int, help="Port to run the Flask app on (default: 5000)")
+    parser.add_argument("port", nargs="?", type=int, default=5003, help="Port to run the Flask app on (default: 5003)")
     
     args = parser.parse_args()
     

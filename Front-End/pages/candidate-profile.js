@@ -198,7 +198,7 @@ export default function CandidateProfile() {
             ...userData,
             isVerified: true,
             verifiedAt: new Date(),
-            verificationScore: verificationData.score || verificationData.verificationScore || "56.11"
+            verificationScore: verificationData.score || verificationData.verificationScore
         };
         
         // Update state and localStorage
