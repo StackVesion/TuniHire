@@ -39,50 +39,69 @@ export default function MeetingsPage() {
       try {
         setLoading(true);
         
-        // First get the user's company - same approach as my-job-grid
-        const companyResponse = await authAxios.get('/api/companies/user/my-company');
-        
-        // Check if we received valid company data
-        if (!companyResponse.data || !companyResponse.data.company || !companyResponse.data.company._id) {
-          console.error('Company data structure:', companyResponse.data);
-          setError('No company found for your account. Please create a company first.');
-          setLoading(false);
-          return;
+        try {
+          // First get the user's company - same logic as in my-job-grid
+          const companyResponse = await authAxios.get(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/companies/user/my-company`
+          );
+          
+          // The API returns the company inside a 'company' property
+          const companyData = companyResponse.data.company;
+          
+          if (!companyData || !companyData._id) {
+            console.error('Company data structure:', companyResponse.data);
+            setError('No company found for your account. Please create a company first.');
+            setLoading(false);
+            return;
+          }
+          
+          console.log('Found company:', companyData.name, 'with ID:', companyData._id);
+          const companyId = companyData._id;
+          
+          // Get all jobs for this company
+          const jobsResponse = await authAxios.get(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/jobs/company/${companyId}`
+          );
+          
+          console.log('Found jobs:', jobsResponse.data.length);
+          
+          // For each job, fetch meeting counts
+          const jobsWithMeetings = await Promise.all(
+            jobsResponse.data.map(async (job) => {
+              try {
+                const meetingsResponse = await authAxios.get(
+                  `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/meetings/job/${job._id}`
+                );
+                
+                return {
+                  ...job,
+                  meetingsCount: meetingsResponse.data.count || 0,
+                  meetings: meetingsResponse.data.data || []
+                };
+              } catch (error) {
+                console.error(`Error fetching meetings for job ${job._id}:`, error);
+                return {
+                  ...job,
+                  meetingsCount: 0,
+                  meetings: []
+                };
+              }
+            })
+          );
+          
+          setJobs(jobsWithMeetings);
+        } catch (err) {
+          console.error('Error fetching company data:', err);
+          
+          if (err.response && err.response.status === 404) {
+            setError('You don\'t have a company yet. Please create one first.');
+          } else if (err.response && err.response.status === 400) {
+            setError('Authentication error. Please login again.');
+            router.push('/login');
+          } else {
+            setError('Failed to load company data: ' + (err.response?.data?.message || err.message));
+          }
         }
-        
-        console.log('Found company:', companyResponse.data.company.name, 'with ID:', companyResponse.data.company._id);
-        const companyId = companyResponse.data.company._id;
-        
-        // Get all jobs for this company
-        const jobsResponse = await authAxios.get(`/api/jobs/company/${companyId}`);
-        
-        console.log('Found jobs:', jobsResponse.data.length);
-        
-        // For each job, fetch meeting counts
-        const jobsWithMeetings = await Promise.all(
-          jobsResponse.data.map(async (job) => {
-            try {
-              const meetingsResponse = await authAxios.get(
-                `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/meetings/job/${job._id}`
-              );
-              
-              return {
-                ...job,
-                meetingsCount: meetingsResponse.data.count || 0,
-                meetings: meetingsResponse.data.data || []
-              };
-            } catch (error) {
-              console.error(`Error fetching meetings for job ${job._id}:`, error);
-              return {
-                ...job,
-                meetingsCount: 0,
-                meetings: []
-              };
-            }
-          })
-        );
-        
-        setJobs(jobsWithMeetings);
       } catch (error) {
         console.error('Error fetching jobs:', error);
         setError('Failed to load jobs. Please try again later.');

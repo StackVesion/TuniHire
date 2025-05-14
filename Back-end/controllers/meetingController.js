@@ -244,20 +244,29 @@ exports.getMeetingsByJobId = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid job ID format' });
     }
 
-    const job = await JobPost.findById(jobId);
+    // First, verify the job exists and get full job details
+    const job = await JobPost.findById(jobId)
+      .populate('companyId', 'name email website category numberOfEmployees status');
+      
     if (!job) {
       return res.status(404).json({ success: false, message: 'Job post not found' });
     }
 
+    // Get all meetings for this job with full population of related data
     const meetings = await Meeting.find({ job_id: jobId })
-      .populate('candidate_id', 'firstName lastName email profilePicture')
+      .populate('job_id', 'title location workplaceType salaryRange description')
+      .populate('candidate_id', 'firstName lastName email profilePicture phone')
       .populate('hr_id', 'firstName lastName email profilePicture')
       .sort({ meetingDate: -1 });
+
+    // Log the number of meetings found for debugging
+    console.log(`Found ${meetings.length} meetings for job ${job.title} (ID: ${jobId})`);
 
     return res.status(200).json({
       success: true,
       count: meetings.length,
-      data: meetings
+      data: meetings,
+      job: job // Include the job details for additional context
     });
   } catch (error) {
     console.error('Error fetching meetings by job ID:', error);
