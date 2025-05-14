@@ -30,6 +30,8 @@ const ResetPassword = () => {
     passwordResponceText: "Utilisez 8 caractères ou plus avec des lettres, des chiffres et des symboles.",
     passwordResponceKey: "",
   });
+  const [message, setMessage] = useState({ text: "", isError: false });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     // Get token from URL query parameters (e.g., ?token=abc123)
@@ -87,6 +89,23 @@ const ResetPassword = () => {
     }));
   };
 
+  // Fonction pour réinitialiser le mot de passe
+  const resetPassword = async (token: string, password: string) => {
+    try {
+      const response = await axios.post('http://localhost:5000/api/users/reset-password', {
+        token,
+        password
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Erreur lors de la réinitialisation du mot de passe:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Une erreur est survenue lors de la réinitialisation du mot de passe'
+      };
+    }
+  };
+
   const onChangePassword = (password: string) => {
     setPassword(password);
     if (password.match(/^$|\s+/)) {
@@ -97,9 +116,9 @@ const ResetPassword = () => {
 
       });
     } else if (password.length === 0) {
-      setPasswordResponse({
-        passwordResponseText: "",
-        passwordResponseKey: "",
+      setPasswordResponce({
+        passwordResponceText: "",
+        passwordResponceKey: "",
       });
     } else if (password.length < 8) {
 
@@ -129,46 +148,6 @@ const ResetPassword = () => {
         passwordResponceKey: "3",
 
       });
-      return;
-    }
-    
-    if (!password || password.length < 8) {
-      setMessage({
-        text: "Please enter a strong password (at least 8 characters)",
-        isError: true
-      });
-      return;
-    }
-    
-    if (password !== confirmPassword) {
-      setMessage({
-        text: "Passwords do not match",
-        isError: true
-      });
-      return;
-    }
-    
-    // Submit form
-    setIsSubmitting(true);
-    setMessage({ text: "", isError: false });
-    
-    try {
-      const response = await resetPassword(token, password);
-      
-      if (response.success) {
-        setMessage({ text: response.message, isError: false });
-        // Redirect after successful password reset
-        setTimeout(() => {
-          navigate(routes.resetPasswordSuccess);
-        }, 2000);
-      } else {
-        setMessage({ text: response.message, isError: true });
-      }
-    } catch (error) {
-      setMessage({ text: "An unexpected error occurred", isError: true });
-      console.error("Password reset error:", error);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

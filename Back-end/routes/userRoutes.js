@@ -68,7 +68,7 @@ router.post('/upload-profile-picture', verifyToken, profileUpload.single('profil
     }
 
     // Generate URL for the uploaded file
-    const baseUrl = process.env.BASE_URL || 'http://localhost:5050';
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
     const profilePicturePath = `/uploads/profile-pictures/${req.file.filename}`;
     const profilePictureUrl = `${baseUrl}${profilePicturePath}`;
 
@@ -133,7 +133,7 @@ router.post('/verify-profile', verifyToken, verificationUpload.single('verificat
     }
 
     // Generate URL for the uploaded verification photo
-    const baseUrl = process.env.BASE_URL || 'http://localhost:5050';
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000';
     const verificationPhotoPath = `/uploads/verification-photos/${req.file.filename}`;
     const verificationPhotoUrl = `${baseUrl}${verificationPhotoPath}`;
 
@@ -609,7 +609,7 @@ router.post('/refresh-token', async (req, res) => {
     
     // Generate new access token
     const accessToken = jwt.sign(
-       : user._id, email: user.email, role: user.role },
+      { userId: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'your-jwt-secret',
       { expiresIn: '1h' } // You can adjust expiration time
     );
@@ -627,6 +627,6 @@ router.post('/refresh-token', async (req, res) => {
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.get('/verify-reset-token', verifyResetToken);
->>>>>
+
 
 module.exports = router;

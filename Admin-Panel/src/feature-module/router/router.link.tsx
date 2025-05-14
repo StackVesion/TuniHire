@@ -217,6 +217,7 @@ import PayRollDeduction from "../finance-accounts/payrool/payrollDedution";
 import Tickets from "../tickets/tickets";
 import TicketGrid from "../tickets/tickets-grid";
 import TicketDetails from "../tickets/ticket-details";
+import Reclamations from "../support/reclamations/reclamations";
 import PerformanceIndicator from "../performance/performanceIndicator";
 import Aisettings from "../settings/websiteSettings/ai-settings";
 import Salarysettings from "../settings/appSettings/salary-settings";
@@ -903,6 +904,11 @@ export const publicRoutes = [
     route: Route,
   },
   {
+    path: routes.reclamations,
+    element: <Reclamations />,
+    route: Route,
+  },
+  {
     path: routes.performanceIndicator,
     element: <PerformanceIndicator />,
     route: Route,
@@ -1575,6 +1581,11 @@ export const publicRoutes = [
   {
     path: routes.applicationDetail,
     element: <ApplicationDetail />,
+  },
+  {
+    path: routes.reclamations,
+    element: <Reclamations />,
+    route: Route,
   },
 ];
 
