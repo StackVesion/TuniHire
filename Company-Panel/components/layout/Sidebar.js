@@ -177,7 +177,7 @@ export default function Sidebar() {
                         {user && user.role && user.role.toString().toUpperCase() === 'CANDIDATE' && (
                             <>
                                 <li><Link className={router.pathname === "/" ? "dashboard2 active" : "dashboard2"} href="/"><img src="/assets/imgs/page/dashboard/dashboard.svg" alt="jobBox" /><span className="name">Dashboard</span></Link></li>
-                                <li><Link className={router.pathname === "/courses" ? "dashboard2 active" : "dashboard2"} href="/Course"><img src="/assets/imgs/page/dashboard/education.svg" alt="jobBox" /><span className="name">Courses</span></Link></li>
+                                <li><Link className={router.pathname === "/courses" ? "dashboard2 active" : "dashboard2"} href="/Course"><img src="/assets/imgs/page/dashboard/tasks.svg" alt="jobBox" /><span className="name">Courses</span></Link></li>
                                 <li><Link className={router.pathname === "/my-resume" ? "dashboard2 active" : "dashboard2"} href="/my-resume"><img src="/assets/imgs/page/dashboard/cv-manage.svg" alt="jobBox" /><span className="name">My Resume</span></Link></li>
                                 <li><Link className={router.pathname === "/my-applications" ? "dashboard2 active" : "dashboard2"} href="/my-applications"><img src="/assets/imgs/page/dashboard/candidates.svg" alt="jobBox" /><span className="name">My Applications</span></Link></li>
                                 <li><Link className={router.pathname === "/apply-for-jobs" ? "dashboard2 active" : "dashboard2"} href="/apply-for-jobs"><img src="/assets/imgs/page/dashboard/recruiters.svg" alt="jobBox" /><span className="name">Apply for Job</span></Link></li>
