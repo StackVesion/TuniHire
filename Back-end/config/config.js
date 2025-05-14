@@ -30,7 +30,10 @@ const config = {
       url: process.env.AI_SERVICE_URL || 'http://localhost:5001',
       enabled: process.env.USE_AI_SERVICE === 'true' || false,
     },
-  }
+  },
+  
+  // Gemini API configuration
+  geminiApiKey: process.env.GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY'
 };
 
 module.exports = config; 

@@ -21,6 +21,7 @@ const dashboardRoutes = require('./routes/dashboard');
 const courseRoutes = require('./routes/courseRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
 const meetingRoutes = require('./routes/meetingRoutes');
+const whiteTestRoutes = require('./routes/whiteTestRoutes');
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/tunihire', {
@@ -42,6 +43,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/meetings', meetingRoutes);
+app.use('/api/whitetests', whiteTestRoutes);
 
 // ...existing code...
 

@@ -5,7 +5,7 @@ import { useRouter } from 'next/router';
 import { getCurrentUser, getToken, createAuthAxios } from '../../../utils/authUtils';
 import LoadingScreen from '../../../components/LoadingScreen';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCalendarPlus, faSearch, faFilter, faSortAmountDown, faClock, faVideo, faCheckCircle, faTimesCircle, faCalendarAlt, faMagic } from '@fortawesome/free-solid-svg-icons';
+import { faCalendarPlus, faSearch, faFilter, faSortAmountDown, faClock, faVideo, faCheckCircle, faTimesCircle, faCalendarAlt, faMagic, faFileAlt, faEdit, faPlusCircle } from '@fortawesome/free-solid-svg-icons';
 
 export default function JobMeetingsPage() {
   const [meetings, setMeetings] = useState([]);
@@ -24,6 +24,13 @@ export default function JobMeetingsPage() {
   const authAxios = createAuthAxios();
   const [applicantsWithMeetings, setApplicantsWithMeetings] = useState([]);
   const [filteredApplicants, setFilteredApplicants] = useState([]);
+  
+  // WhiteTest related states
+  const [whiteTest, setWhiteTest] = useState(null);
+  const [showWhiteTestDialog, setShowWhiteTestDialog] = useState(false);
+  const [whiteTestContent, setWhiteTestContent] = useState('');
+  const [isEditingWhiteTest, setIsEditingWhiteTest] = useState(false);
+  const [generatingWhiteTest, setGeneratingWhiteTest] = useState(false);
 
   // Fetch job, applicants and meetings - defined outside useEffect to be accessible to other functions
   const fetchJobAndMeetings = async () => {
@@ -108,6 +115,32 @@ export default function JobMeetingsPage() {
         // If the job data includes company information, store it for reference
         if (jobData.companyId) {
           console.log('Company data found:', jobData.companyId.name || jobData.companyId);
+        }
+        
+        // Fetch white test for this job if it exists
+        try {
+          const whiteTestResponse = await authAxios.get(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}/api/whitetests/job/${id}`
+          );
+          
+          if (whiteTestResponse.data && whiteTestResponse.data.success) {
+            console.log('White test found:', whiteTestResponse.data.data);
+            setWhiteTest(whiteTestResponse.data.data);
+            setWhiteTestContent(whiteTestResponse.data.data.content);
+          } else {
+            console.log('No white test found for this job');
+            setWhiteTest(null);
+            setWhiteTestContent('');
+          }
+        } catch (whiteTestError) {
+          // If 404, it means no white test exists yet (which is normal)
+          if (whiteTestError.response && whiteTestError.response.status === 404) {
+            setWhiteTest(null);
+            setWhiteTestContent('');
+            console.log('No white test exists for this job yet');
+          } else {
+            console.error('Error fetching white test:', whiteTestError);
+          }
         }
         
       } catch (err) {
