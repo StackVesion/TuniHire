@@ -2,6 +2,16 @@
 
 A machine learning-powered recommendation engine for TuniHire that analyzes candidate portfolios, job postings, and historical application data to provide intelligent job matching, ATS pass predictions, and personalized recommendations.
 
+## Technology Stack
+
+- **Python**: Core programming language
+- **Flask**: Web framework for API endpoints
+- **Scikit-learn**: Machine learning library for core algorithms
+- **TensorFlow/PyTorch**: Deep learning capabilities for advanced models
+- **Pandas/NumPy**: Data manipulation and numerical computing
+- **NLTK/SpaCy**: Natural language processing for text analysis
+- **MongoDB**: Storage for model weights and processed data
+
 ## Key Features
 
 ### AI-Powered Recommendations
