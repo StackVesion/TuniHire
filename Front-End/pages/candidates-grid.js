@@ -133,6 +133,7 @@ export default function CandidateGrid() {
     return (
         <>
             <Layout>
+                <br></br>
                 <div>
                     <section className="section-box-2">
                         <div className="container">
