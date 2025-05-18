@@ -51,6 +51,9 @@ export default function Contact() {
     return (
         <>
             <Layout>
+                                <br></br>
+                <br></br>
+
                 <div>
                     <section className="section-box">
                         <div className="breacrumb-cover bg-img-about">
