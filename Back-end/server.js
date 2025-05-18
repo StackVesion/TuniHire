@@ -128,7 +128,14 @@ app.get('/uploads/resumes/:filename', (req, res) => {
 });
 
 // Connect to MongoDB
-connectDB();
+(async () => {
+  try {
+    await connectDB();
+  } catch (error) {
+    console.error('Failed to connect to MongoDB:', error.message);
+    console.log('Application will continue without database functionality');
+  }
+})();
 
 // Email transporters
 const verificationEmailTransporter = nodemailer.createTransport({
@@ -261,6 +268,7 @@ app.use("/api/meetings", require("./routes/meetingRoutes")); // Add the meetings
 app.use("/api/whitetests", require("./routes/whiteTestRoutes")); // Add the white tests routes
 app.use("/api/bots", require("./routes/botRoutes")); // Add the bot routes
 app.use("/health", require("./routes/health"));
+app.use("/api/reclamations", require("./routes/reclamationRoutes"));  
 
 // API route list
 app.get('/api/routes', (req, res) => {
@@ -405,5 +413,9 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`MongoDB Connected: ${mongoose.connection.host}`);
+  if (mongoose.connection.readyState === 1) {
+    console.log(`MongoDB Connected: ${mongoose.connection.host || 'localhost'}`);
+  } else {
+    console.log('MongoDB Connection Status: Not connected');
+  }
 });

@@ -1,12 +1,18 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
+// Drop any existing User model to ensure indexes are recreated
+if (mongoose.models.User) {
+  delete mongoose.models.User;
+}
+
+// Define schema without any unique indexes except for email
 const UserSchema = new mongoose.Schema({
   googleId: String,
   githubId: String,
   firstName: { type: String },
   lastName: { type: String },
-  email: { type: String, required: true, unique: true },
+  email: { type: String, required: true },  // Removed unique constraint temporarily
   password: { type: String, required: function() { 
     // Password is required only if there's no googleId or githubId
     return !this.googleId && !this.githubId; 
@@ -47,8 +53,9 @@ const UserSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
   picture: String,
   phoneNumber: String,
-  faceDescriptor: { type: Array, default: null },
-  faceId: { type: String, unique: true, sparse: true },
+  // Face recognition fields - no indexes or constraints
+  faceDescriptor: { type: Array },
+  faceId: { type: String },
   otp: { type: String },
   otpExpiry: { type: Date },
   isOtpVerified: { type: Boolean, default: false },
@@ -62,6 +69,10 @@ const UserSchema = new mongoose.Schema({
   // Password reset fields
   resetPasswordToken: String,
   resetPasswordExpires: Date
-});
+}, { autoIndex: false });  // Disable automatic indexing
 
-module.exports = mongoose.model("User", UserSchema);
+// Create a new model with the updated schema
+const User = mongoose.model("User", UserSchema);
+
+// Export the model
+module.exports = User;

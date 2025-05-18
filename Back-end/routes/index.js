@@ -14,6 +14,8 @@ const subscriptionRoutes = require('./subscriptionRoutes');
 
 router.use('/users', userRoutes);
 router.use('/companies', companyRoutes);
+
+// Route was moved to the company routes file
 router.use('/jobs', jobRoutes);
 router.use('/applications', applicationRoutes);
 router.use('/dashboard', dashboardRoutes);

@@ -20,7 +20,9 @@ const router = express.Router();
 
 // Public routes
 router.get('/', getAllPortfolios);
-// Add the user-specific route BEFORE the generic ID route to prevent conflicts
+
+// IMPORTANT: Specific routes must come BEFORE generic parameter routes
+// User-specific route for getting the current user's portfolio
 router.get('/user', verifyToken, async (req, res) => {
   try {
     // Get the user ID from the authenticated user
@@ -43,8 +45,10 @@ router.get('/user', verifyToken, async (req, res) => {
     });
   }
 });
-router.get('/:id', getPortfolioById);
+// Make sure specific routes with static segments come BEFORE routes with parameters
 router.get('/user/:userId', getPortfolioByUserId);
+// Generic ID route should come LAST to avoid intercepting other routes
+router.get('/:id', getPortfolioById);
 
 // Protected routes - require authentication
 router.post('/', verifyToken, createPortfolio);

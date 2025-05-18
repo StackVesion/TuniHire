@@ -198,14 +198,15 @@ export default function Header() {
                     <div className="main-header">
                         <div className="header-left">
                             <div className="header-logo">
-                                <Link className="d-flex" href="/">
-                                    <img 
-                                        alt="TuniHire" 
-                                        src="/assets/jobhub-logo.svg" 
-                                        style={getLogoStyle(windowWidth)} 
-                                        className={`logo-img ${scroll ? 'logo-scrolled' : ''}`}
-                                    />
-                                </Link>
+                             <a className="d-flex" href="http://localhost:3000">
+                                <img 
+                                    alt="TuniHire" 
+                                    src="/assets/jobhub-logo.svg" 
+                                    style={getLogoStyle(windowWidth)} 
+                                    className={`logo-img ${scroll ? 'logo-scrolled' : ''}`}
+                                />
+                                </a>
+
                             </div>
                         </div>
                         

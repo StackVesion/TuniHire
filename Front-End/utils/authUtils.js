@@ -92,8 +92,7 @@ export const createAuthAxios = () => {
   const instance = axios.create({
     baseURL: getBaseUrl(),
     timeout: 10000, // 10 second timeout
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    withCredentials: true // Ajouter cette ligne pour inclure les cookies dans les requêtes cross-origin
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
   });
   
   // Add response interceptor for handling 401/403 errors globally

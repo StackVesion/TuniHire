@@ -8,11 +8,15 @@ import * as faceapi from "face-api.js";
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-webgl';
 
-export default function Signin() {
+export default function Register() {
     const [formData, setFormData] = useState({
+        firstName: "",
+        lastName: "",
         email: "",
         password: "",
-        rememberMe: false
+        confirmPassword: "",
+        role: "jobseeker",
+        terms: false
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -23,8 +27,8 @@ export default function Signin() {
     const [showFaceIdModal, setShowFaceIdModal] = useState(false);
     const [faceDetected, setFaceDetected] = useState(false);
     const [faceIdLoading, setFaceIdLoading] = useState(false);
-    const [rememberMeError, setRememberMeError] = useState('');
-
+    const [passwordStrength, setPasswordStrength] = useState(0);
+    const [passwordFeedback, setPasswordFeedback] = useState("");
 
     useEffect(() => {
         const loadModels = async () => {
@@ -39,13 +43,44 @@ export default function Signin() {
                 setIsModelLoaded(true);
                 console.log("Face recognition models loaded successfully");
             } catch (err) {
-                console.error("Erreur de chargement des modèles :", err);
-                setError("Impossible de charger les modèles de reconnaissance faciale.");
+                console.error("Error loading models:", err);
+                setError("Unable to load face recognition models.");
             }
         };
 
         loadModels();
     }, []);
+
+    // Password strength checker
+    useEffect(() => {
+        if (formData.password) {
+            const hasLowerCase = /[a-z]/.test(formData.password);
+            const hasUpperCase = /[A-Z]/.test(formData.password);
+            const hasNumber = /\d/.test(formData.password);
+            const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(formData.password);
+            const isLongEnough = formData.password.length >= 8;
+            
+            let strength = 0;
+            if (hasLowerCase) strength += 1;
+            if (hasUpperCase) strength += 1;
+            if (hasNumber) strength += 1;
+            if (hasSpecialChar) strength += 1;
+            if (isLongEnough) strength += 1;
+            
+            setPasswordStrength(strength);
+            
+            if (strength < 3) {
+                setPasswordFeedback("Weak password. Add uppercase, numbers, or special characters.");
+            } else if (strength < 5) {
+                setPasswordFeedback("Medium strength. Add more variety for a stronger password.");
+            } else {
+                setPasswordFeedback("Strong password!");
+            }
+        } else {
+            setPasswordStrength(0);
+            setPasswordFeedback("");
+        }
+    }, [formData.password]);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -53,13 +88,14 @@ export default function Signin() {
             ...formData, 
             [name]: type === 'checkbox' ? checked : value 
         });
+        
         // Clear any previous error message when user starts typing
         if (error) setError("");
     };
 
     const captureFace = async () => {
         if (!webcamRef.current || !isModelLoaded) {
-            alert("Les modèles ne sont pas encore chargés.");
+            alert("Models are not loaded yet.");
             return;
         }
 
@@ -69,11 +105,10 @@ export default function Signin() {
 
         const video = webcamRef.current.video;
         if (!video || video.readyState !== 4) {
-            setError("Impossible d'accéder à la webcam.");
+            setError("Unable to access webcam.");
             setFaceIdLoading(false);
             return;
         }
-        
 
         try {
             const detections = await faceapi.detectSingleFace(video)
@@ -81,7 +116,7 @@ export default function Signin() {
                 .withFaceDescriptor();
             
             if (!detections) {
-                setError("Aucun visage détecté, veuillez essayer à nouveau.");
+                setError("No face detected, please try again.");
                 setFaceIdLoading(false);
                 return;
             }
@@ -89,34 +124,62 @@ export default function Signin() {
             setFaceDescriptor(detections.descriptor);
             setFaceDetected(true);
             setFaceIdLoading(false);
-            console.log("Face Descriptor capturé :", detections.descriptor);
+            console.log("Face Descriptor captured:", detections.descriptor);
         } catch (err) {
-            console.error("Erreur de détection du visage :", err);
-            setError("Impossible de détecter le visage. Essayez à nouveau.");
+            console.error("Face detection error:", err);
+            setError("Unable to detect face. Try again.");
             setFaceIdLoading(false);
         }
     };
 
+    const validateForm = () => {
+        if (formData.password !== formData.confirmPassword) {
+            setError("Passwords do not match");
+            return false;
+        }
+        
+        if (formData.password.length < 8) {
+            setError("Password must be at least 8 characters long");
+            return false;
+        }
+        
+        if (!formData.terms) {
+            setError("You must agree to the terms and conditions");
+            return false;
+        }
+        
+        return true;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-if (!formData.rememberMe) {
-  setRememberMeError("Please check 'Remember me' before signing in.");
-  return;
-} else {
-  setRememberMeError(""); // Clear if no error
-}
+        
+        if (!validateForm()) {
+            return;
+        }
+        
         setLoading(true);
         setError("");
 
+        const userData = {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            password: formData.password,
+            role: formData.role
+        };
+
+        // Add face descriptor if available
+        if (faceDescriptor) {
+            userData.faceDescriptor = Array.from(faceDescriptor);
+        }
+
         try {
-            console.log("Attempting sign in with:", formData.email);
+            console.log("Registering user with data:", { ...userData, password: "[REDACTED]" });
             
             const response = await axios.post(
-                "http://localhost:5000/api/users/signin", 
-                {
-                    email: formData.email,
-                    password: formData.password,
-                },
+                "http://localhost:5000/api/users/signup", 
+                userData,
                 { 
                     withCredentials: true,
                     headers: {
@@ -125,94 +188,28 @@ if (!formData.rememberMe) {
                 }
             );
             
-            console.log("Sign-in response:", response.data);
+            console.log("Registration response:", response.data);
 
-            if (response.data.token) {
-                // Store token
-                const storage = formData.rememberMe ? localStorage : sessionStorage;
-                storage.setItem("token", response.data.token);
-                
-                // Create a user object with necessary information
-                const userData = {
-                    userId: response.data.userId,
-                    firstName: response.data.firstName,
-                    lastName: response.data.lastName,
-                    email: response.data.email,
-                    role: response.data.role
-                };
-
-                // Store user data
-                storage.setItem("user", JSON.stringify(userData));
-                console.log("User data stored:", userData);
-
-                // Navigate to the same page or home page
-                router.push(router.query.redirect || "/");
+            if (response.data.success) {
+                // Redirect to sign-in page
+                router.push("/page-signin?registered=true");
             } else {
-                setError("Authentication failed: No token received");
-                console.error("No token in response");
+                setError(response.data.message || "Registration failed");
             }
         } catch (error) {
-            const errorMessage = error.response?.data?.message || error.message || "Sign-in failed";
-            console.error("Sign-in failed:", errorMessage, error);
-            setError(`Sign-in failed: ${errorMessage}`);
+            const errorMessage = error.response?.data?.message || error.message || "Registration failed";
+            console.error("Registration failed:", errorMessage, error);
+            setError(`Registration failed: ${errorMessage}`);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleFaceLogin = async (e) => {
-        if (e) e.preventDefault();
-        
-        if (!faceDescriptor) {
-            setError("Veuillez d'abord capturer votre visage.");
-            return;
-        }
-
-        setFaceIdLoading(true);
-        setError("");
-
-        const requestBody = {
-            faceDescriptor: Array.from(faceDescriptor)
-        };
-
-        console.log("Sending face data for authentication...");
-
-        try {
-            const response = await axios.post(
-                "http://localhost:5000/api/users/signin/faceid", 
-                requestBody, 
-                { withCredentials: true }
-            );
-            
-            if (response.data.token) {
-                localStorage.setItem("token", response.data.token);
-                const userData = {
-                    userId: response.data.userId,
-                    firstName: response.data.firstName,
-                    lastName: response.data.lastName,
-                    email: response.data.email,
-                    role: response.data.role,
-                    faceId: true
-                };
-                localStorage.setItem("user", JSON.stringify(userData));
-                
-                // Fermer la modal et rediriger
-                setShowFaceIdModal(false);
-                router.push(router.query.redirect || "/");
-            }
-        } catch (error) {
-            console.error("Face ID login error:", error.response?.data?.message || error.message);
-            setError(error.response?.data?.message || "Erreur d'authentification par Face ID.");
-        } finally {
-            setFaceIdLoading(false);
-        }
-    };
-
-    const handleGoogleSignIn = () => {
+    const handleGoogleSignUp = () => {
         window.location.href = "http://localhost:5000/auth/google";
     };
 
-    const handleGitHubSignIn = () => {
+    const handleGitHubSignUp = () => {
         window.location.href = "http://localhost:5000/auth/github";
     };
     
@@ -237,16 +234,16 @@ if (!formData.rememberMe) {
                                 <div className="card-body p-4 p-md-5">
                                     <div className="text-center mb-4">
                                         <img src="/assets/imgs/template/logo.svg" alt="TuniHire" className="mb-3" style={{ height: '60px' }} />
-                                        <h2 className="mt-2 mb-2 text-brand-1 fw-bold">Welcome Back</h2>
-                                        <p className="font-sm text-muted mb-4">Sign in to access your account and explore opportunities</p>
+                                        <h2 className="mt-2 mb-2 text-brand-1 fw-bold">Create an Account</h2>
+                                        <p className="font-sm text-muted mb-4">Join TuniHire and discover new opportunities</p>
                                     </div>
                                     
                                     <div className="social-login-buttons d-flex flex-column gap-2 mb-4">
-                                        <button onClick={handleGoogleSignIn} className="btn social-login hover-up d-flex align-items-center justify-content-center gap-2 py-3">
+                                        <button onClick={handleGoogleSignUp} className="btn social-login hover-up d-flex align-items-center justify-content-center gap-2 py-3">
                                             <img src="/assets/imgs/template/icons/icon-google.svg" alt="Google" style={{ width: '20px' }} />
                                             <span>Continue with Google</span>
                                         </button>
-                                        <button onClick={handleGitHubSignIn} className="btn social-login hover-up d-flex align-items-center justify-content-center gap-2 py-3">
+                                        <button onClick={handleGitHubSignUp} className="btn social-login hover-up d-flex align-items-center justify-content-center gap-2 py-3">
                                             <img src="/assets/imgs/template/icons/icon-github.svg" alt="GitHub" style={{ width: '20px' }} />
                                             <span>Continue with GitHub</span>
                                         </button>
@@ -255,11 +252,11 @@ if (!formData.rememberMe) {
                                             className="btn btn-primary hover-up d-flex align-items-center justify-content-center gap-2 py-3"
                                         >
                                             <i className="fas fa-user-circle"></i>
-                                            <span>Sign in with Face ID</span>
+                                            <span>Add Face ID</span>
                                         </button>
                                     </div>
                                     
-                                    <div className="divider-text-center mb-4"><span>Or sign in with email</span></div>
+                                    <div className="divider-text-center mb-4"><span>Or register with email</span></div>
                                     
                                     {error && !showFaceIdModal && (
                                         <div className="alert alert-danger" role="alert">
@@ -267,7 +264,51 @@ if (!formData.rememberMe) {
                                         </div>
                                     )}
                                     
+                                    {faceDetected && !showFaceIdModal && (
+                                        <div className="alert alert-success" role="alert">
+                                            <i className="fas fa-check-circle me-2"></i>
+                                            Face ID has been added to your account
+                                        </div>
+                                    )}
+                                    
                                     <form className="login-register" onSubmit={handleSubmit}>
+                                        <div className="row">
+                                            <div className="col-md-6 mb-3">
+                                                <div className="form-group">
+                                                    <label className="form-label fw-medium" htmlFor="input-firstname">
+                                                        First Name
+                                                    </label>
+                                                    <input
+                                                        className="form-control form-control-lg"
+                                                        id="input-firstname"
+                                                        type="text"
+                                                        required
+                                                        name="firstName"
+                                                        placeholder="John"
+                                                        value={formData.firstName}
+                                                        onChange={handleChange}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="col-md-6 mb-3">
+                                                <div className="form-group">
+                                                    <label className="form-label fw-medium" htmlFor="input-lastname">
+                                                        Last Name
+                                                    </label>
+                                                    <input
+                                                        className="form-control form-control-lg"
+                                                        id="input-lastname"
+                                                        type="text"
+                                                        required
+                                                        name="lastName"
+                                                        placeholder="Doe"
+                                                        value={formData.lastName}
+                                                        onChange={handleChange}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
                                         <div className="form-group mb-3">
                                             <label className="form-label fw-medium" htmlFor="input-email">
                                                 Email address
@@ -283,6 +324,7 @@ if (!formData.rememberMe) {
                                                 onChange={handleChange}
                                             />
                                         </div>
+                                        
                                         <div className="form-group mb-3">
                                             <label className="form-label fw-medium" htmlFor="input-password">
                                                 Password
@@ -297,60 +339,121 @@ if (!formData.rememberMe) {
                                                 value={formData.password}
                                                 onChange={handleChange}
                                             />
-                                            <div className="d-flex justify-content-end mt-2">
-                                                <Link legacyBehavior href="/page-contact">
-                                                    <a className="text-primary small">Forgot Password?</a>
-                                                </Link>
+                                            {formData.password && (
+                                                <div className="mt-2">
+                                                    <div className="password-strength-meter">
+                                                        <div className="progress" style={{ height: '8px' }}>
+                                                            <div 
+                                                                className={`progress-bar ${
+                                                                    passwordStrength < 3 ? 'bg-danger' : 
+                                                                    passwordStrength < 5 ? 'bg-warning' : 'bg-success'
+                                                                }`} 
+                                                                role="progressbar" 
+                                                                style={{ width: `${passwordStrength * 20}%` }} 
+                                                                aria-valuenow={passwordStrength * 20} 
+                                                                aria-valuemin="0" 
+                                                                aria-valuemax="100"
+                                                            ></div>
+                                                        </div>
+                                                        <small className="text-muted mt-1 d-block">{passwordFeedback}</small>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="form-group mb-3">
+                                            <label className="form-label fw-medium" htmlFor="input-confirm-password">
+                                                Confirm Password
+                                            </label>
+                                            <input
+                                                className="form-control form-control-lg"
+                                                id="input-confirm-password"
+                                                type="password"
+                                                required
+                                                name="confirmPassword"
+                                                placeholder="••••••••"
+                                                value={formData.confirmPassword}
+                                                onChange={handleChange}
+                                            />
+                                            {formData.password && formData.confirmPassword && 
+                                             formData.password !== formData.confirmPassword && (
+                                                <small className="text-danger mt-1 d-block">Passwords do not match</small>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="form-group mb-3">
+                                            <label className="form-label fw-medium">I am a:</label>
+                                            <div className="role-options d-flex gap-3">
+                                                <div className="form-check">
+                                                    <input
+                                                        className="form-check-input"
+                                                        type="radio"
+                                                        name="role"
+                                                        id="role-jobseeker"
+                                                        value="jobseeker"
+                                                        checked={formData.role === "jobseeker"}
+                                                        onChange={handleChange}
+                                                    />
+                                                    <label className="form-check-label" htmlFor="role-jobseeker">
+                                                        Job Seeker
+                                                    </label>
+                                                </div>
+                                                <div className="form-check">
+                                                    <input
+                                                        className="form-check-input"
+                                                        type="radio"
+                                                        name="role"
+                                                        id="role-employer"
+                                                        value="employer"
+                                                        checked={formData.role === "employer"}
+                                                        onChange={handleChange}
+                                                    />
+                                                    <label className="form-check-label" htmlFor="role-employer">
+                                                        Employer
+                                                    </label>
+                                                </div>
                                             </div>
                                         </div>
+                                        
                                         <div className="form-group mb-4">
                                             <div className="form-check">
                                                 <input 
                                                     className="form-check-input" 
                                                     type="checkbox" 
-                                                    id="remember-me" 
-                                                    name="rememberMe"
-                                                    checked={formData.rememberMe}
+                                                    id="terms" 
+                                                    name="terms"
+                                                    checked={formData.terms}
                                                     onChange={handleChange}
-                                                    style={{
-                                                        width: '18px',
-                                                        height: '18px',
-                                                        borderRadius: '3px',
-                                                        backgroundColor: formData.rememberMe ? '#0d6efd' : '#fff',
-                                                        borderColor: '#0d6efd'
-                                                    }}
+                                                    required
                                                 />
-                                                <label className="form-check-label" htmlFor="remember-me">
-                                                    Remember me
+                                                <label className="form-check-label" htmlFor="terms">
+                                                    I agree to the <Link href="/terms"><a className="text-primary">Terms & Conditions</a></Link>
                                                 </label>
                                             </div>
-                                               {rememberMeError && (
-                                        <div style={{ color: 'red', fontSize: '14px', marginTop: '5px' }}>
-                                            {rememberMeError}
                                         </div>
-                                        )}
-                                        </div>
+                                        
                                         <div className="form-group mb-4">
                                             <button 
-                                                className="btn btn-primary hover-up w-100 py-3" 
+                                                className="btn btn-brand-1 hover-up w-100 py-3" 
                                                 type="submit" 
                                                 disabled={loading}
                                             >
                                                 {loading ? (
                                                     <span>
                                                         <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                                        Signing in...
+                                                        Creating Account...
                                                     </span>
                                                 ) : (
-                                                    "Sign In"
+                                                    "Create Account"
                                                 )}
                                             </button>
                                         </div>
+                                        
                                         <div className="text-center">
                                             <p className="font-sm text-muted mb-0">
-                                                Don't have an account? 
-                                                <Link legacyBehavior href="/page-register">
-                                                    <a className="text-primary ms-1">Sign up</a>
+                                                Already have an account? 
+                                                <Link legacyBehavior href="/page-signin">
+                                                    <a className="text-primary ms-1">Sign in</a>
                                                 </Link>
                                             </p>
                                         </div>
@@ -362,13 +465,12 @@ if (!formData.rememberMe) {
                 </div>
             </section>
             
-            
             {/* Modal Face ID */}
             {showFaceIdModal && (
                 <div className="modal-faceid">
                     <div className="modal-faceid-content">
                         <div className="modal-faceid-header">
-                            <h5 className="modal-title">Face ID Authentication</h5>
+                            <h5 className="modal-title">Add Face ID</h5>
                             <button type="button" className="close" onClick={closeFaceIdModal}>
                                 <span aria-hidden="true">&times;</span>
                             </button>
@@ -380,7 +482,7 @@ if (!formData.rememberMe) {
                                 </div>
                             )}
                             <div className="text-center mb-4">
-                                <p>Position your face in front of the camera to sign in</p>
+                                <p>Position your face in front of the camera to set up Face ID</p>
                             </div>
                             <div className="webcam-container">
                                 <Webcam
@@ -431,17 +533,10 @@ if (!formData.rememberMe) {
                             <button 
                                 type="button" 
                                 className="btn btn-primary"
-                                onClick={handleFaceLogin}
-                                disabled={!faceDetected || faceIdLoading}
+                                onClick={closeFaceIdModal}
+                                disabled={!faceDetected}
                             >
-                                {faceIdLoading ? (
-                                    <span>
-                                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                        Signing in...
-                                    </span>
-                                ) : (
-                                    "Sign in with Face ID"
-                                )}
+                                Add Face ID
                             </button>
                         </div>
                     </div>
@@ -521,14 +616,6 @@ if (!formData.rememberMe) {
                 .social-login:hover {
                     background-color: #f8f9fa;
                     transform: translateY(-3px);
-                }
-                .form-check-input:checked {
-                    background-color: #0d6efd !important;
-                    border-color: #0d6efd !important;
-                }
-                .form-check-input:focus {
-                    border-color: #0d6efd;
-                    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
                 }
             `}</style>
         </Layout>
