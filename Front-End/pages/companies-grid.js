@@ -175,6 +175,12 @@ export default function CompaniesGrid() {
     return (
         <>
             <Layout>
+                <br></br>
+                                <br></br>
+                <br></br>
+                <br></br>
+                <br></br>
+        
                 <div>
                     <section className="section-box-2">
                         <div className="container">
