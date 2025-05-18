@@ -13,6 +13,8 @@ export default function CompaniesGrid() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalCompanies, setTotalCompanies] = useState(0);
     const [itemsPerPage, setItemsPerPage] = useState(9); // Number of companies per page
+    const [hoveredRatings, setHoveredRatings] = useState({});
+    const [selectedRatings, setSelectedRatings] = useState({});
     
     // Filter state
     const [filters, setFilters] = useState({
@@ -121,6 +123,54 @@ export default function CompaniesGrid() {
     
     // Change page
     const paginate = (pageNumber) => setCurrentPage(pageNumber);
+    
+    // Handle star hover
+    const handleStarHover = (companyId, rating) => {
+        setHoveredRatings(prev => ({
+            ...prev,
+            [companyId]: rating
+        }));
+    };
+    
+    // Handle star click/rating
+    const handleStarClick = async (companyId, rating) => {
+        try {
+            // Update UI immediately for better user experience
+            setSelectedRatings(prev => ({
+                ...prev,
+                [companyId]: rating
+            }));
+            
+            // Here you would typically make an API call to save the rating
+            // For example:
+            // await axios.post(`http://localhost:5000/api/companies/${companyId}/rate`, { rating });
+            
+            // Update the company in the local state
+            setCompanies(prevCompanies => 
+                prevCompanies.map(company => 
+                    company._id === companyId 
+                        ? { ...company, rating } 
+                        : company
+                )
+            );
+            
+            // Show success message
+            alert(`Thank you for rating ${rating} stars!`);
+            
+        } catch (error) {
+            console.error('Error submitting rating:', error);
+            alert('Failed to submit rating. Please try again.');
+        }
+    };
+    
+    // Handle mouse leave from rating stars
+    const handleStarMouseLeave = (companyId) => {
+        setHoveredRatings(prev => {
+            const newState = { ...prev };
+            delete newState[companyId];
+            return newState;
+        });
+    };
 
     return (
         <>
@@ -128,10 +178,12 @@ export default function CompaniesGrid() {
                 <div>
                     <section className="section-box-2">
                         <div className="container">
-                            <div className="banner-hero banner-company">
+                            <div className="banner-hero banner-company" style={{background: 'linear-gradient(to right, #3b82f6, #1e40af)', borderRadius: '15px', padding: '40px 15px', margin: '0 5px'}}>
                                 <div className="block-banner text-center">
-                                    <h3 className="wow animate__animated animate__fadeInUp">Browse Companies</h3>
-                                    <div className="font-sm color-text-paragraph-2 mt-10 wow animate__animated animate__fadeInUp" data-wow-delay=".1s">
+                                    <h3 className="wow animate__animated animate__fadeInUp" style={{color: 'white', fontSize: 'clamp(24px, 5vw, 36px)', fontWeight: '700', padding: '0 10px'}}>
+                                        Browse Companies
+                                    </h3>
+                                    <div className="font-sm mt-10 wow animate__animated animate__fadeInUp" data-wow-delay=".1s" style={{color: 'rgba(255, 255, 255, 0.9)', maxWidth: '600px', margin: '0 auto', fontSize: 'clamp(14px, 4vw, 16px)', padding: '0 15px'}}>
                                         Discover top companies that are hiring and find your next career opportunity
                                     </div>
                                     <div className="box-list-character">
@@ -309,9 +361,27 @@ export default function CompaniesGrid() {
                                                 </div>
                                             ) : (
                                                 currentCompanies.map((company, index) => (
-                                                    <div key={company._id} className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12">
-                                                        <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn">
-                                                            <div className="image-box">
+                                                     <div key={company._id} className="col-xl-4 col-lg-4 col-md-6 col-sm-12 col-12" style={{marginBottom: '20px'}}>
+                                                        <div className="card-grid-1 hover-up wow animate__animated animate__fadeIn" style={{
+                                                            borderRadius: '12px',
+                                                            boxShadow: '0 5px 15px rgba(0,0,0,0.05)',
+                                                            transition: 'all 0.3s ease',
+                                                            border: '1px solid #eee',
+                                                            overflow: 'hidden',
+                                                            height: '100%',
+                                                            display: 'flex',
+                                                            flexDirection: 'column'
+                                                        }}>
+                                                            <div className="image-box" style={{
+                                                                background: 'linear-gradient(to right, #f8fafc, #f1f5f9)',
+                                                                padding: '15px',
+                                                                display: 'flex',
+                                                                justifyContent: 'center',
+                                                                alignItems: 'center',
+                                                                minHeight: '120px',
+                                                                borderBottom: '1px solid #eee',
+                                                                width: '100%'
+                                                            }}>
                                                                 <Link href={`/company-details?id=${company._id}`}>
                                                                     <img 
                                                                         src={company.logo || "assets/imgs/brands/brand-1.png"} 
@@ -324,25 +394,87 @@ export default function CompaniesGrid() {
                                                                     />
                                                                 </Link>
                                                             </div>
-                                                            <div className="info-text mt-10">
-                                                                <h5 className="font-bold">
+                                                            <div className="info-text mt-10" style={{padding: '15px', flex: '1', display: 'flex', flexDirection: 'column'}}>
+                                                                <h5 className="font-bold" style={{fontSize: '18px', marginBottom: '10px'}}>
                                                                     <Link href={`/company-details?id=${company._id}`}>
                                                                         {company.name}
                                                                     </Link>
                                                                 </h5>
-                                                                <div className="mt-5">
-                                                                    <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                                    <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                                    <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                                    <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
-                                                                    <img alt="jobBox" src="assets/imgs/template/icons/star.svg" />
+                                                                <div 
+                                                                    className="mt-5" 
+                                                                    style={{color: '#FFB800', display: 'flex', alignItems: 'center'}}
+                                                                    onMouseLeave={() => handleStarMouseLeave(company._id)}
+                                                                >
+                                                                    {/* Interactive star rating system */}
+                                                                    {[1, 2, 3, 4, 5].map((star) => {
+                                                                        // Determine which rating to display (hovered, selected, or original)
+                                                                        const displayRating = 
+                                                                            hoveredRatings[company._id] !== undefined
+                                                                                ? hoveredRatings[company._id]
+                                                                                : selectedRatings[company._id] !== undefined
+                                                                                    ? selectedRatings[company._id]
+                                                                                    : company.rating || 0;
+                                                                        
+                                                                        // Determine star color based on hover/selection state
+                                                                        const starColor = star <= displayRating ? '#FFB800' : '#E0E0E0';
+                                                                        
+                                                                        return (
+                                                                            <i 
+                                                                                key={star} 
+                                                                                className="fi-rr-star" 
+                                                                                style={{
+                                                                                    color: starColor,
+                                                                                    cursor: 'pointer',
+                                                                                    fontSize: '16px',
+                                                                                    margin: '0 2px',
+                                                                                    transition: 'color 0.2s ease'
+                                                                                }}
+                                                                                onMouseEnter={() => handleStarHover(company._id, star)}
+                                                                                onClick={() => handleStarClick(company._id, star)}
+                                                                            />
+                                                                        );
+                                                                    })}
+                                                                    <span style={{fontSize: '14px', marginLeft: '5px', color: '#64748b'}}>
+                                                                        {(
+                                                                            hoveredRatings[company._id] !== undefined
+                                                                                ? hoveredRatings[company._id]
+                                                                                : selectedRatings[company._id] !== undefined
+                                                                                    ? selectedRatings[company._id]
+                                                                                    : company.rating || 0
+                                                                        ).toFixed(1)}
+                                                                    </span>
                                                                 </div>
-                                                                <span className="card-location">{company.location || "Location not specified"}</span>
-                                                                <div className="mt-30">
+                                                                <div className="d-flex align-items-center mt-10">
+                                                                    <i className="fi-rr-marker mr-5" style={{color: '#64748b'}}></i>
+                                                                    <span className="card-location" style={{color: '#64748b', fontSize: '14px'}}>{company.location || "Location not specified"}</span>
+                                                                </div>
+                                                                {company.category && (
+                                                                    <div className="d-flex align-items-center mt-5">
+                                                                        <i className="fi-rr-briefcase mr-5" style={{color: '#64748b'}}></i>
+                                                                        <span style={{color: '#64748b', fontSize: '14px'}}>{company.category}</span>
+                                                                    </div>
+                                                                )}
+                                                                <div className="mt-20" style={{marginTop: 'auto', paddingTop: '15px'}}>
                                                                     <Link
                                                                         href={`/jobs-grid?company=${company._id}`}
-                                                                        className="btn btn-grey-big"
+                                                                        className="btn btn-apply-now" 
+                                                                        style={{
+                                                                            backgroundColor: '#3b82f6',
+                                                                            color: 'white',
+                                                                            borderRadius: '8px',
+                                                                            padding: '10px 15px',
+                                                                            fontWeight: '500',
+                                                                            width: '100%',
+                                                                            textAlign: 'center',
+                                                                            display: 'flex',
+                                                                            justifyContent: 'center',
+                                                                            alignItems: 'center',
+                                                                            gap: '5px',
+                                                                            fontSize: 'clamp(14px, 2vw, 16px)',
+                                                                            transition: 'all 0.3s ease'
+                                                                        }}
                                                                     >
+                                                                        <i className="fi-rr-briefcase"></i>
                                                                         <span>{company.jobCount !== undefined ? company.jobCount : '...'}</span>
                                                                         <span> {company.jobCount === 1 ? 'Job Open' : 'Jobs Open'}</span>
                                                                     </Link>
@@ -539,24 +671,7 @@ export default function CompaniesGrid() {
                             </div>
                         </div>
                     </section>
-                    <section className="section-box mt-50 mb-50">
-                        <div className="container">
-                            <div className="text-start">
-                                <h2 className="section-title mb-10 wow animate__animated animate__fadeInUp">News and Blog</h2>
-                                <p className="font-lg color-text-paragraph-2 wow animate__animated animate__fadeInUp">Get the latest news, updates and tips</p>
-                            </div>
-                        </div>
-                        <div className="container">
-                            <div className="mt-50">
-                                <div className="box-swiper style-nav-top">
-                                    <BlogSlider />
-                                </div>
-                                <div className="text-center">
-                                    <Link href="blog-grid" className="btn btn-brand-1 btn-icon-load mt--30 hover-up">Load More Posts</Link>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+                   
                     <section className="section-box mt-50 mb-20">
                         <div className="container">
                             <div className="box-newsletter">

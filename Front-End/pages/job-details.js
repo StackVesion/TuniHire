@@ -129,19 +129,20 @@ export default function JobDetails() {
                             </div>
                             <div className="row mt-10">
                                 <div className="col-lg-8 col-md-12">
-                                    <h3>{job.title}</h3>
-                                    <div className="mt-0 mb-15">
+                                    <h3 className="job-title-detail">{job.title}</h3>
+                                    <div className="mt-0 mb-15 d-flex align-items-center">
                                         <Link href={`/company-details?id=${job.companyId}`} className="name-job">
-                                            {company?.name || job.companyName || "Company Name"}
+                                            <i className="fi-rr-building mr-5"></i> {company?.name || job.companyName || "Company Name"}
                                         </Link>
-                                        <span className="card-briefcase ml-15">{job.workplaceType}</span>
-                                        <span className="card-time">{formatTimeAgo(job.createdAt)}</span>
+                                        <span className="card-location ml-15"><i className="fi-rr-marker mr-5"></i> {job.location || "Remote"}</span>
+                                        <span className="card-briefcase ml-15"><i className="fi-rr-briefcase mr-5"></i> {job.workplaceType}</span>
+                                        <span className="card-time ml-15"><i className="fi-rr-clock mr-5"></i> {formatTimeAgo(job.createdAt)}</span>
                                     </div>
                                 </div>
                                 <div className="col-lg-4 col-md-12 text-lg-end">
-                                    <Link href="/candidate-profile?activeTab=2" className="btn btn-apply-icon btn-apply btn-apply-big hover-up">
-                                        Apply now
-                                    </Link>
+                                    <a href="http://localhost:3001/apply-for-jobs" className="btn btn-apply-icon btn-apply btn-apply-big hover-up" style={{backgroundColor: '#3b82f6', borderColor: '#3b82f6'}}>
+                                        <i className="fi-rr-paper-plane mr-5"></i> Apply now
+                                    </a>
                                 </div>
                             </div>
                             <div className="border-bottom pt-10 pb-10" />
@@ -276,13 +277,13 @@ export default function JobDetails() {
                                     </div>
                                     <div className="single-apply-jobs">
                                         <div className="row align-items-center">
-                                            <div className="col-md-5">
-                                                <Link href="/candidate-profile?activeTab=2" className="btn btn-default mr-15">
-                                                    Apply now
-                                                </Link>
-
+                                            <div className="col-md-7 d-flex gap-3">
+                                                <a href="http://localhost:3001/apply-for-jobs" className="btn btn-apply-icon btn-apply btn-apply-big hover-up" style={{backgroundColor: '#3b82f6', borderColor: '#3b82f6'}}>
+                                                    <i className="fi-rr-paper-plane mr-5"></i> Apply now
+                                                </a>
+                                                
                                                 <Link href="#" className="btn btn-border">
-                                                    Save job
+                                                    <i className="fi-rr-bookmark mr-5"></i> Save job
                                                 </Link>
                                             </div>
                                             <div className="col-md-7 text-lg-end social-share">
@@ -441,19 +442,7 @@ export default function JobDetails() {
                             </div>
                         </div>
                     </section>
-                    <section className="section-box mt-50">
-                        <div className="container">
-                            <div className="text-center">
-                                <h2 className="section-title mb-10">Similar jobs</h2>
-                                <p className="font-lg color-text-paragraph-2">
-                                    You may be interested in these jobs also
-                                </p>
-                            </div>
-                            <div className="slick-carousel slick-dotted mt-50">
-                                <FeaturedSlider />
-                            </div>
-                        </div>
-                    </section>
+           
                 </div>
             </Layout>
         </>

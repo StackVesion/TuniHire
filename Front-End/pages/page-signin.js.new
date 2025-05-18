@@ -12,7 +12,6 @@ export default function Signin() {
     const [formData, setFormData] = useState({
         email: "",
         password: "",
-        rememberMe: false
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -23,8 +22,6 @@ export default function Signin() {
     const [showFaceIdModal, setShowFaceIdModal] = useState(false);
     const [faceDetected, setFaceDetected] = useState(false);
     const [faceIdLoading, setFaceIdLoading] = useState(false);
-    const [rememberMeError, setRememberMeError] = useState('');
-
 
     useEffect(() => {
         const loadModels = async () => {
@@ -48,11 +45,7 @@ export default function Signin() {
     }, []);
 
     const handleChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFormData({ 
-            ...formData, 
-            [name]: type === 'checkbox' ? checked : value 
-        });
+        setFormData({ ...formData, [e.target.name]: e.target.value });
         // Clear any previous error message when user starts typing
         if (error) setError("");
     };
@@ -73,7 +66,6 @@ export default function Signin() {
             setFaceIdLoading(false);
             return;
         }
-        
 
         try {
             const detections = await faceapi.detectSingleFace(video)
@@ -99,12 +91,6 @@ export default function Signin() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-if (!formData.rememberMe) {
-  setRememberMeError("Please check 'Remember me' before signing in.");
-  return;
-} else {
-  setRememberMeError(""); // Clear if no error
-}
         setLoading(true);
         setError("");
 
@@ -129,8 +115,7 @@ if (!formData.rememberMe) {
 
             if (response.data.token) {
                 // Store token
-                const storage = formData.rememberMe ? localStorage : sessionStorage;
-                storage.setItem("token", response.data.token);
+                localStorage.setItem("token", response.data.token);
                 
                 // Create a user object with necessary information
                 const userData = {
@@ -142,7 +127,7 @@ if (!formData.rememberMe) {
                 };
 
                 // Store user data
-                storage.setItem("user", JSON.stringify(userData));
+                localStorage.setItem("user", JSON.stringify(userData));
                 console.log("User data stored:", userData);
 
                 // Navigate to the same page or home page
@@ -284,9 +269,14 @@ if (!formData.rememberMe) {
                                             />
                                         </div>
                                         <div className="form-group mb-3">
-                                            <label className="form-label fw-medium" htmlFor="input-password">
-                                                Password
-                                            </label>
+                                            <div className="d-flex justify-content-between mb-1">
+                                                <label className="form-label fw-medium" htmlFor="input-password">
+                                                    Password
+                                                </label>
+                                                <Link legacyBehavior href="/page-contact">
+                                                    <a className="text-primary small">Forgot Password?</a>
+                                                </Link>
+                                            </div>
                                             <input
                                                 className="form-control form-control-lg"
                                                 id="input-password"
@@ -297,42 +287,18 @@ if (!formData.rememberMe) {
                                                 value={formData.password}
                                                 onChange={handleChange}
                                             />
-                                            <div className="d-flex justify-content-end mt-2">
-                                                <Link legacyBehavior href="/page-contact">
-                                                    <a className="text-primary small">Forgot Password?</a>
-                                                </Link>
-                                            </div>
                                         </div>
                                         <div className="form-group mb-4">
                                             <div className="form-check">
-                                                <input 
-                                                    className="form-check-input" 
-                                                    type="checkbox" 
-                                                    id="remember-me" 
-                                                    name="rememberMe"
-                                                    checked={formData.rememberMe}
-                                                    onChange={handleChange}
-                                                    style={{
-                                                        width: '18px',
-                                                        height: '18px',
-                                                        borderRadius: '3px',
-                                                        backgroundColor: formData.rememberMe ? '#0d6efd' : '#fff',
-                                                        borderColor: '#0d6efd'
-                                                    }}
-                                                />
+                                                <input className="form-check-input" type="checkbox" id="remember-me" />
                                                 <label className="form-check-label" htmlFor="remember-me">
                                                     Remember me
                                                 </label>
                                             </div>
-                                               {rememberMeError && (
-                                        <div style={{ color: 'red', fontSize: '14px', marginTop: '5px' }}>
-                                            {rememberMeError}
-                                        </div>
-                                        )}
                                         </div>
                                         <div className="form-group mb-4">
                                             <button 
-                                                className="btn btn-primary hover-up w-100 py-3" 
+                                                className="btn btn-brand-1 hover-up w-100 py-3" 
                                                 type="submit" 
                                                 disabled={loading}
                                             >
@@ -361,7 +327,6 @@ if (!formData.rememberMe) {
                     </div>
                 </div>
             </section>
-            
             
             {/* Modal Face ID */}
             {showFaceIdModal && (
@@ -521,14 +486,6 @@ if (!formData.rememberMe) {
                 .social-login:hover {
                     background-color: #f8f9fa;
                     transform: translateY(-3px);
-                }
-                .form-check-input:checked {
-                    background-color: #0d6efd !important;
-                    border-color: #0d6efd !important;
-                }
-                .form-check-input:focus {
-                    border-color: #0d6efd;
-                    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
                 }
             `}</style>
         </Layout>

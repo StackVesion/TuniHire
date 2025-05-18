@@ -15,8 +15,8 @@ export default function Register() {
         lastName: "",
         email: "",
         password: "",
-        rePassword: "",
-        role: "jobseeker", // Default role is jobseeker
+        confirmPassword: "",
+        role: "jobseeker",
         terms: false
     });
     const [loading, setLoading] = useState(false);
@@ -136,7 +136,7 @@ export default function Register() {
     };
 
     const validateForm = () => {
-        if (formData.password !== formData.rePassword) {
+        if (formData.password !== formData.confirmPassword) {
             setError("Passwords do not match");
             return false;
         }
@@ -164,31 +164,18 @@ export default function Register() {
         setLoading(true);
         setError("");
 
-        // Ensure all required fields are included
         const userData = {
             firstName: formData.firstName,
             lastName: formData.lastName,
             email: formData.email,
             password: formData.password,
-            rePassword: formData.rePassword,
-            role: formData.role || "jobseeker" // Ensure role is always set
+            role: formData.role
         };
 
-        // NEVER send face descriptor data unless explicitly captured and detected
-        // This prevents MongoDB duplicate key errors
-        if (faceDescriptor && faceDetected && Array.isArray(faceDescriptor) && faceDescriptor.length > 0) {
-            // Only include face data if we have explicitly captured a face
+        // Add face descriptor if available
+        if (faceDescriptor) {
             userData.faceDescriptor = Array.from(faceDescriptor);
-            console.log("Including face descriptor in registration data");
-        } else {
-            // Make sure we're not sending any face-related data
-            console.log("No face data included in registration");
-            // Explicitly delete these properties to ensure they're not sent
-            delete userData.faceDescriptor;
-            delete userData.faceId;
         }
-        
-        console.log("Complete registration data:", { ...userData, password: "[REDACTED]", rePassword: "[REDACTED]" });
 
         try {
             console.log("Registering user with data:", { ...userData, password: "[REDACTED]" });
@@ -355,7 +342,6 @@ export default function Register() {
                                                     placeholder="••••••••"
                                                     value={formData.password}
                                                     onChange={handleChange}
-                                                    autoComplete="new-password"
                                                 />
                                                 {formData.password && (
                                                     <div className="mt-2">
@@ -388,19 +374,50 @@ export default function Register() {
                                                     id="input-confirm-password"
                                                     type="password"
                                                     required
-                                                    name="rePassword"
+                                                    name="confirmPassword"
                                                     placeholder="••••••••"
-                                                    value={formData.rePassword}
+                                                    value={formData.confirmPassword}
                                                     onChange={handleChange}
-                                                    autoComplete="new-password"
                                                 />
-                                                {formData.password && formData.rePassword && 
-                                                 formData.password !== formData.rePassword && (
+                                                {formData.password && formData.confirmPassword && 
+                                                 formData.password !== formData.confirmPassword && (
                                                     <small className="text-danger mt-1 d-block">Passwords do not match</small>
                                                 )}
                                             </div>
                                             
-
+                                            <div className="form-group mb-3">
+                                                <label className="form-label fw-medium">I am a:</label>
+                                                <div className="role-options d-flex gap-3">
+                                                    <div className="form-check">
+                                                        <input
+                                                            className="form-check-input"
+                                                            type="radio"
+                                                            name="role"
+                                                            id="role-jobseeker"
+                                                            value="jobseeker"
+                                                            checked={formData.role === "jobseeker"}
+                                                            onChange={handleChange}
+                                                        />
+                                                        <label className="form-check-label" htmlFor="role-jobseeker">
+                                                            Job Seeker
+                                                        </label>
+                                                    </div>
+                                                    <div className="form-check">
+                                                        <input
+                                                            className="form-check-input"
+                                                            type="radio"
+                                                            name="role"
+                                                            id="role-employer"
+                                                            value="employer"
+                                                            checked={formData.role === "employer"}
+                                                            onChange={handleChange}
+                                                        />
+                                                        <label className="form-check-label" htmlFor="role-employer">
+                                                            Employer
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
                                             
                                             <div className="form-group mb-4">
                                                 <div className="form-check">
@@ -421,7 +438,7 @@ export default function Register() {
                                                         }}
                                                     />
                                                     <label className="form-check-label" htmlFor="terms">
-                                                        I agree to the <Link legacyBehavior href="/terms"><a className="text-primary">Terms & Conditions</a></Link>
+                                                        I agree to the <Link href="/terms"><a className="text-primary">Terms & Conditions</a></Link>
                                                     </label>
                                                 </div>
                                             </div>

@@ -193,8 +193,6 @@ const AdminSidebar = () => {
                         </div>
                     </div>
                 )}
-            </div>
-            
             <style jsx>{`
                 .admin-mobile-toggle {
                     display: none;
@@ -388,6 +386,7 @@ const AdminSidebar = () => {
             `}</style>
         </>
     );
+};
 };
 
 export default AdminSidebar;

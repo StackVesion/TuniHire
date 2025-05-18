@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import AdminLayout from "../../components/layout/admin/AdminLayout";
+import AdminLayout from "../../components/layout/AdminLayout";
 
 export default function AdminDashboard() {
   const router = useRouter();

@@ -210,18 +210,16 @@ export default function Layout({ headTitle, breadcrumbTitle, breadcrumbActive, c
     return () => {};
   }, []);
 
-  // useEffect(() => {
-  //   // Ensure we're running on the client where window is defined
-  //   if (typeof window !== "undefined") {
-  //     // Dynamically import wowjs and extract the named export WOW
-  //     import("wowjs").then(({ WOW }) => {
-  //       // Initialize WOW.js animations
-  //       new WOW({ live: false }).init();
-  //     }).catch((err) => {
-  //       console.error("Failed to load WOW.js", err);
-  //     });
-  //   }
-  // }, []);
+  // Add animations when the component mounts
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // Add animation classes to elements
+      const animatedElements = document.querySelectorAll('.stats-card, .card-job, .quick-action-card, .profile-completion-card');
+      animatedElements.forEach(element => {
+        element.classList.add('animated-card');
+      });
+    }
+  }, []);
 
   return (
     <>
@@ -232,7 +230,7 @@ export default function Layout({ headTitle, breadcrumbTitle, breadcrumbActive, c
       <MobileMenu handleToggle={handleToggle} isToggled={isToggled} />
       <main className="main">
         <Sidebar />
-        <div className="box-content">
+        <div className="box-content shadow-modern">
           {breadcrumbTitle && (
             <Breadcrumb breadcrumbTitle={breadcrumbTitle} breadcrumbActive={breadcrumbActive} />
           )}

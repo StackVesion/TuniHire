@@ -35,3 +35,321 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
+
+/* Enhanced dashboard UI styles */
+.dashboard-header {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.dashboard-header:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+.dashboard-avatar {
+  transition: all 0.3s ease;
+}
+
+.dashboard-avatar:hover {
+  transform: scale(1.05);
+}
+
+/* Enhanced card styles */
+.card-style-1 {
+  transition: all 0.3s ease;
+  border-radius: 12px;
+  overflow: hidden;
+  border: none;
+}
+
+.card-style-1:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1) !important;
+}
+
+.card-image {
+  transition: all 0.3s ease;
+}
+
+.card-style-1:hover .card-image {
+  transform: scale(1.1);
+}
+
+/* Quick actions enhancements */
+.quick-action-card {
+  transition: all 0.3s ease;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.quick-action-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1) !important;
+}
+
+.quick-action-icon {
+  transition: all 0.4s ease;
+}
+
+.quick-action-card:hover .quick-action-icon {
+  transform: scale(1.15);
+}
+
+/* Profile completion enhancements */
+.profile-completion-card {
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.profile-completion-card:hover {
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Job card enhancements */
+.card-job {
+  transition: all 0.3s ease;
+}
+
+.card-job:hover {
+  transform: translateY(-5px);
+}
+
+.card-job-body {
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: 1px solid #e9ecef;
+}
+
+.card-job:hover .card-job-body {
+  border-color: #3b82f6;
+  box-shadow: 0 8px 15px rgba(59, 130, 246, 0.1);
+}
+
+/* Global enhancements */
+.font-bold {
+  font-weight: 700 !important;
+}
+
+.rounded-xl {
+  border-radius: 12px !important;
+}
+
+.shadow-hover {
+  transition: all 0.3s ease;
+}
+
+.shadow-hover:hover {
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Modern button styles */
+.btn-modern {
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-modern:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Dashboard stats cards */
+.stats-card {
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: none;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.stats-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+.stats-icon {
+  transition: all 0.4s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.stats-card:hover .stats-icon {
+  transform: scale(1.1);
+  background-color: rgba(59, 130, 246, 0.2);
+}
+
+.stats-icon i {
+  transition: all 0.3s ease;
+}
+
+.stats-card:hover .stats-icon i {
+  transform: scale(1.2);
+}
+
+.bg-primary-light i.text-primary {
+  color: var(--color-primary) !important;
+}
+
+.bg-success-light i.text-success {
+  color: var(--color-success) !important;
+}
+
+.bg-warning-light i.text-warning {
+  color: var(--color-warning) !important;
+}
+
+.bg-danger-light i.text-danger {
+  color: var(--color-danger) !important;
+}
+
+.bg-info-light i.text-info {
+  color: var(--color-info) !important;
+}
+
+/* Custom interview icon */
+.interview-icon-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 30px;
+  height: 30px;
+  margin: 0 auto;
+}
+
+.interview-icon-calendar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 24px;
+}
+
+.interview-icon-person {
+  position: absolute;
+  bottom: -8px;
+  right: -8px;
+  font-size: 16px;
+  background-color: var(--color-primary-light);
+  border-radius: 50%;
+  padding: 3px;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Global modern UI enhancements */
+body {
+  background-color: #f9fafc;
+}
+
+/* Enhanced color variables */
+:root {
+  --color-primary: #3b82f6;
+  --color-primary-light: #dbeafe;
+  --color-success: #10b981;
+  --color-success-light: #d1fae5;
+  --color-warning: #f59e0b;
+  --color-warning-light: #fef3c7;
+  --color-danger: #ef4444;
+  --color-danger-light: #fee2e2;
+  --color-info: #3b82f6;
+  --color-info-light: #dbeafe;
+}
+
+/* Background colors */
+.bg-primary-light {
+  background-color: var(--color-primary-light) !important;
+}
+
+.bg-success-light {
+  background-color: var(--color-success-light) !important;
+}
+
+.bg-warning-light {
+  background-color: var(--color-warning-light) !important;
+}
+
+.bg-danger-light {
+  background-color: var(--color-danger-light) !important;
+}
+
+.bg-info-light {
+  background-color: var(--color-info-light) !important;
+}
+
+/* Modern drop shadow */
+.shadow-modern {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+/* Badge styles */
+.badge {
+  padding: 0.5em 0.75em;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+.bg-soft-primary {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.bg-soft-success {
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.bg-soft-warning {
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+.bg-soft-danger {
+  background-color: var(--color-danger-light);
+  color: var(--color-danger);
+}
+
+/* Card animations */
+.animated-card {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.animated-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Main content container */
+.box-content {
+  background-color: #f9fafc;
+  border-radius: 12px;
+  padding: 20px;
+}
