@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
 const getEmailTemplate = require('../templates/emailVerification');
-
+const API_URL = process.env.NEXT_PUBLIC_FRONT_API_URL || 'http://localhost:3000';
 // Utiliser le transporteur spécifique pour les emails de vérification
 const transporter = global.verificationEmailTransporter || nodemailer.createTransport({
     service: 'gmail',
@@ -15,7 +15,7 @@ const transporter = global.verificationEmailTransporter || nodemailer.createTran
 });
 
 const sendVerificationEmail = async (email, verificationToken, firstName) => {
-    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+    const verificationUrl = `${API_URL}/verify-email/${verificationToken}`;
     const htmlContent = getEmailTemplate(verificationUrl, firstName || 'there');
 
     const mailOptions = {
