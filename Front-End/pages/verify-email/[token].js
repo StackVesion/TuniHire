@@ -3,6 +3,8 @@ import { useRouter } from 'next/router';
 import axios from 'axios';
 import Layout from "../../components/Layout/Layout";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 export default function VerifyEmail() {
     const [status, setStatus] = useState('verifying');
     const [errorMessage, setErrorMessage] = useState('');
@@ -24,7 +26,7 @@ export default function VerifyEmail() {
             // Ajout d'un délai pour s'assurer que le serveur a le temps de répondre
             setTimeout(async () => {
                 try {
-                    const response = await axios.get(`http://localhost:5000/api/users/verify-email/${token}`);
+                    const response = await axios.get(`${API_URL}/api/users/verify-email/${token}`);
                     
                     console.log("Verification response:", response.data);
                     
@@ -74,7 +76,7 @@ export default function VerifyEmail() {
         
         try {
             setStatus('resending');
-            const response = await axios.get(`http://localhost:5000/api/users/resend-verification/${email}`);
+            const response = await axios.get(`${API_URL}/api/users/resend-verification/${email}`);
             console.log("Resend response:", response.data);
             
             setStatus('resent');
